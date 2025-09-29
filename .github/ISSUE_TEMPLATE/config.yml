@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Community Discord
+    url: https://discord.com/invite/acqv9FVG
+    about: Join our Discord to discuss ideas, workflows, and security research with the community.
+  - name: 📖 Documentation
+    url: https://github.com/FuzzingLabs/fuzzforge_ai/tree/main/docs
+    about: Check our documentation for guides, tutorials, and API reference.
