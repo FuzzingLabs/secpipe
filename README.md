@@ -11,6 +11,8 @@
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"/></a>
   <a href="https://fuzzforge.ai"><img src="https://img.shields.io/badge/Website-fuzzforge.ai-blue?logo=vercel" alt="Website"/></a>
   <img src="https://img.shields.io/badge/version-0.6.0-green" alt="Version">
+  <a href="https://github.com/fuzzinglabs/fuzzforge_ai/stargazers"><img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge_ai?style=social" alt="GitHub Stars"></a>
+  
 </p>
 
 <p align="center">
@@ -37,7 +39,17 @@
 
 FuzzForge is **open source**, built to empower security teams, researchers, and the community.
 
-> 🚧 FuzzForge is still a work in progress, you can [subscribe]() to get the latest news.
+> 🚧 FuzzForge is under active development. Expect breaking changes.
+
+---
+
+## ⭐ Support the Project
+
+<a href="https://github.com/fuzzinglabs/fuzzforge/stargazers">
+  <img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge?style=social" alt="GitHub Stars">
+</a>
+
+If you find FuzzForge useful, please star the repo to support development 🚀
 
 ---
 
@@ -135,7 +147,26 @@ ff workflow security_assessment . # Start a workflow (you can also use ff comman
 ## 🤝 Contributing
 
 We welcome contributions from the community!  
-Check out our [Contributing Guide](CONTRIBUTING.md) to get started.
+There are many ways to help:
+- Report bugs by opening an [issue](../../issues)  
+- Suggest new features or improvements  
+- Submit pull requests with fixes or enhancements  
+- Share workflows, corpora, or modules with the community  
+
+See our [Contributing Guide](CONTRIBUTING.md) for details.
+
+---
+
+## 🗺️ Roadmap
+
+Planned features and improvements:
+- 📦 Public workflow & module marketplace
+- 🤖 New specialized AI agents (Rust, Go, Android, Automotive)
+- 🔗 Expanded fuzzer integrations (LibFuzzer, Jazzer, more network fuzzers)
+- ☁️ Multi-tenant SaaS platform with team collaboration
+- 📊 Advanced reporting & analytics
+
+👉 Follow updates in the [GitHub issues](../../issues) and [Discord](https://discord.com/invite/acqv9FVG).
 
 ---
 
