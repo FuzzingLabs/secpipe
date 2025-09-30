@@ -102,8 +102,8 @@ Run your first workflow :
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/fuzzinglabs/fuzzforge.git
-cd fuzzforge
+git clone https://github.com/fuzzinglabs/fuzzforge_ai.git
+cd fuzzforge_ai
 
 # 2. Build & run with Docker
 # Set registry host for your OS (local registry is mandatory)
