@@ -3,7 +3,7 @@ name: Docusaurus test deployment
 on:
   pull_request:
     branches:
-      - main
+      - master
 
 jobs:
   test-deploy:

@@ -1,7 +1,7 @@
 <p align="center">
-  <img src="docs/static/img/fuzzforge_white.png" alt="FuzzForge Banner" width="20%">
+  <img src="docs/static/img/fuzzforge_banner_github.png" alt="FuzzForge Banner" width="100%">
 </p>
-<h1 align="center">FuzzForge 🚧</h1>
+<h1 align="center">🚧 FuzzForge is under active development</h1>
 
 <p align="center"><strong>AI-powered workflow automation and AI Agents for AppSec, Fuzzing & Offensive Security</strong></p>
 
@@ -9,9 +9,9 @@
   <a href="https://discord.com/invite/acqv9FVG"><img src="https://img.shields.io/discord/1420767905255133267?logo=discord&label=Discord" alt="Discord"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSL%20%2B%20Apache-orange" alt="License: BSL + Apache"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"/></a>
-  <a href="https://fuzzforge.ai"><img src="https://img.shields.io/badge/Website-fuzzforge.ai-blue?logo=vercel" alt="Website"/></a>
+  <a href="https://fuzzforge.ai"><img src="https://img.shields.io/badge/Website-fuzzforge.ai-blue" alt="Website"/></a>
   <img src="https://img.shields.io/badge/version-0.6.0-green" alt="Version">
-  <a href="https://github.com/fuzzinglabs/fuzzforge_ai/stargazers"><img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge_ai?style=social" alt="GitHub Stars"></a>
+  <a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers"><img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars"></a>
   
 </p>
 
@@ -21,8 +21,9 @@
     • <a href="#-key-features"><b>Features</b></a>
     • <a href="#-installation"><b>Installation</b></a>
     • <a href="#-quickstart"><b>Quickstart</b></a>
-    • <a href="#ai-powered-workflow-execution"><b>Demo</b></a>
+    • <a href="#ai-powered-workflow-execution"><b>AI Demo</b></a>
     • <a href="#-contributing"><b>Contributing</b></a>
+    • <a href="#%EF%B8%8F-roadmap"><b>Roadmap</b></a>
   </sub>
 </p>
 
@@ -45,8 +46,8 @@ FuzzForge is **open source**, built to empower security teams, researchers, and 
 
 ## ⭐ Support the Project
 
-<a href="https://github.com/fuzzinglabs/fuzzforge/stargazers">
-  <img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge_ai?style=social" alt="GitHub Stars">
+<a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers">
+  <img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars">
 </a>
 
 If you find FuzzForge useful, please star the repo to support development 🚀
@@ -97,7 +98,7 @@ uv tool install --python python3.12 .
 
 ## ⚡ Quickstart
 
-Run your first workflow in **3 steps**:
+Run your first workflow :
 
 ```bash
 # 1. Clone the repo
@@ -119,7 +120,7 @@ docker compose up -d
 # 3. Run your first workflow
 cd test_projects/vulnerable_app/ # Go into the test directory
 fuzzforge init # Init a fuzzforge project
-ff workflow security_assessment . # Start a workflow (you can also use ff command)
+ff workflow run security_assessment . # Start a workflow (you can also use ff command)
 ```
 
 ### Manual Workflow Setup
