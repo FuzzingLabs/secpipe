@@ -46,7 +46,7 @@ FuzzForge is **open source**, built to empower security teams, researchers, and 
 ## ⭐ Support the Project
 
 <a href="https://github.com/fuzzinglabs/fuzzforge/stargazers">
-  <img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge?style=social" alt="GitHub Stars">
+  <img src="https://img.shields.io/github/stars/fuzzinglabs/fuzzforge_ai?style=social" alt="GitHub Stars">
 </a>
 
 If you find FuzzForge useful, please star the repo to support development 🚀
