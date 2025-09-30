@@ -119,7 +119,7 @@ docker compose up -d
 # 3. Run your first workflow
 cd test_projects/vulnerable_app/ # Go into the test directory
 fuzzforge init # Init a fuzzforge project
-ff workflow security_assessment . # Start a workflow (you can also use ff command)
+ff workflow run security_assessment . # Start a workflow (you can also use ff command)
 ```
 
 ### Manual Workflow Setup
