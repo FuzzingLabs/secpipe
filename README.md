@@ -21,8 +21,9 @@
     • <a href="#-key-features"><b>Features</b></a>
     • <a href="#-installation"><b>Installation</b></a>
     • <a href="#-quickstart"><b>Quickstart</b></a>
-    • <a href="#ai-powered-workflow-execution"><b>Demo</b></a>
+    • <a href="#ai-powered-workflow-execution"><b>AI Demo</b></a>
     • <a href="#-contributing"><b>Contributing</b></a>
+    • <a href="#%EF%B8%8F-roadmap"><b>Roadmap</b></a>
   </sub>
 </p>
 
