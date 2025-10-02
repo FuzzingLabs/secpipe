@@ -1,0 +1,70 @@
+name: Python CI
+
+# This is a dumb Ci to ensure that the python client and backend builds correctly
+# It could be optimized to run faster, building, testing and linting only changed code
+# but for now it is good enough. It runs on every push and PR to any branch.
+# It also runs on demand.
+
+on:
+  workflow_dispatch:
+
+  push:
+    paths:
+      - "ai/**"
+      - "backend/**"
+      - "cli/**"
+      - "sdk/**"
+      - "src/**"
+  pull_request:
+    paths:
+      - "ai/**"
+      - "backend/**"
+      - "cli/**"
+      - "sdk/**"
+      - "src/**"
+
+jobs:
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install
+
+      # Validate no obvious issues
+      # Quick hack because CLI returns non-zero exit code when no args are provided
+      - name: Run base command
+        run: |
+          set +e
+          uv run ff
+          if [ $? -ne 2 ]; then
+            echo "Expected exit code 2 from 'uv run ff', got $?"
+            exit 1
+          fi
+
+      - name: Build fuzzforge_ai package
+        run: uv build
+
+      - name: Build ai package
+        working-directory: ai
+        run: uv build
+
+      - name: Build cli package
+        working-directory: cli
+        run: uv build
+
+      - name: Build sdk package
+        working-directory: sdk
+        run: uv build
+
+      - name: Build backend package
+        working-directory: backend
+        run: uv build
