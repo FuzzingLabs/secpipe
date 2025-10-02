@@ -384,7 +384,6 @@ def examples():
 
 [bold]Execute Workflows:[/bold]
   ff workflow afl-fuzzing ./target  # Run fuzzing on target
-  ff workflow scan-c ./src timeout=300 threads=4  # With parameters
 
 [bold]Monitor Execution:[/bold]
   ff status                         # Check latest execution
