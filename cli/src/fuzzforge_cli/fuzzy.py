@@ -14,9 +14,9 @@ Provides "Did you mean...?" functionality and intelligent command/parameter sugg
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
-
 import difflib
-from typing import List, Optional, Dict, Any, Tuple
+from typing import Any, Dict, List, Optional, Tuple
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -34,10 +34,9 @@ class FuzzyMatcher:
             "workflows": ["list", "info"],
             "runs": ["submit", "status", "list", "rerun"],
             "findings": ["get", "list", "export", "all"],
-            "monitor": ["stats", "crashes", "live"],
             "config": ["set", "get", "list", "init"],
             "ai": ["ask", "summarize", "explain"],
-            "ingest": ["project", "findings"]
+            "ingest": ["project", "findings"],
         }
 
         # Common workflow names
@@ -47,7 +46,7 @@ class FuzzyMatcher:
             "infrastructure_scan",
             "static_analysis_scan",
             "penetration_testing_scan",
-            "secret_detection_scan"
+            "secret_detection_scan",
         ]
 
         # Common parameter names
@@ -60,24 +59,25 @@ class FuzzyMatcher:
             "param-file",
             "interactive",
             "wait",
-            "live",
             "format",
             "output",
             "severity",
             "since",
             "limit",
             "stats",
-            "export"
+            "export",
         ]
 
         # Common values
         self.common_values = {
             "volume_mode": ["ro", "rw"],
             "format": ["json", "csv", "html", "sarif"],
-            "severity": ["critical", "high", "medium", "low", "info"]
+            "severity": ["critical", "high", "medium", "low", "info"],
         }
 
-    def find_closest_command(self, user_input: str, command_group: Optional[str] = None) -> Optional[Tuple[str, float]]:
+    def find_closest_command(
+        self, user_input: str, command_group: Optional[str] = None
+    ) -> Optional[Tuple[str, float]]:
         """Find the closest matching command."""
         if command_group and command_group in self.commands:
             # Search within a specific command group
@@ -86,9 +86,7 @@ class FuzzyMatcher:
             # Search all main commands
             candidates = list(self.commands.keys())
 
-        matches = difflib.get_close_matches(
-            user_input, candidates, n=1, cutoff=0.6
-        )
+        matches = difflib.get_close_matches(user_input, candidates, n=1, cutoff=0.6)
 
         if matches:
             match = matches[0]
@@ -114,7 +112,7 @@ class FuzzyMatcher:
     def find_closest_parameter(self, user_input: str) -> Optional[Tuple[str, float]]:
         """Find the closest matching parameter name."""
         # Remove leading dashes
-        clean_input = user_input.lstrip('-')
+        clean_input = user_input.lstrip("-")
 
         matches = difflib.get_close_matches(
             clean_input, self.parameter_names, n=1, cutoff=0.6
@@ -139,7 +137,9 @@ class FuzzyMatcher:
 
         return []
 
-    def get_command_suggestions(self, user_command: List[str]) -> Optional[Dict[str, Any]]:
+    def get_command_suggestions(
+        self, user_command: List[str]
+    ) -> Optional[Dict[str, Any]]:
         """Get suggestions for a user command that may have typos."""
         if not user_command:
             return None
@@ -153,11 +153,9 @@ class FuzzyMatcher:
             if closest:
                 match, confidence = closest
                 suggestions["type"] = "main_command"
-                suggestions["suggestions"].append({
-                    "text": match,
-                    "confidence": confidence,
-                    "type": "command"
-                })
+                suggestions["suggestions"].append(
+                    {"text": match, "confidence": confidence, "type": "command"}
+                )
 
         # Check subcommand if present
         elif len(user_command) > 1:
@@ -167,11 +165,13 @@ class FuzzyMatcher:
                 if closest:
                     match, confidence = closest
                     suggestions["type"] = "subcommand"
-                    suggestions["suggestions"].append({
-                        "text": f"{main_cmd} {match}",
-                        "confidence": confidence,
-                        "type": "subcommand"
-                    })
+                    suggestions["suggestions"].append(
+                        {
+                            "text": f"{main_cmd} {match}",
+                            "confidence": confidence,
+                            "type": "subcommand",
+                        }
+                    )
 
         return suggestions if suggestions["suggestions"] else None
 
@@ -210,17 +210,19 @@ def display_command_suggestion(suggestions: Dict[str, Any]):
 
     # Add helpful context
     if suggestion_type == "main_command":
-        text.append("\n💡 Use 'fuzzforge --help' to see all available commands", style="dim")
+        text.append(
+            "\n💡 Use 'fuzzforge --help' to see all available commands", style="dim"
+        )
     elif suggestion_type == "subcommand":
         main_cmd = suggestions["original"][0]
-        text.append(f"\n💡 Use 'fuzzforge {main_cmd} --help' to see available subcommands", style="dim")
+        text.append(
+            f"\n💡 Use 'fuzzforge {main_cmd} --help' to see available subcommands",
+            style="dim",
+        )
 
-    console.print(Panel(
-        text,
-        title="🤔 Command Suggestion",
-        border_style="yellow",
-        expand=False
-    ))
+    console.print(
+        Panel(text, title="🤔 Command Suggestion", border_style="yellow", expand=False)
+    )
 
 
 def display_workflow_suggestion(original: str, suggestion: str):
@@ -234,14 +236,13 @@ def display_workflow_suggestion(original: str, suggestion: str):
     text.append(f"'{suggestion}'", style="bold green")
     text.append("?\n\n")
 
-    text.append("💡 Use 'fuzzforge workflows' to see all available workflows", style="dim")
+    text.append(
+        "💡 Use 'fuzzforge workflows' to see all available workflows", style="dim"
+    )
 
-    console.print(Panel(
-        text,
-        title="🔧 Workflow Suggestion",
-        border_style="yellow",
-        expand=False
-    ))
+    console.print(
+        Panel(text, title="🔧 Workflow Suggestion", border_style="yellow", expand=False)
+    )
 
 
 def display_parameter_suggestion(original: str, suggestion: str):
@@ -257,12 +258,9 @@ def display_parameter_suggestion(original: str, suggestion: str):
 
     text.append("💡 Use '--help' to see all available parameters", style="dim")
 
-    console.print(Panel(
-        text,
-        title="⚙️ Parameter Suggestion",
-        border_style="yellow",
-        expand=False
-    ))
+    console.print(
+        Panel(text, title="⚙️ Parameter Suggestion", border_style="yellow", expand=False)
+    )
 
 
 def enhanced_command_not_found_handler(command_parts: List[str]):

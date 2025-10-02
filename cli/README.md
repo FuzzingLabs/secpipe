@@ -80,8 +80,6 @@ fuzzforge workflows info security_assessment
 # Submit a workflow for analysis
 fuzzforge workflow security_assessment /path/to/your/code
 
-# Monitor progress in real-time
-fuzzforge monitor live <execution-id>
 
 # View findings when complete
 fuzzforge finding <execution-id>
@@ -179,7 +177,6 @@ fuzzforge workflow security_assessment /path/to/code --wait
 - `--timeout, -t` - Execution timeout in seconds
 - `--interactive/--no-interactive, -i/-n` - Interactive parameter input
 - `--wait, -w` - Wait for execution to complete
-- `--live, -l` - Show live monitoring during execution
 
 #### `fuzzforge workflow status [execution-id]`
 Check the status of a workflow execution.
@@ -260,39 +257,6 @@ fuzzforge finding export abc123def456 --format csv --output report.csv
 # Export as HTML report
 fuzzforge finding export --format html --output report.html
 ```
-
-### Real-time Monitoring
-
-#### `fuzzforge monitor stats <execution-id>`
-Show current fuzzing statistics.
-
-```bash
-# Show stats once
-fuzzforge monitor stats abc123def456 --once
-
-# Live updating stats (default)
-fuzzforge monitor stats abc123def456 --refresh 5
-```
-
-#### `fuzzforge monitor crashes <run-id>`
-Display crash reports for a fuzzing run.
-
-```bash
-fuzzforge monitor crashes abc123def456 --limit 50
-```
-
-#### `fuzzforge monitor live <run-id>`
-Real-time monitoring dashboard with live updates.
-
-```bash
-fuzzforge monitor live abc123def456 --refresh 3
-```
-
-Features:
-- Live updating statistics
-- Progress indicators and bars
-- Run status monitoring
-- Automatic completion detection
 
 ### Configuration Management
 
@@ -495,7 +459,6 @@ cli/
 │       ├── workflows.py     # Workflow management
 │       ├── runs.py          # Run management
 │       ├── findings.py      # Findings management
-│       ├── monitor.py       # Real-time monitoring
 │       ├── config.py        # Configuration commands
 │       └── status.py        # Status information
 ├── pyproject.toml           # Project configuration
@@ -576,7 +539,6 @@ fuzzforge --help
 # Command-specific help
 ff workflows --help
 ff workflow run --help
-ff monitor live --help
 
 # Show version
 fuzzforge --version

@@ -10,11 +10,10 @@
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
-
 from __future__ import annotations
 
-from pathlib import Path
 import os
+from pathlib import Path
 from textwrap import dedent
 from typing import Optional
 
@@ -32,17 +31,20 @@ app = typer.Typer()
 @app.command()
 def project(
     name: Optional[str] = typer.Option(
-        None, "--name", "-n",
-        help="Project name (defaults to current directory name)"
+        None, "--name", "-n", help="Project name (defaults to current directory name)"
     ),
     api_url: Optional[str] = typer.Option(
-        None, "--api-url", "-u",
-        help="FuzzForge API URL (defaults to http://localhost:8000)"
+        None,
+        "--api-url",
+        "-u",
+        help="FuzzForge API URL (defaults to http://localhost:8000)",
     ),
     force: bool = typer.Option(
-        False, "--force", "-f",
-        help="Force initialization even if project already exists"
-    )
+        False,
+        "--force",
+        "-f",
+        help="Force initialization even if project already exists",
+    ),
 ):
     """
     📁 Initialize a new FuzzForge project in the current directory.
@@ -58,24 +60,20 @@ def project(
     # Check if project already exists
     if fuzzforge_dir.exists() and not force:
         if fuzzforge_dir.is_dir() and any(fuzzforge_dir.iterdir()):
-            console.print("❌ FuzzForge project already exists in this directory", style="red")
+            console.print(
+                "❌ FuzzForge project already exists in this directory", style="red"
+            )
             console.print("Use --force to reinitialize", style="dim")
             raise typer.Exit(1)
 
     # Get project name
     if not name:
-        name = Prompt.ask(
-            "Project name",
-            default=current_dir.name,
-            console=console
-        )
+        name = Prompt.ask("Project name", default=current_dir.name, console=console)
 
     # Get API URL
     if not api_url:
         api_url = Prompt.ask(
-            "FuzzForge API URL",
-            default="http://localhost:8000",
-            console=console
+            "FuzzForge API URL", default="http://localhost:8000", console=console
         )
 
     # Confirm initialization
@@ -117,15 +115,15 @@ def project(
         ]
 
         if gitignore_path.exists():
-            with open(gitignore_path, 'r') as f:
+            with open(gitignore_path, "r") as f:
                 existing_content = f.read()
 
             if "# FuzzForge CLI" not in existing_content:
-                with open(gitignore_path, 'a') as f:
+                with open(gitignore_path, "a") as f:
                     f.write(f"\n{chr(10).join(gitignore_entries)}\n")
                 console.print("📝 Updated .gitignore with FuzzForge entries")
         else:
-            with open(gitignore_path, 'w') as f:
+            with open(gitignore_path, "w") as f:
                 f.write(f"{chr(10).join(gitignore_entries)}\n")
             console.print("📝 Created .gitignore")
 
@@ -145,9 +143,6 @@ fuzzforge workflows
 # Submit a workflow for analysis
 fuzzforge workflow <workflow-name> /path/to/target
 
-# Monitor run progress
-fuzzforge monitor live <run-id>
-
 # View findings
 fuzzforge finding <run-id>
 ```
@@ -159,12 +154,12 @@ fuzzforge finding <run-id>
 - `.fuzzforge/findings.db` - Local database for runs and findings
 """
 
-            with open(readme_path, 'w') as f:
+            with open(readme_path, "w") as f:
                 f.write(readme_content)
             console.print("📚 Created README.md")
 
         console.print("\n✅ FuzzForge project initialized successfully!", style="green")
-        console.print(f"\n🎯 Next steps:")
+        console.print("\n🎯 Next steps:")
         console.print("   • ff workflows - See available workflows")
         console.print("   • ff status - Check API connectivity")
         console.print("   • ff workflow <workflow> <path> - Start your first analysis")
