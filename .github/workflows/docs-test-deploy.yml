@@ -1,9 +1,14 @@
 name: Docusaurus test deployment
 
 on:
+  workflow_dispatch:
+
+  push:
+    paths:
+      - "docs/**"
   pull_request:
-    branches:
-      - master
+    paths:
+      - "docs/**"
 
 jobs:
   test-deploy:
