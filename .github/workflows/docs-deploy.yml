@@ -1,10 +1,13 @@
 name: Deploy Docusaurus to GitHub Pages
 
 on:
+  workflow_dispatch:
+
   push:
     branches:
       - master
-  workflow_dispatch:
+    paths:
+      - "docs/**"
 
 jobs:
   build:
