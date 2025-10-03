@@ -117,26 +117,6 @@ def status():
 
 
 @app.command()
-def config(
-    key: Optional[str] = typer.Argument(None, help="Configuration key"),
-    value: Optional[str] = typer.Argument(None, help="Configuration value to set"),
-):
-    """
-    ⚙️  Manage configuration (show all, get, or set values)
-    """
-
-    if key is None:
-        # No arguments: show all config
-        config_cmd.show_config(global_config=False)
-    elif value is None:
-        # Key only: get specific value
-        config_cmd.get_config(key=key, global_config=False)
-    else:
-        # Key and value: set value
-        config_cmd.set_config(key=key, value=value, global_config=False)
-
-
-@app.command()
 def clean(
     days: int = typer.Option(
         90, "--days", "-d", help="Remove data older than this many days"
@@ -366,6 +346,7 @@ app.add_typer(finding_app, name="finding", help="🔍 View and analyze findings"
 # Other command groups
 app.add_typer(ai.app, name="ai", help="🤖 AI integration features")
 app.add_typer(ingest.app, name="ingest", help="🧠 Ingest knowledge into AI")
+app.add_typer(config_cmd.app, name="config", help="⚙️  Manage configuration settings")
 
 
 # Help and utility commands
