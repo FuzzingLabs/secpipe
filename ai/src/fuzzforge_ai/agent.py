@@ -60,7 +60,7 @@ class FuzzForgeAgent:
             debug=os.getenv('FUZZFORGE_DEBUG', '0') == '1',
             memory_service=self.memory_service,
             session_persistence=os.getenv('SESSION_PERSISTENCE', 'inmemory'),
-            fuzzforge_mcp_url=os.getenv('FUZZFORGE_MCP_URL'),
+            fuzzforge_mcp_url=None,  # Disabled
         )
         
         # Create Hybrid Memory Manager (ADK + Cognee direct integration)

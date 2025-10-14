@@ -21,10 +21,10 @@ except ImportError:  # pragma: no cover - used when CLI not available
             raise ImportError(
                 "ProjectConfigManager is unavailable. Install the FuzzForge CLI "
                 "package or supply a compatible configuration object."
-            ) from exc
+            )
 
     def __getattr__(name):  # pragma: no cover - defensive
-        raise ImportError("ProjectConfigManager unavailable") from exc
+        raise ImportError("ProjectConfigManager unavailable")
 
 ProjectConfigManager = _ProjectConfigManager
 

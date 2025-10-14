@@ -185,6 +185,9 @@ logs/
 # FuzzForge project directories (user projects should manage their own .gitignore)
 .fuzzforge/
 
+# Docker volume configs (keep .env.example but ignore actual .env)
+volumes/env/.env
+
 # Test project databases and configurations
 test_projects/*/.fuzzforge/
 test_projects/*/findings.db*

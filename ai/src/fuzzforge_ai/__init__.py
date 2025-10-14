@@ -3,6 +3,11 @@ FuzzForge AI Module - Agent-to-Agent orchestration system
 
 This module integrates the fuzzforge_ai components into FuzzForge,
 providing intelligent AI agent capabilities for security analysis.
+
+Usage:
+    from fuzzforge_ai.a2a_wrapper import send_agent_task
+    from fuzzforge_ai.agent import FuzzForgeAgent
+    from fuzzforge_ai.config_manager import ConfigManager
 """
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -17,8 +22,3 @@ providing intelligent AI agent capabilities for security analysis.
 
 
 __version__ = "0.6.0"
-
-from .agent import FuzzForgeAgent
-from .config_manager import ConfigManager
-
-__all__ = ['FuzzForgeAgent', 'ConfigManager']

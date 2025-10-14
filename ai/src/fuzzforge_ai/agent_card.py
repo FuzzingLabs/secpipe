@@ -172,7 +172,6 @@ def get_fuzzforge_agent_card(url: str = "http://localhost:10100") -> AgentCard:
             orchestration_skill,
             memory_skill,
             conversation_skill,
-            workflow_automation_skill,
             agent_management_skill
         ],
         capabilities=fuzzforge_capabilities,

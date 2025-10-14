@@ -403,12 +403,12 @@ class ProjectConfigManager:
         if max_tokens:
             os.environ["LLM_MAX_TOKENS"] = str(max_tokens)
 
-        # Provide a default MCP endpoint for local FuzzForge backend access when unset
-        if not os.getenv("FUZZFORGE_MCP_URL"):
-            os.environ["FUZZFORGE_MCP_URL"] = os.getenv(
-                "FUZZFORGE_DEFAULT_MCP_URL",
-                "http://localhost:8010/mcp",
-            )
+        # Disabled - FuzzForge MCP backend connection
+        # if not os.getenv("FUZZFORGE_MCP_URL"):
+        #     os.environ["FUZZFORGE_MCP_URL"] = os.getenv(
+        #         "FUZZFORGE_DEFAULT_MCP_URL",
+        #         "http://localhost:8010/mcp",
+        #     )
 
     def refresh(self) -> None:
         """Reload configuration from disk."""
