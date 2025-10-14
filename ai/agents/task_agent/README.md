@@ -13,7 +13,7 @@ A flexible AI agent powered by LiteLLM that supports runtime hot-swapping of mod
 ## Architecture
 
 ```
-agent_with_adk_format/
+task_agent/
 ├── __init__.py              # Exposes root_agent for ADK
 ├── a2a_hot_swap.py          # JSON-RPC helper for hot-swapping
 ├── README.md                # This guide
@@ -38,7 +38,7 @@ agent_with_adk_format/
 
 Copying the example file is optional—the repository already ships with a root-level `.env` seeded with defaults. Adjust the values at the package root:
 ```bash
-cd agent_with_adk_format
+cd task_agent
 # Optionally refresh from the template
 # cp .env.example .env
 ```
@@ -66,7 +66,7 @@ pip install "google-adk" "a2a-sdk[all]" "python-dotenv" "litellm"
 Build the container (this image can be pushed to any registry or run locally):
 
 ```bash
-docker build -t litellm-hot-swap:latest agent_with_adk_format
+docker build -t litellm-hot-swap:latest task_agent
 ```
 
 Provide environment configuration at runtime (either pass variables individually or mount a file):
@@ -74,7 +74,7 @@ Provide environment configuration at runtime (either pass variables individually
 ```bash
 docker run \
   -p 8000:8000 \
-  --env-file agent_with_adk_format/.env \
+  --env-file task_agent/.env \
   litellm-hot-swap:latest
 ```
 
@@ -86,7 +86,7 @@ The container starts Uvicorn with the ADK app (`main.py`) listening on port 8000
 
 Start the web interface:
 ```bash
-adk web agent_with_adk_format
+adk web task_agent
 ```
 
 > **Tip:** before launching `adk web`/`adk run`/`adk api_server`, ensure the root-level `.env` contains valid API keys for any provider you plan to hot-swap to (e.g. set `OPENAI_API_KEY` before switching to `openai/gpt-4o`).
@@ -97,14 +97,14 @@ Open http://localhost:8000 in your browser and interact with the agent.
 
 Run in terminal mode:
 ```bash
-adk run agent_with_adk_format
+adk run task_agent
 ```
 
 ### Option 3: A2A API Server
 
 Start as an A2A-compatible API server:
 ```bash
-adk api_server --a2a --port 8000 agent_with_adk_format
+adk api_server --a2a --port 8000 task_agent
 ```
 
 The agent will be available at: `http://localhost:8000/a2a/litellm_agent`
@@ -114,7 +114,7 @@ The agent will be available at: `http://localhost:8000/a2a/litellm_agent`
 Use the bundled script to drive hot-swaps and user messages over A2A:
 
 ```bash
-python agent_with_adk_format/a2a_hot_swap.py \
+python task_agent/a2a_hot_swap.py \
   --url http://127.0.0.1:8000/a2a/litellm_agent \
   --model openai gpt-4o \
   --prompt "You are concise." \
@@ -125,7 +125,7 @@ python agent_with_adk_format/a2a_hot_swap.py \
 To send a follow-up prompt in the same session (with a larger timeout for long answers):
 
 ```bash
-python agent_with_adk_format/a2a_hot_swap.py \
+python task_agent/a2a_hot_swap.py \
   --url http://127.0.0.1:8000/a2a/litellm_agent \
   --model openai gpt-4o \
   --prompt "You are concise." \
@@ -214,12 +214,12 @@ You can trigger model and prompt changes directly against the A2A endpoint witho
 
 ```bash
 # Start the agent first (in another terminal):
-adk api_server --a2a --port 8000 agent_with_adk_format
+adk api_server --a2a --port 8000 task_agent
 
 # Apply swaps via pure A2A calls
-python agent/a2a_hot_swap.py --model openai gpt-4o --prompt "You are concise." --config
-python agent/a2a_hot_swap.py --model anthropic claude-3-sonnet-20240229 --context shared-session --config
-python agent/a2a_hot_swap.py --prompt "" --context shared-session --config  # Clear the prompt and show current state
+python task_agent/a2a_hot_swap.py --model openai gpt-4o --prompt "You are concise." --config
+python task_agent/a2a_hot_swap.py --model anthropic claude-3-sonnet-20240229 --context shared-session --config
+python task_agent/a2a_hot_swap.py --prompt "" --context shared-session --config  # Clear the prompt and show current state
 ```
 
 `--model` accepts either `provider/model` or a provider/model pair. Add `--context` if you want to reuse the same conversation across invocations. Use `--config` to dump the agent's configuration after the changes are applied.
@@ -305,7 +305,7 @@ asyncio.run(chat())
 - Verify LiteLLM supports the model (https://docs.litellm.ai/docs/providers)
 
 ### Connection Refused
-- Ensure the agent is running (`adk api_server --a2a agent_with_adk_format`)
+- Ensure the agent is running (`adk api_server --a2a task_agent`)
 - Check the port matches (default: 8000)
 - Verify no firewall blocking localhost
 
