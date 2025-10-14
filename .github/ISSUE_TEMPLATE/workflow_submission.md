@@ -26,7 +26,7 @@ What type of security workflow is this?
 ## Files
 Please attach or provide links to your workflow files:
 
-- [ ] `workflow.py` - Main Prefect flow implementation
+- [ ] `workflow.py` - Main Temporal flow implementation
 - [ ] `Dockerfile` - Container definition
 - [ ] `metadata.yaml` - Workflow metadata
 - [ ] Test files or examples

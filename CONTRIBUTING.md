@@ -84,9 +84,10 @@ docs(readme): update installation instructions
    ```
    backend/toolbox/workflows/your_workflow/
    ├── __init__.py
-   ├── workflow.py          # Main Prefect flow
-   ├── metadata.yaml        # Workflow metadata
-   └── Dockerfile          # Container definition
+   ├── workflow.py          # Main Temporal workflow
+   ├── activities.py        # Workflow activities (optional)
+   ├── metadata.yaml        # Workflow metadata (includes vertical field)
+   └── requirements.txt     # Additional dependencies (optional)
    ```
 
 2. **Register Your Workflow**

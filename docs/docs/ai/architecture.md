@@ -1,6 +1,6 @@
 # AI Architecture
 
-FuzzForge AI is the orchestration layer that lets large language models drive the broader security platform. Built on the Google ADK runtime, the module coordinates local tools, remote Agent-to-Agent (A2A) peers, and Prefect-backed workflows while persisting long-running context for every project.
+FuzzForge AI is the orchestration layer that lets large language models drive the broader security platform. Built on the Google ADK runtime, the module coordinates local tools, remote Agent-to-Agent (A2A) peers, and Temporal-backed workflows while persisting long-running context for every project.
 
 ## System Diagram
 
@@ -27,7 +27,7 @@ graph TB
     Executor --> Prompts[Prompt Templates]
 
     Router --> RemoteAgents[Registered A2A Agents]
-    MCP --> Prefect[FuzzForge Backend]
+    MCP --> Temporal[FuzzForge Backend]
     Memory --> SessionDB[Session Store]
     Memory --> Semantic[Semantic Recall]
     Memory --> Graphs[Cognee Graph]
@@ -44,7 +44,7 @@ sequenceDiagram
     participant CLI as CLI / HTTP Surface
     participant Exec as FuzzForgeExecutor
     participant ADK as ADK Runner
-    participant Prefect as Prefect Backend
+    participant Temporal as Temporal Backend
     participant Cognee as Cognee
     participant Artifact as Artifact Cache
 
@@ -52,8 +52,8 @@ sequenceDiagram
     CLI->>Exec: Normalised request + context ID
     Exec->>ADK: Tool invocation (LiteLLM)
     ADK-->>Exec: Structured response / tool result
-    Exec->>Prefect: (optional) submit workflow via MCP
-    Prefect-->>Exec: Run status updates
+    Exec->>Temporal: (optional) submit workflow via MCP
+    Temporal-->>Exec: Run status updates
     Exec->>Cognee: (optional) knowledge query / ingestion
     Cognee-->>Exec: Graph results
     Exec->>Artifact: Persist generated files
@@ -69,7 +69,7 @@ sequenceDiagram
 ## Core Components
 
 - **FuzzForgeAgent** (`ai/src/fuzzforge_ai/agent.py`) assembles the runtime: it loads environment variables, constructs the executor, and builds an ADK `Agent` backed by `LiteLlm`. The singleton accessor `get_fuzzforge_agent()` keeps CLI and server instances aligned and shares the generated agent card.
-- **FuzzForgeExecutor** (`ai/src/fuzzforge_ai/agent_executor.py`) is the brain. It registers tools, manages session storage (SQLite or in-memory via `DatabaseSessionService` / `InMemorySessionService`), and coordinates artifact storage. The executor also tracks long-running Prefect workflows inside `pending_runs`, produces `TaskStatusUpdateEvent` objects, and funnels every response through ADK’s `Runner` so traces include tool metadata.
+- **FuzzForgeExecutor** (`ai/src/fuzzforge_ai/agent_executor.py`) is the brain. It registers tools, manages session storage (SQLite or in-memory via `DatabaseSessionService` / `InMemorySessionService`), and coordinates artifact storage. The executor also tracks long-running Temporal workflows inside `pending_runs`, produces `TaskStatusUpdateEvent` objects, and funnels every response through ADK’s `Runner` so traces include tool metadata.
 - **Remote agent registry** (`ai/src/fuzzforge_ai/remote_agent.py`) holds metadata for downstream agents and handles capability discovery over HTTP. Auto-registration is configured by `ConfigManager` so known agents attach on startup.
 - **Memory services**:
   - `FuzzForgeMemoryService` and `HybridMemoryManager` (`ai/src/fuzzforge_ai/memory_service.py`) provide conversation recall and bridge to Cognee datasets when configured.
@@ -77,15 +77,15 @@ sequenceDiagram
 
 ## Workflow Automation
 
-The executor wraps Prefect MCP actions exposed by the backend:
+The executor wraps Temporal MCP actions exposed by the backend:
 
 | Tool | Source | Purpose |
 | --- | --- | --- |
 | `list_workflows_mcp` | `ai/src/fuzzforge_ai/agent_executor.py` | Enumerate available scans |
 | `submit_security_scan_mcp` | `agent_executor.py` | Launch a scan and persist run metadata |
-| `get_run_status_mcp` | `agent_executor.py` | Poll Prefect for status and push task events |
+| `get_run_status_mcp` | `agent_executor.py` | Poll Temporal for status and push task events |
 | `get_comprehensive_scan_summary` | `agent_executor.py` | Collect findings and bundle artifacts |
-| `get_backend_status_mcp` | `agent_executor.py` | Block submissions until Prefect reports `ready` |
+| `get_backend_status_mcp` | `agent_executor.py` | Block submissions until Temporal reports `ready` |
 
 The CLI surface mirrors these helpers as natural-language prompts (`You> run fuzzforge workflow …`). ADK’s `Runner` handles retries and ensures each tool call yields structured `Event` objects for downstream instrumentation.
 

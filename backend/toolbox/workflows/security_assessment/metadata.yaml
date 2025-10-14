@@ -1,6 +1,6 @@
 name: security_assessment
 version: "2.0.0"
-vertical: rust
+vertical: python
 description: "Comprehensive security assessment workflow that scans files, analyzes code for vulnerabilities, and generates SARIF reports"
 author: "FuzzForge Team"
 tags:

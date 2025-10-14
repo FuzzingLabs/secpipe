@@ -841,15 +841,15 @@ class FuzzForgeExecutor:
                 elif normalised_mode in {"read_write", "readwrite", "rw"}:
                     normalised_mode = "rw"
                 else:
-                    # Fall back to Prefect defaults if we can't recognise the input
+                    # Fall back to read-only if we can't recognise the input
                     normalised_mode = "ro"
 
-                # Resolve the target path to an absolute path for Prefect's validation
+                # Resolve the target path to an absolute path for validation
                 resolved_path = target_path or "."
                 try:
                     resolved_path = str(Path(resolved_path).expanduser().resolve())
                 except Exception:
-                    # If resolution fails, Prefect will surface the validation error – use the raw value
+                    # If resolution fails, use the raw value
                     resolved_path = target_path
 
                 # Ensure configuration objects default to dictionaries instead of None

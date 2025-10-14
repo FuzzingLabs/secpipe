@@ -87,7 +87,7 @@ If the Cognee variables are omitted, graph-specific tools remain available but r
 FUZZFORGE_MCP_URL=http://localhost:8010/mcp
 ```
 
-The agent uses this endpoint to list, launch, and monitor Prefect workflows.
+The agent uses this endpoint to list, launch, and monitor Temporal workflows.
 
 ## Tracing & Observability
 

@@ -68,7 +68,7 @@ Response excerpt:
    - Call `POST /graph/query` to explore project knowledge.
    - Call `POST /project/files` to fetch raw files from the repository.
    - Download finished scan summaries with `GET /artifacts/{id}`.
-4. The AI module pushes Prefect workflow results into artifacts automatically, so remote agents can poll without re-running scans.
+4. The AI module pushes Temporal workflow results into artifacts automatically, so remote agents can poll without re-running scans.
 
 ## Registration Flow
 
@@ -129,7 +129,7 @@ sequenceDiagram
     participant Remote as Remote Agent
     participant HTTP as A2A Server
     participant Exec as Executor
-    participant Workflow as Prefect Backend
+    participant Workflow as Temporal Backend
 
     Remote->>HTTP: POST / (message with tool request)
     HTTP->>Exec: Forward message

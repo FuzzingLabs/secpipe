@@ -204,7 +204,7 @@ curl -X POST http://localhost:8000/workflows/infrastructure_scan/submit \
                                 │                        │
                                 ▼                        ▼
                        ┌──────────────────┐    ┌─────────────────┐
-                       │   MCP Tools      │    │   Prefect       │
+                       │   MCP Tools      │    │   Temporal       │
                        │   - scan submit  │    │   Workflows     │
                        │   - results      │    │   - Security    │
                        │   - analysis     │    │   - Fuzzing     │

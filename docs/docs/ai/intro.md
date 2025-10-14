@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # FuzzForge AI Module
 
-FuzzForge AI is the multi-agent layer that lets you operate the FuzzForge security platform through natural language. It orchestrates local tooling, registered Agent-to-Agent (A2A) peers, and the Prefect-powered backend while keeping long-running context in memory and project knowledge graphs.
+FuzzForge AI is the multi-agent layer that lets you operate the FuzzForge security platform through natural language. It orchestrates local tooling, registered Agent-to-Agent (A2A) peers, and the Temporal-powered backend while keeping long-running context in memory and project knowledge graphs.
 
 ## Quick Start
 
@@ -36,7 +36,7 @@ FuzzForge AI is the multi-agent layer that lets you operate the FuzzForge securi
    ```bash
    fuzzforge ai agent
    ```
-   Keep the backend running (Prefect API at `FUZZFORGE_MCP_URL`) so workflow commands succeed.
+   Keep the backend running (Temporal API at `FUZZFORGE_MCP_URL`) so workflow commands succeed.
 
 ## Everyday Workflow
 
@@ -65,7 +65,7 @@ Inside `fuzzforge ai agent` you can mix slash commands and free-form prompts:
 /sendfile SecurityAgent src/report.md "Please review"
 You> route_to SecurityAnalyzer: scan ./backend for secrets
 You> run fuzzforge workflow static_analysis_scan on ./test_projects/demo
-You> search project knowledge for "prefect status" using INSIGHTS
+You> search project knowledge for "temporal status" using INSIGHTS
 ```
 
 Artifacts created during the conversation are served from `.fuzzforge/artifacts/` and exposed through the A2A HTTP API.
@@ -88,7 +88,7 @@ Use these to validate the setup once the agent shell is running:
 - `run fuzzforge workflow static_analysis_scan on ./backend with target_branch=main`
 - `show findings for that run once it finishes`
 - `refresh the project knowledge graph for ./backend`
-- `search project knowledge for "prefect readiness" using INSIGHTS`
+- `search project knowledge for "temporal readiness" using INSIGHTS`
 - `/recall terraform secrets`
 - `/memory status`
 - `ROUTE_TO SecurityAnalyzer: audit infrastructure_vulnerable`

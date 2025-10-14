@@ -33,7 +33,7 @@ Assistant> Streams the `get_comprehensive_scan_summary` output and attaches the 
 You> refresh the project knowledge graph for ./backend
 Assistant> Launches `fuzzforge ingest --path ./backend --recursive` and reports file counts.
 
-You> search project knowledge for "prefect readiness" using INSIGHTS
+You> search project knowledge for "temporal readiness" using INSIGHTS
 Assistant> Routes to Cognee via `query_project_knowledge_api` and returns the top matches.
 
 You> recall "api key rotation"
@@ -52,7 +52,7 @@ Assistant> Uploads the file as an artifact and notifies the remote agent.
 
 ## Prompt Tips
 
-- Use explicit verbs (`list`, `run`, `search`) to trigger the Prefect workflow helpers.
+- Use explicit verbs (`list`, `run`, `search`) to trigger the Temporal workflow helpers.
 - Include parameter names inline (`with target_branch=main`) so the executor maps values to MCP tool inputs without additional clarification.
 - When referencing prior runs, reuse the assistant’s run IDs or ask for "the last run"—the session store tracks them per context ID.
 - If Cognee is not configured, graph queries return a friendly notice; set `LLM_COGNEE_*` variables to enable full answers.

@@ -1,8 +1,9 @@
 """
-Enhanced exceptions for FuzzForge SDK with rich context and Docker integration.
+Enhanced exceptions for FuzzForge SDK with rich context.
 
-Provides comprehensive error information including container logs, diagnostics,
-and actionable suggestions for troubleshooting.
+Provides comprehensive error information and actionable suggestions for troubleshooting.
+Note: Container diagnostics are not available in Temporal architecture as workflows
+run in long-lived worker containers rather than ephemeral per-workflow containers.
 """
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -21,8 +22,6 @@ import re
 from typing import Optional, Dict, Any, List
 from dataclasses import dataclass, asdict
 
-from .docker_logs import docker_integration, ContainerDiagnostics
-
 
 @dataclass
 class ErrorContext:
@@ -31,7 +30,6 @@ class ErrorContext:
     request_method: Optional[str] = None
     request_data: Optional[Dict[str, Any]] = None
     response_data: Optional[Dict[str, Any]] = None
-    container_diagnostics: Optional[ContainerDiagnostics] = None
     suggested_fixes: List[str] = None
     error_patterns: Dict[str, List[str]] = None
     related_run_id: Optional[str] = None
@@ -62,48 +60,9 @@ class FuzzForgeError(Exception):
         self.context = context or ErrorContext()
         self.original_exception = original_exception
 
-        # Auto-populate container diagnostics if we have a run ID
-        if self.context.related_run_id and not self.context.container_diagnostics:
-            self._fetch_container_diagnostics()
-
-    def _fetch_container_diagnostics(self):
-        """Fetch container diagnostics for the related run."""
-        if not self.context.related_run_id:
-            return
-
-        try:
-            # Try to find containers by Prefect run ID label
-            label_filter = f"prefect.flow-run-id={self.context.related_run_id}"
-            container_names = docker_integration.get_container_names_by_label(label_filter)
-
-            if container_names:
-                # Use the most recent container
-                container_name = container_names[0]
-                diagnostics = docker_integration.get_container_diagnostics(container_name)
-
-                # Analyze error patterns in logs
-                if diagnostics.logs:
-                    error_analysis = docker_integration.analyze_error_patterns(diagnostics.logs)
-                    suggestions = docker_integration.suggest_fixes(error_analysis)
-
-                    self.context.container_diagnostics = diagnostics
-                    self.context.error_patterns = error_analysis
-                    self.context.suggested_fixes.extend(suggestions)
-
-        except Exception:
-            # Don't fail the main error because of diagnostics issues
-            pass
-
     def get_summary(self) -> str:
         """Get a summary of the error with key details."""
         parts = [self.message]
-
-        if self.context.container_diagnostics:
-            diag = self.context.container_diagnostics
-            if diag.status != 'running':
-                parts.append(f"Container status: {diag.status}")
-            if diag.exit_code is not None:
-                parts.append(f"Exit code: {diag.exit_code}")
 
         if self.context.error_patterns:
             detected = list(self.context.error_patterns.keys())
@@ -153,18 +112,11 @@ class FuzzForgeHTTPError(FuzzForgeError):
         self.response_text = response_text
 
     def get_summary(self) -> str:
-        base = f"HTTP {self.status_code}: {self.message}"
-
-        if self.context.container_diagnostics:
-            diag = self.context.container_diagnostics
-            if diag.exit_code is not None and diag.exit_code != 0:
-                base += f" (Container exit code: {diag.exit_code})"
-
-        return base
+        return f"HTTP {self.status_code}: {self.message}"
 
 
 class DeploymentError(FuzzForgeHTTPError):
-    """Enhanced deployment errors with container diagnostics."""
+    """Enhanced deployment errors."""
 
     def __init__(
         self,
@@ -181,23 +133,9 @@ class DeploymentError(FuzzForgeHTTPError):
 
         context.workflow_name = workflow_name
 
-        # If we have a container name, get its diagnostics immediately
-        if container_name:
-            try:
-                diagnostics = docker_integration.get_container_diagnostics(container_name)
-                context.container_diagnostics = diagnostics
-
-                # Analyze logs for error patterns
-                if diagnostics.logs:
-                    error_analysis = docker_integration.analyze_error_patterns(diagnostics.logs)
-                    suggestions = docker_integration.suggest_fixes(error_analysis)
-
-                    context.error_patterns = error_analysis
-                    context.suggested_fixes.extend(suggestions)
-
-            except Exception:
-                # Don't fail on diagnostics
-                pass
+        # Note: Container diagnostics are not fetched in Temporal architecture.
+        # Workflows run in long-lived worker containers, not per-workflow containers.
+        # The container_name parameter is kept for backward compatibility but not used.
 
         full_message = f"Deployment failed for workflow '{workflow_name}': {message}"
         super().__init__(full_message, status_code, response_text, context)
@@ -292,22 +230,9 @@ class ContainerError(FuzzForgeError):
         if context is None:
             context = ErrorContext()
 
-        # Immediately fetch container diagnostics
-        try:
-            diagnostics = docker_integration.get_container_diagnostics(container_name)
-            context.container_diagnostics = diagnostics
-
-            # Analyze logs for patterns
-            if diagnostics.logs:
-                error_analysis = docker_integration.analyze_error_patterns(diagnostics.logs)
-                suggestions = docker_integration.suggest_fixes(error_analysis)
-
-                context.error_patterns = error_analysis
-                context.suggested_fixes.extend(suggestions)
-
-        except Exception:
-            # Don't fail on diagnostics
-            pass
+        # Note: Container diagnostics are not fetched in Temporal architecture.
+        # Workflows run in long-lived worker containers, not per-workflow containers.
+        # The container_name parameter is kept for backward compatibility but not used.
 
         full_message = f"Container error ({container_name}): {message}"
         if exit_code is not None:

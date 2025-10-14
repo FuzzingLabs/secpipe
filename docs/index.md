@@ -1,6 +1,6 @@
 # FuzzForge Documentation
 
-Welcome to FuzzForge, a comprehensive security analysis platform built on Prefect 3 that automates security testing workflows. FuzzForge provides 6 production-ready workflows that run static analysis, secret detection, infrastructure scanning, penetration testing, and custom fuzzing campaigns with Docker-based isolation and SARIF-compliant reporting.
+Welcome to FuzzForge, a comprehensive security analysis platform built on Temporal that automates security testing workflows. FuzzForge provides production-ready workflows that run static analysis, secret detection, infrastructure scanning, penetration testing, and custom fuzzing campaigns with Docker-based isolation and SARIF-compliant reporting.
 
 ## 🚀 Quick Navigation
 

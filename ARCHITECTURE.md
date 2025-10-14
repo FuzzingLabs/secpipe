@@ -1,92 +1,44 @@
 # FuzzForge AI Architecture
 
-**Last Updated:** 2025-10-01
-**Status:** Approved Architecture Plan
-**Current Phase:** Migration from Prefect to Temporal with Vertical Workers
+**Last Updated:** 2025-10-14
+**Status:** Production - Temporal with Vertical Workers
 
 ---
 
 ## Table of Contents
 
 1. [Executive Summary](#executive-summary)
-2. [Current Architecture (Prefect)](#current-architecture-prefect)
-3. [Target Architecture (Temporal + Vertical Workers)](#target-architecture-temporal--vertical-workers)
-4. [Vertical Worker Model](#vertical-worker-model)
-5. [Storage Strategy (MinIO)](#storage-strategy-minio)
-6. [Dynamic Workflow Loading](#dynamic-workflow-loading)
-7. [Architecture Principles](#architecture-principles)
-8. [Component Details](#component-details)
-9. [Scaling Strategy](#scaling-strategy)
-10. [File Lifecycle Management](#file-lifecycle-management)
-11. [Future: Nomad Migration](#future-nomad-migration)
-12. [Migration Timeline](#migration-timeline)
-13. [Decision Log](#decision-log)
+2. [Current Architecture (Temporal + Vertical Workers)](#current-architecture-temporal--vertical-workers)
+3. [Vertical Worker Model](#vertical-worker-model)
+4. [Storage Strategy (MinIO)](#storage-strategy-minio)
+5. [Dynamic Workflow Loading](#dynamic-workflow-loading)
+6. [Architecture Principles](#architecture-principles)
+7. [Component Details](#component-details)
+8. [Scaling Strategy](#scaling-strategy)
+9. [File Lifecycle Management](#file-lifecycle-management)
+10. [Future: Nomad Migration](#future-nomad-migration)
 
 ---
 
 ## Executive Summary
 
-### The Decision
+### The Architecture
 
-**Replace Prefect with Temporal** using a **vertical worker architecture** where each worker is pre-built with domain-specific security toolchains (Android, Rust, Web, iOS, Blockchain, etc.). Use **MinIO** for unified storage across dev and production environments.
+**Temporal orchestration** with a **vertical worker architecture** where each worker is pre-built with domain-specific security toolchains (Android, Rust, Web, iOS, Blockchain, OSS-Fuzz, etc.). Uses **MinIO** for unified S3-compatible storage across dev and production environments.
 
-### Why This Change?
-
-| Aspect | Current (Prefect) | Target (Temporal + Verticals) |
-|--------|-------------------|-------------------------------|
-| **Services** | 6 (Server, Postgres, Redis, Registry, Docker-proxy, Worker) | 6 (Temporal, MinIO, MinIO-setup, 3+ vertical workers) |
-| **Orchestration** | Prefect (complex) | Temporal (simpler, more reliable) |
-| **Worker Model** | Ephemeral containers per workflow | Long-lived vertical workers with pre-built toolchains |
-| **Storage** | Docker Registry + volume mounts | MinIO (S3-compatible) with caching |
-| **Dynamic Workflows** | Build image per workflow | Mount workflow code as volume (no rebuild) |
-| **Target Access** | Host volume mounts (/Users, /home) | Upload to MinIO, download to cache |
-| **Memory Usage** | ~1.85GB | ~2.3GB (+24%, worth it for benefits) |
-
-### Key Benefits
+### Key Architecture Features
 
 1. **Vertical Specialization:** Pre-built toolchains (Android: Frida, apktool; Rust: AFL++, cargo-fuzz)
-2. **Zero Startup Overhead:** Long-lived workers (no 5s container spawn per workflow)
+2. **Zero Startup Overhead:** Long-lived workers (no container spawn per workflow)
 3. **Dynamic Workflows:** Add workflows without rebuilding images (mount as volume)
-4. **Unified Storage:** MinIO works identically in dev and prod (no environment-specific code)
+4. **Unified Storage:** MinIO works identically in dev and prod
 5. **Better Security:** No host filesystem mounts, isolated uploaded targets
 6. **Automatic Cleanup:** MinIO lifecycle policies handle file expiration
-7. **Marketing Advantage:** Sell "security verticals" not "generic orchestration" (safer Nomad BSL positioning)
-8. **Scalability:** Clear path from single-host to multi-host to Nomad cluster
+7. **Scalability:** Clear path from single-host to multi-host to Nomad cluster
 
 ---
 
-## Current Architecture (Prefect)
-
-### Infrastructure Components
-
-```
-┌─────────────────────────────────────────────────────────┐
-│ Docker Compose Stack (6 services)                       │
-│                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ Prefect      │  │ Postgres     │  │ Redis        │ │
-│  │ Server       │  │ (metadata)   │  │ (queue)      │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-│                                                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │
-│  │ Registry     │  │ Docker Proxy │  │ Prefect      │ │
-│  │ (images)     │  │ (isolation)  │  │ Worker       │ │
-│  └──────────────┘  └──────────────┘  └──────────────┘ │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Pain Points
-
-- **Complexity:** 6 services to manage, configure, and monitor
-- **Registry overhead:** Must push/pull images for every workflow deployment
-- **Volume mounting complexity:** job_variables configuration per workflow
-- **Dynamic workflows:** Requires rebuilding and pushing Docker images
-- **Scalability:** Unclear how to scale beyond single host
-- **Resource usage:** ~1.85GB baseline
-
----
-
-## Target Architecture (Temporal + Vertical Workers)
+## Current Architecture (Temporal + Vertical Workers)
 
 ### Infrastructure Overview
 
@@ -155,7 +107,7 @@ Worker-android:  ~512MB  (varies by toolchain)
 Worker-rust:     ~512MB
 Worker-web:      ~512MB
 ─────────────────────────
-Total:           ~2.3GB  (vs 1.85GB Prefect = +24%)
+Total:           ~2.3GB
 
 Note: +450MB overhead is worth it for:
   - Unified dev/prod architecture
@@ -1030,8 +982,8 @@ job "fuzzforge-worker-android" {
 
 ## Decision Log
 
-### 2025-09-30: Initial Architecture Decision
-- **Decision:** Migrate from Prefect to Temporal
+### 2025-09-30: Architecture Implementation
+- **Decision:** Temporal with Vertical Workers
 - **Rationale:** Simpler infrastructure, better reliability, clear scaling path
 
 ### 2025-10-01: Vertical Worker Model

@@ -25,9 +25,9 @@ At a glance, FuzzForge is organized into several layers, each with a clear respo
 
 - **Client Layer:** Where users and external systems interact (CLI, API clients, MCP server).
 - **API Layer:** The FastAPI backend, which exposes REST endpoints and manages requests.
-- **Orchestration Layer:** Prefect server and workers, which schedule and execute workflows.
-- **Execution Layer:** Docker Engine and containers, where workflows actually run.
-- **Storage Layer:** PostgreSQL database, Docker volumes, and a result cache for persistence.
+- **Orchestration Layer:** Temporal server and vertical workers, which schedule and execute workflows.
+- **Execution Layer:** Long-lived vertical worker containers with pre-installed toolchains, where workflows run.
+- **Storage Layer:** PostgreSQL database, MinIO (S3-compatible storage), and worker cache for persistence.
 
 Here’s a simplified view of how these layers fit together:
 
@@ -46,8 +46,8 @@ graph TB
     end
 
     subgraph "Orchestration Layer"
-        Prefect[Prefect Server]
-        Workers[Prefect Workers]
+        Temporal[Temporal Server]
+        Workers[Vertical Workers]
         Scheduler[Workflow Scheduler]
     end
 
@@ -69,9 +69,9 @@ graph TB
 
     FastAPI --> Router
     Router --> Middleware
-    Middleware --> Prefect
+    Middleware --> Temporal
 
-    Prefect --> Workers
+    Temporal --> Workers
     Workers --> Scheduler
     Scheduler --> Docker
 

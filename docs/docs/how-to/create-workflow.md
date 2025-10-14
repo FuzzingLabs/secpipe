@@ -363,12 +363,12 @@ class DependencyAnalysisWorkflow:
         return sarif_report
 ```
 
-**Key differences from Prefect:**
-- Use `@workflow.defn` class instead of `@flow` function
-- Use `@activity.defn` instead of `@task`
-- Must call `get_target` activity to download from MinIO with isolation mode
+**Key Temporal Workflow Concepts:**
+- Use `@workflow.defn` class decorator to define workflows
+- Use `@activity.defn` decorator for activity functions
+- Call `get_target` activity to download targets from MinIO with workspace isolation
 - Use `workflow.execute_activity()` with explicit timeouts and retry policies
-- Use `workflow.logger` for logging (appears in Temporal UI)
+- Use `workflow.logger` for logging (appears in Temporal UI and backend logs)
 - Call `cleanup_cache` activity at end to clean up workspace
 
 ---

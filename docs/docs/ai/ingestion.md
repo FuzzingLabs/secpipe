@@ -53,7 +53,7 @@ All runs automatically skip `.fuzzforge/**` and `.git/**` to avoid recursive ing
 You> refresh the project knowledge graph for ./backend
 Assistant> Kicks off `fuzzforge ingest` with recursive scan
 
-You> search project knowledge for "prefect workflow" using INSIGHTS
+You> search project knowledge for "temporal workflow" using INSIGHTS
 Assistant> Routes to Cognee `search_project_knowledge`
 
 You> ingest_to_dataset("Design doc for new scanner", "insights")
@@ -70,7 +70,7 @@ LLM_PROVIDER=openai
 LITELLM_MODEL=gpt-5-mini
 OPENAI_API_KEY=sk-your-key
 
-# FuzzForge backend (Prefect-powered)
+# FuzzForge backend (Temporal-powered)
 FUZZFORGE_MCP_URL=http://localhost:8010/mcp
 
 # Optional: knowledge graph provider

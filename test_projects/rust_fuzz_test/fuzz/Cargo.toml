@@ -26,3 +26,10 @@ path = "fuzz_targets/fuzz_divide.rs"
 test = false
 doc = false
 bench = false
+
+[[bin]]
+name = "fuzz_waterfall"
+path = "fuzz_targets/fuzz_waterfall.rs"
+test = false
+doc = false
+bench = false
