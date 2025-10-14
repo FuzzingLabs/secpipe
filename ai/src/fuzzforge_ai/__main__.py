@@ -1,3 +1,4 @@
+# ruff: noqa: E402  # Imports delayed for environment/logging setup
 """
 FuzzForge A2A Server
 Run this to expose FuzzForge as an A2A-compatible agent

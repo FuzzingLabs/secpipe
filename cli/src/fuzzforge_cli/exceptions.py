@@ -259,12 +259,6 @@ def handle_error(error: Exception, context: str = "") -> None:
         if hasattr(error, 'context') and error.context:
             ctx = error.context
 
-            # Container diagnostics
-            if ctx.container_diagnostics:
-                console.print("\n[bold]Container Diagnostics:[/bold]")
-                display_container_diagnostics(ctx.container_diagnostics)
-                display_container_logs(ctx.container_diagnostics)
-
             # Error patterns
             if ctx.error_patterns:
                 display_error_patterns(ctx.error_patterns)

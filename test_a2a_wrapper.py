@@ -1,3 +1,4 @@
+# ruff: noqa: E402  # Imports delayed for environment/logging setup
 #!/usr/bin/env python3
 """
 Test script for A2A wrapper module
@@ -103,7 +104,7 @@ async def test_multi_turn():
         context="geography_quiz",
         timeout=30
     )
-    print(f"Q1: What is the capital of France?")
+    print("Q1: What is the capital of France?")
     print(f"A1: {result1.text}")
     print()
 
@@ -114,7 +115,7 @@ async def test_multi_turn():
         context="geography_quiz",  # Same context
         timeout=30
     )
-    print(f"Q2: What is the population of that city?")
+    print("Q2: What is the population of that city?")
     print(f"A2: {result2.text}")
     print()
 

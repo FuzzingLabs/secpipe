@@ -1,3 +1,4 @@
+# ruff: noqa: E402  # Imports delayed for environment/logging setup
 #!/usr/bin/env python3
 """
 Quick smoke test for SDK exception handling after exceptions.py modifications.

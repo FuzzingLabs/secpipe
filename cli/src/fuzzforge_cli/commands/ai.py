@@ -18,7 +18,6 @@ import os
 
 import typer
 from rich.console import Console
-from rich.table import Table
 
 
 console = Console()
@@ -49,41 +48,15 @@ def ai_agent() -> None:
 @app.command("status")
 def ai_status() -> None:
     """Show AI system health and configuration."""
-    try:
-        status = asyncio.run(get_ai_status_async())
-    except Exception as exc:  # pragma: no cover
-        console.print(f"[red]Failed to get AI status:[/red] {exc}")
-        raise typer.Exit(1) from exc
-
-    console.print("[bold cyan]🤖 FuzzForge AI System Status[/bold cyan]\n")
-
-    config_table = Table(title="Configuration", show_header=True, header_style="bold magenta")
-    config_table.add_column("Setting", style="bold")
-    config_table.add_column("Value", style="cyan")
-    config_table.add_column("Status", style="green")
-
-    for key, info in status["config"].items():
-        status_icon = "✅" if info["configured"] else "❌"
-        display_value = info["value"] if info["value"] else "-"
-        config_table.add_row(key, display_value, f"{status_icon}")
-
-    console.print(config_table)
-    console.print()
-
-    components_table = Table(title="AI Components", show_header=True, header_style="bold magenta")
-    components_table.add_column("Component", style="bold")
-    components_table.add_column("Status", style="green")
-    components_table.add_column("Details", style="dim")
-
-    for component, info in status["components"].items():
-        status_icon = "🟢" if info["available"] else "🔴"
-        components_table.add_row(component, status_icon, info["details"])
-
-    console.print(components_table)
-
-    if status["agents"]:
-        console.print()
-        console.print(f"[bold green]✓[/bold green] {len(status['agents'])} agents registered")
+    # TODO: Implement AI status checking
+    # This command is a placeholder for future health monitoring functionality
+    console.print("🚧 [yellow]AI status command is not yet implemented.[/yellow]")
+    console.print("\nPlanned features:")
+    console.print("  • LLM provider connectivity")
+    console.print("  • API key validation")
+    console.print("  • Registered agents status")
+    console.print("  • Memory/session persistence health")
+    console.print("\nFor now, use [cyan]ff ai agent[/cyan] to launch the AI agent.")
 
 
 @app.command("server")

@@ -156,7 +156,7 @@ class CogneeService:
                 self._user = await get_user(fallback_email)
                 logger.info(f"Using existing user: {fallback_email}")
                 return
-            except:
+            except Exception:
                 # User doesn't exist, try to create fallback
                 pass
             

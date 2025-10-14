@@ -20,7 +20,6 @@ from typing import Optional, List
 import sys
 
 from .commands import (
-    init,
     workflows,
     workflow_exec,
     findings,

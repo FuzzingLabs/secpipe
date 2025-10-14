@@ -37,7 +37,7 @@ class RemoteAgentConnection:
             response.raise_for_status()
             self.agent_card = response.json()
             return self.agent_card
-        except:
+        except Exception:
             # Try old path for compatibility
             try:
                 response = await self.client.get(f"{self.url}/.well-known/agent.json")

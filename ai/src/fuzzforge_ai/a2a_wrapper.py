@@ -15,7 +15,7 @@ Programmatic interface to send tasks to A2A agents with custom model/prompt/cont
 
 from __future__ import annotations
 
-from typing import Optional, Dict, Any
+from typing import Optional, Any
 from uuid import uuid4
 
 import httpx

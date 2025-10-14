@@ -1,3 +1,4 @@
+# ruff: noqa: E402  # Imports delayed for environment/logging setup
 """FuzzForge Agent Executor - orchestrates workflows and delegation."""
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -173,7 +174,7 @@ class FuzzForgeExecutor:
                         else:
                             # Run now if no loop is running
                             loop.run_until_complete(self._register_agent_async(url, name))
-                    except:
+                    except Exception:
                         # Ignore auto-registration failures
                         pass
         except Exception as e:
@@ -451,11 +452,11 @@ class FuzzForgeExecutor:
                         try:
                             user = await get_user(user_email)
                             logger.info(f"Using existing user: {user_email}")
-                        except:
+                        except Exception:
                             try:
                                 user = await create_user(user_email, user_tenant)
                                 logger.info(f"Created new user: {user_email}")
-                            except:
+                            except Exception:
                                 user = None
                         
                         if user:
@@ -1704,7 +1705,7 @@ Be concise and intelligent in your responses."""
         if self.agentops_trace:
             try:
                 agentops.end_trace()
-            except:
+            except Exception:
                 pass
 
         # Cancel background monitors

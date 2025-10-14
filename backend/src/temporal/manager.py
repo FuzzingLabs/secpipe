@@ -181,15 +181,18 @@ class TemporalManager:
         # Prepare workflow input arguments
         workflow_params = workflow_params or {}
 
-        # Build args list: [target_id, ...workflow_params values]
+        # Build args list: [target_id, ...workflow_params in schema order]
         # The workflow parameters are passed as individual positional args
         workflow_args = [target_id]
 
-        # Add parameters in order based on workflow signature
-        # For security_assessment: scanner_config, analyzer_config, reporter_config
-        # For atheris_fuzzing: target_file, max_iterations, timeout_seconds
-        if workflow_params:
-            workflow_args.extend(workflow_params.values())
+        # Add parameters in order based on metadata schema
+        # This ensures parameters match the workflow signature order
+        if workflow_params and 'parameters' in workflow_info.metadata:
+            param_schema = workflow_info.metadata['parameters'].get('properties', {})
+            # Iterate parameters in schema order and add values
+            for param_name in param_schema.keys():
+                param_value = workflow_params.get(param_name)
+                workflow_args.append(param_value)
 
         # Determine task queue from workflow vertical
         vertical = workflow_info.metadata.get("vertical", "default")
@@ -199,6 +202,8 @@ class TemporalManager:
             f"Starting workflow: {workflow_name} "
             f"(id={workflow_id}, queue={task_queue}, target={target_id})"
         )
+        logger.info(f"DEBUG: workflow_args = {workflow_args}")
+        logger.info(f"DEBUG: workflow_params received = {workflow_params}")
 
         try:
             # Start workflow execution with positional arguments

@@ -205,9 +205,6 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
         console=console,
     )
 
-    enable_cognee = False
-    cognee_url = ""
-
     session_db_path = fuzzforge_dir / "fuzzforge_sessions.db"
     session_db_rel = session_db_path.relative_to(fuzzforge_dir.parent)
 
@@ -219,7 +216,7 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
         f"LLM_MODEL={llm_model}",
         f"LITELLM_MODEL={llm_model}",
         f"OPENAI_API_KEY={api_key}",
-        f"FUZZFORGE_MCP_URL={os.getenv('FUZZFORGE_MCP_URL', 'http://localhost:8010/mcp')}",
+        "FUZZFORGE_MCP_URL=http://localhost:8010/mcp",
         "",
         "# Cognee configuration mirrors the primary LLM by default",
         f"LLM_COGNEE_PROVIDER={llm_provider}",

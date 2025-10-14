@@ -1,0 +1,64 @@
+name: llm_analysis
+version: "1.0.0"
+vertical: python
+description: "Uses AI/LLM to analyze code for security vulnerabilities and code quality issues"
+author: "FuzzForge Team"
+tags:
+  - "llm"
+  - "ai"
+  - "security"
+  - "static-analysis"
+  - "code-quality"
+
+# Workspace isolation mode
+workspace_isolation: "shared"
+
+default_parameters:
+  agent_url: "http://fuzzforge-task-agent:8000/a2a/litellm_agent"
+  llm_model: "gpt-4o-mini"
+  llm_provider: "openai"
+  max_files: 5
+
+parameters:
+  type: object
+  properties:
+    agent_url:
+      type: string
+      description: "A2A agent endpoint URL"
+    llm_model:
+      type: string
+      description: "LLM model to use (e.g., gpt-4o-mini, claude-3-5-sonnet)"
+    llm_provider:
+      type: string
+      description: "LLM provider (openai, anthropic, etc.)"
+    file_patterns:
+      type: array
+      items:
+        type: string
+      description: "File patterns to analyze (e.g., ['*.py', '*.js'])"
+    max_files:
+      type: integer
+      description: "Maximum number of files to analyze"
+    max_file_size:
+      type: integer
+      description: "Maximum file size in bytes"
+    timeout:
+      type: integer
+      description: "Timeout per file in seconds"
+
+output_schema:
+  type: object
+  properties:
+    sarif:
+      type: object
+      description: "SARIF-formatted security findings from LLM"
+    summary:
+      type: object
+      description: "Analysis summary"
+      properties:
+        files_analyzed:
+          type: integer
+        total_findings:
+          type: integer
+        model_used:
+          type: string

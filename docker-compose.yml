@@ -259,6 +259,8 @@ services:
     volumes:
       # Mount workflow code (read-only) for dynamic discovery
       - ./backend/toolbox:/app/toolbox:ro
+      # Mount AI module for A2A wrapper access
+      - ./ai/src:/app/ai_src:ro
       # Worker cache for downloaded targets
       - worker_python_cache:/cache
     networks:

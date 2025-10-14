@@ -1,3 +1,4 @@
+# ruff: noqa: E402  # Imports delayed for environment/logging setup
 #!/usr/bin/env python3
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -428,7 +429,7 @@ class FuzzForgeCLI:
                                         text = data['parts'][0].get('text', '')[:150]
                                         role = data.get('role', 'unknown')
                                         console.print(f"{i}. [{role}]: {text}...")
-                                except:
+                                except Exception:
                                     console.print(f"{i}. {content[:150]}...")
                         else:
                             console.print("[yellow]No matches found in SQLite either[/yellow]")

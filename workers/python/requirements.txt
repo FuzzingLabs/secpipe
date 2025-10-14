@@ -11,5 +11,8 @@ pyyaml>=6.0.0
 # HTTP Client (for real-time stats reporting)
 httpx>=0.27.0
 
+# A2A Agent Communication
+a2a-sdk[all]>=0.1.0
+
 # Fuzzing
 atheris>=2.3.0

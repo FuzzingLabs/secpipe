@@ -35,8 +35,8 @@ RUN mkdir -p /cache && chmod 755 /cache
 # Copy worker entrypoint
 COPY worker.py /app/worker.py
 
-# Add toolbox to Python path (mounted at runtime)
-ENV PYTHONPATH="/app:/app/toolbox:${PYTHONPATH}"
+# Add toolbox and AI module to Python path (mounted at runtime)
+ENV PYTHONPATH="/app:/app/toolbox:/app/ai_src:${PYTHONPATH}"
 ENV PYTHONUNBUFFERED=1
 
 # Healthcheck
