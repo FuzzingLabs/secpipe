@@ -187,33 +187,69 @@ class CogneeProjectIntegration:
         except Exception as e:
             return {"error": f"Failed to list data: {e}"}
     
+    async def cognify_text(self, text: str, dataset: str = None) -> Dict[str, Any]:
+        """
+        Cognify text content into knowledge graph
+
+        Args:
+            text: Text to cognify
+            dataset: Dataset name (defaults to project_name_codebase)
+
+        Returns:
+            Dict containing cognify results
+        """
+        if not self._initialized:
+            await self.initialize()
+
+        if not self._initialized:
+            return {"error": "Cognee not initialized"}
+
+        if not dataset:
+            dataset = f"{self.project_context['project_name']}_codebase"
+
+        try:
+            # Add text to dataset
+            await self._cognee.add([text], dataset_name=dataset)
+
+            # Process (cognify) the dataset
+            await self._cognee.cognify([dataset])
+
+            return {
+                "text_length": len(text),
+                "dataset": dataset,
+                "project": self.project_context["project_name"],
+                "status": "success"
+            }
+        except Exception as e:
+            return {"error": f"Cognify failed: {e}"}
+
     async def ingest_text_to_dataset(self, text: str, dataset: str = None) -> Dict[str, Any]:
         """
         Ingest text content into a specific dataset
-        
+
         Args:
             text: Text to ingest
             dataset: Dataset name (defaults to project_name_codebase)
-            
+
         Returns:
             Dict containing ingest results
         """
         if not self._initialized:
             await self.initialize()
-            
+
         if not self._initialized:
             return {"error": "Cognee not initialized"}
-            
+
         if not dataset:
             dataset = f"{self.project_context['project_name']}_codebase"
-            
+
         try:
             # Add text to dataset
             await self._cognee.add([text], dataset_name=dataset)
-            
+
             # Process (cognify) the dataset
             await self._cognee.cognify([dataset])
-            
+
             return {
                 "text_length": len(text),
                 "dataset": dataset,
