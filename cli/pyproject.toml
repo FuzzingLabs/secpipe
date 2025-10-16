@@ -1,6 +1,6 @@
 [project]
 name = "fuzzforge-cli"
-version = "0.6.0"
+version = "0.7.0"
 description = "FuzzForge CLI - Command-line interface for FuzzForge security testing platform"
 readme = "README.md"
 authors = [

@@ -1,6 +1,6 @@
 [project]
 name = "fuzzforge-ai"
-version = "0.6.0"
+version = "0.7.0"
 description = "FuzzForge AI orchestration module"
 readme = "README.md"
 requires-python = ">=3.11"
