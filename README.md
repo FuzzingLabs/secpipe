@@ -46,13 +46,13 @@ FuzzForge is **open source**, built to empower security teams, researchers, and 
 
 ---
 
-## ⭐ Support the Project
+## Demo - Manual Workflow Setup
 
-<a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers">
-  <img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars">
-</a>
+![Manual Workflow Demo](docs/static/videos/manual_workflow.gif)
 
-If you find FuzzForge useful, please star the repo to support development 🚀
+_Setting up and running security workflows through the interface_
+
+👉 More installation options in the [Documentation](https://docs.fuzzforge.ai).
 
 ---
 
@@ -64,6 +64,16 @@ If you find FuzzForge useful, please star the repo to support development 🚀
 - 🔗 **Fuzzer Integration** – Atheris (Python), cargo-fuzz (Rust), OSS-Fuzz campaigns
 - 🌐 **Community Marketplace** – Share workflows, corpora, PoCs, and modules
 - 🔒 **Enterprise Ready** – Team/Corp cloud tiers for scaling offensive security
+
+---
+
+## ⭐ Support the Project
+
+<a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers">
+  <img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars">
+</a>
+
+If you find FuzzForge useful, please star the repo to support development 🚀
 
 ---
 
@@ -139,7 +149,10 @@ Run your first workflow with **Temporal orchestration** and **automatic file upl
 git clone https://github.com/fuzzinglabs/fuzzforge_ai.git
 cd fuzzforge_ai
 
-# 2. Start FuzzForge with Temporal
+# 2. Copy the default LLM env config
+cp volumes/env/.env.example volumes/env/.env
+
+# 3. Start FuzzForge with Temporal
 docker compose up -d
 ```
 
@@ -163,16 +176,6 @@ ff workflow run security_assessment .    # Start workflow - CLI uploads files au
 - **MinIO**: File storage for targets (Console at http://localhost:9001)
 - **Vertical Workers**: Pre-built workers with security toolchains
 - **Backend API**: FuzzForge REST API (http://localhost:8000)
-
-### Manual Workflow Setup
-
-![Manual Workflow Demo](docs/static/videos/manual_workflow.gif)
-
-_Setting up and running security workflows through the interface_
-
-👉 More installation options in the [Documentation](https://docs.fuzzforge.ai).
-
----
 
 ## AI-Powered Workflow Execution
 
