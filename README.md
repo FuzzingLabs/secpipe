@@ -41,6 +41,8 @@
 FuzzForge is **open source**, built to empower security teams, researchers, and the community.
 
 > 🚧 FuzzForge is under active development. Expect breaking changes.
+>
+> **Note:** Fuzzing workflows (`atheris_fuzzing`, `cargo_fuzzing`, `ossfuzz_campaign`) are in early development. OSS-Fuzz integration is under heavy active development. For stable workflows, use: `security_assessment`, `gitleaks_detection`, `trufflehog_detection`, or `llm_secret_detection`.
 
 ---
 
@@ -59,7 +61,7 @@ If you find FuzzForge useful, please star the repo to support development 🚀
 - 🤖 **AI Agents for Security** – Specialized agents for AppSec, reversing, and fuzzing
 - 🛠 **Workflow Automation** – Define & execute AppSec workflows as code
 - 📈 **Vulnerability Research at Scale** – Rediscover 1-days & find 0-days with automation
-- 🔗 **Fuzzer Integration** – AFL, Honggfuzz, AFLnet, StateAFL & more
+- 🔗 **Fuzzer Integration** – Atheris (Python), cargo-fuzz (Rust), OSS-Fuzz campaigns
 - 🌐 **Community Marketplace** – Share workflows, corpora, PoCs, and modules
 - 🔒 **Enterprise Ready** – Team/Corp cloud tiers for scaling offensive security
 
