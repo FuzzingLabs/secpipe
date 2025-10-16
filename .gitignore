@@ -233,6 +233,12 @@ yarn-error.log*
 *.key
 *.p12
 *.pfx
+
+# Exception: Secret detection benchmark test files (not real secrets)
+!test_projects/secret_detection_benchmark/
+!test_projects/secret_detection_benchmark/**
+!**/secret_detection_benchmark_GROUND_TRUTH.json
+
 secret*
 secrets/
 credentials*

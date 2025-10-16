@@ -1,0 +1,12 @@
+# Keys configuration
+api_keys:
+  production:
+    # MEDIUM SECRET #16: Multi-line private key in YAML literal block
+    private_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      MIIEpAIBAAKCAQEAyLqJZvd5CZxJhLZYLFCqLV9G5k8dFz1LoNwPPfK3qE1k8H4y
+      FQwNyX3WJZNmKJLOPQMfHZQxGhHJPwZYjKQPYHJ1234567890abcdefghijklmno
+      -----END RSA PRIVATE KEY-----
+
+  # MEDIUM SECRET #17: Secret with Unicode characters
+  api_token_intl: "tøkęn_śęçrėt_ẃïth_ŭñïçődė_123456"

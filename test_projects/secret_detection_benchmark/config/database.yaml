@@ -1,0 +1,10 @@
+# Database configuration
+databases:
+  production:
+    host: prod-db.example.com
+    port: 5432
+    # EASY SECRET #6: Azure connection string
+    connection_string: "DefaultEndpointsProtocol=https;AccountName=prodstore;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;EndpointSuffix=core.windows.net"
+  staging:
+    host: staging-db.example.com
+    port: 5432
