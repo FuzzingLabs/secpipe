@@ -234,7 +234,6 @@ docker compose pull
 ## Next Steps
 
 - [Getting Started Guide](../tutorial/getting-started.md): Complete setup walkthrough
-- [Running Workflows](running-workflows.md): Execute security workflows
 - [Troubleshooting](troubleshooting.md): Fix common issues
 
 ---
