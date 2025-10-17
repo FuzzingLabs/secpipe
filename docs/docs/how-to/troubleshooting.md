@@ -10,14 +10,14 @@ Before diving into specific errors, let’s check the basics:
 
 ```bash
 # Check all FuzzForge services
-docker-compose -f docker-compose.temporal.yaml ps
+docker-compose -f docker-compose.yml ps
 
 # Verify Docker registry config (if using workflow registry)
 docker info | grep -i "insecure registries"
 
 # Test service health endpoints
 curl http://localhost:8000/health
-curl http://localhost:8233  # Temporal Web UI
+curl http://localhost:8080  # Temporal Web UI
 curl http://localhost:9000  # MinIO API
 curl http://localhost:9001  # MinIO Console
 ```
@@ -54,13 +54,13 @@ The registry isn’t running or the port is blocked.
 **How to fix:**
 - Make sure the registry container is up (if using registry for workflow images):
   ```bash
-  docker-compose -f docker-compose.temporal.yaml ps registry
+  docker-compose -f docker-compose.yml ps registry
   ```
 - Check logs for errors:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml logs registry
+  docker-compose -f docker-compose.yml logs registry
   ```
-- If port 5001 is in use, change it in `docker-compose.temporal.yaml` and your Docker config.
+- If port 5001 is in use, change it in `docker-compose.yml` and your Docker config.
 
 **Note:** With Temporal architecture, target files use MinIO (port 9000), not the registry.
 
@@ -85,11 +85,11 @@ File upload to MinIO failed or worker can't download target.
 **How to fix:**
 - Check MinIO is running:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml ps minio
+  docker-compose -f docker-compose.yml ps minio
   ```
 - Check MinIO logs:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml logs minio
+  docker-compose -f docker-compose.yml logs minio
   ```
 - Verify MinIO is accessible:
   ```bash
@@ -106,13 +106,13 @@ File upload to MinIO failed or worker can't download target.
 **How to fix:**
 - Check worker logs for details:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml logs worker-rust | tail -50
+  docker-compose -f docker-compose.yml logs worker-rust | tail -50
   ```
-- Check Temporal Web UI at http://localhost:8233 for detailed execution history
+- Check Temporal Web UI at http://localhost:8080 for detailed execution history
 - Restart services:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml down
-  docker-compose -f docker-compose.temporal.yaml up -d
+  docker-compose -f docker-compose.yml down
+  docker-compose -f docker-compose.yml up -d
   ```
 - Reduce the number of concurrent workflows if your system is resource-constrained.
 
@@ -125,18 +125,18 @@ File upload to MinIO failed or worker can't download target.
 **How to fix:**
 - Check if the service is running:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml ps fuzzforge-backend
-  docker-compose -f docker-compose.temporal.yaml ps temporal
+  docker-compose -f docker-compose.yml ps fuzzforge-backend
+  docker-compose -f docker-compose.yml ps temporal
   ```
 - View logs for errors:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml logs fuzzforge-backend --tail 50
-  docker-compose -f docker-compose.temporal.yaml logs temporal --tail 20
+  docker-compose -f docker-compose.yml logs fuzzforge-backend --tail 50
+  docker-compose -f docker-compose.yml logs temporal --tail 20
   ```
 - Restart the affected service:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml restart fuzzforge-backend
-  docker-compose -f docker-compose.temporal.yaml restart temporal
+  docker-compose -f docker-compose.yml restart fuzzforge-backend
+  docker-compose -f docker-compose.yml restart temporal
   ```
 
 ---
@@ -216,9 +216,9 @@ File upload to MinIO failed or worker can't download target.
   ```
 - Recreate the network:
   ```bash
-  docker-compose -f docker-compose.temporal.yaml down
+  docker-compose -f docker-compose.yml down
   docker network prune -f
-  docker-compose -f docker-compose.temporal.yaml up -d
+  docker-compose -f docker-compose.yml up -d
   ```
 
 ---
@@ -245,9 +245,9 @@ File upload to MinIO failed or worker can't download target.
 
 ```bash
 export TEMPORAL_LOGGING_LEVEL=DEBUG
-docker-compose -f docker-compose.temporal.yaml down
-docker-compose -f docker-compose.temporal.yaml up -d
-docker-compose -f docker-compose.temporal.yaml logs fuzzforge-backend -f
+docker-compose -f docker-compose.yml down
+docker-compose -f docker-compose.yml up -d
+docker-compose -f docker-compose.yml logs fuzzforge-backend -f
 ```
 
 ### Collect diagnostic info
@@ -258,12 +258,12 @@ Save and run this script to gather info for support:
 #!/bin/bash
 echo "=== FuzzForge Diagnostics ==="
 date
-docker-compose -f docker-compose.temporal.yaml ps
+docker-compose -f docker-compose.yml ps
 docker info | grep -A 5 -i "insecure registries"
 curl -s http://localhost:8000/health || echo "Backend unhealthy"
-curl -s http://localhost:8233 >/dev/null && echo "Temporal UI healthy" || echo "Temporal UI unhealthy"
+curl -s http://localhost:8080 >/dev/null && echo "Temporal UI healthy" || echo "Temporal UI unhealthy"
 curl -s http://localhost:9000 >/dev/null && echo "MinIO healthy" || echo "MinIO unhealthy"
-docker-compose -f docker-compose.temporal.yaml logs --tail 10
+docker-compose -f docker-compose.yml logs --tail 10
 ```
 
 ### Still stuck?

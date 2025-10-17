@@ -17,7 +17,7 @@ Before we begin, ensure you have the following installed:
 First, let's clone the FuzzForge repository:
 
 ```bash
-git clone https://github.com/FuzzingLabs/fuzzforge.git
+git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
 cd fuzzforge
 ```
 
@@ -85,7 +85,7 @@ docker pull localhost:5001/hello-world 2>/dev/null || echo "Registry not accessi
 Start all FuzzForge services:
 
 ```bash
-docker-compose -f docker-compose.temporal.yaml up -d
+docker-compose -f docker-compose.yml up -d
 ```
 
 This will start 6+ services:
@@ -101,7 +101,7 @@ Wait for all services to be healthy (this may take 2-3 minutes on first startup)
 
 ```bash
 # Check service health
-docker-compose -f docker-compose.temporal.yaml ps
+docker-compose -f docker-compose.yml ps
 
 # Verify FuzzForge is ready
 curl http://localhost:8000/health
@@ -228,7 +228,7 @@ Example output:
 
 You can monitor workflow execution in real-time using the Temporal Web UI:
 
-1. Open http://localhost:8233 in your browser
+1. Open http://localhost:8080 in your browser
 2. Navigate to "Workflows" to see workflow executions
 3. Click on a workflow to see detailed execution history and activity results
 
