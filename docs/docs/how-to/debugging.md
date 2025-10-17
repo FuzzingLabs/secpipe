@@ -8,10 +8,10 @@ This guide shows you how to debug FuzzForge workflows and modules using Temporal
 
 When something goes wrong:
 
-1. **Check worker logs** - `docker-compose -f docker-compose.temporal.yaml logs worker-rust -f`
-2. **Check Temporal UI** - http://localhost:8233 (visual execution history)
+1. **Check worker logs** - `docker-compose -f docker-compose.yml logs worker-rust -f`
+2. **Check Temporal UI** - http://localhost:8080 (visual execution history)
 3. **Check MinIO console** - http://localhost:9001 (inspect uploaded files)
-4. **Check backend logs** - `docker-compose -f docker-compose.temporal.yaml logs fuzzforge-backend -f`
+4. **Check backend logs** - `docker-compose -f docker-compose.yml logs fuzzforge-backend -f`
 
 ---
 
@@ -41,12 +41,12 @@ When something goes wrong:
 
 4. **Check worker logs for discovery errors:**
    ```bash
-   docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "my_workflow"
+   docker-compose -f docker-compose.yml logs worker-rust | grep "my_workflow"
    ```
 
 **Solution:**
 - Ensure `metadata.yaml` has correct `vertical` field
-- Restart worker to reload: `docker-compose -f docker-compose.temporal.yaml restart worker-rust`
+- Restart worker to reload: `docker-compose -f docker-compose.yml restart worker-rust`
 - Check worker logs for discovery confirmation
 
 ---
@@ -55,10 +55,10 @@ When something goes wrong:
 
 ### Using Temporal Web UI
 
-The Temporal UI at http://localhost:8233 is your primary debugging tool.
+The Temporal UI at http://localhost:8080 is your primary debugging tool.
 
 **Navigate to a workflow:**
-1. Open http://localhost:8233
+1. Open http://localhost:8080
 2. Click "Workflows" in left sidebar
 3. Find your workflow by `run_id` or workflow name
 4. Click to see detailed execution
@@ -86,13 +86,13 @@ The Temporal UI at http://localhost:8233 is your primary debugging tool.
 
 ```bash
 # Follow logs from rust worker
-docker-compose -f docker-compose.temporal.yaml logs worker-rust -f
+docker-compose -f docker-compose.yml logs worker-rust -f
 
 # Follow logs from all workers
-docker-compose -f docker-compose.temporal.yaml logs worker-rust worker-android -f
+docker-compose -f docker-compose.yml logs worker-rust worker-android -f
 
 # Show last 100 lines
-docker-compose -f docker-compose.temporal.yaml logs worker-rust --tail 100
+docker-compose -f docker-compose.yml logs worker-rust --tail 100
 ```
 
 ### What Worker Logs Show
@@ -125,16 +125,16 @@ IndentationError: expected an indented block
 
 ```bash
 # Show only errors
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep ERROR
+docker-compose -f docker-compose.yml logs worker-rust | grep ERROR
 
 # Show workflow discovery
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "Discovered workflow"
+docker-compose -f docker-compose.yml logs worker-rust | grep "Discovered workflow"
 
 # Show specific workflow execution
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "security_assessment-abc123"
+docker-compose -f docker-compose.yml logs worker-rust | grep "security_assessment-abc123"
 
 # Show activity execution
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "activity"
+docker-compose -f docker-compose.yml logs worker-rust | grep "activity"
 ```
 
 ---
@@ -156,7 +156,7 @@ docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "activity
 curl http://localhost:9000
 
 # List backend logs for upload
-docker-compose -f docker-compose.temporal.yaml logs fuzzforge-backend | grep "upload"
+docker-compose -f docker-compose.yml logs fuzzforge-backend | grep "upload"
 ```
 
 ### Check Worker Cache
@@ -230,12 +230,12 @@ Since toolbox is mounted as a volume, you can edit code on your host and reload:
 
 2. **Restart worker to reload:**
    ```bash
-   docker-compose -f docker-compose.temporal.yaml restart worker-rust
+   docker-compose -f docker-compose.yml restart worker-rust
    ```
 
 3. **Check discovery logs:**
    ```bash
-   docker-compose -f docker-compose.temporal.yaml logs worker-rust | tail -50
+   docker-compose -f docker-compose.yml logs worker-rust | tail -50
    ```
 
 ### Add Debug Logging
@@ -266,14 +266,14 @@ class MyWorkflow:
 
 Set debug logging:
 ```bash
-# Edit docker-compose.temporal.yaml
+# Edit docker-compose.yml
 services:
   worker-rust:
     environment:
       LOG_LEVEL: DEBUG  # Change from INFO to DEBUG
 
 # Restart
-docker-compose -f docker-compose.temporal.yaml restart worker-rust
+docker-compose -f docker-compose.yml restart worker-rust
 ```
 
 ---
@@ -285,7 +285,7 @@ docker-compose -f docker-compose.temporal.yaml restart worker-rust
 **Debug:**
 1. Check Temporal UI for last completed activity
 2. Check worker logs for errors
-3. Check if worker is still running: `docker-compose -f docker-compose.temporal.yaml ps worker-rust`
+3. Check if worker is still running: `docker-compose -f docker-compose.yml ps worker-rust`
 
 **Solution:**
 - Worker may have crashed - restart it
@@ -315,7 +315,7 @@ docker-compose -f docker-compose.temporal.yaml restart worker-rust
 
 **Solution:**
 - Re-upload file via CLI
-- Check MinIO is running: `docker-compose -f docker-compose.temporal.yaml ps minio`
+- Check MinIO is running: `docker-compose -f docker-compose.yml ps minio`
 - Check MinIO credentials in worker environment
 
 ---
@@ -337,7 +337,7 @@ docker-compose -f docker-compose.temporal.yaml restart worker-rust
 docker stats fuzzforge-worker-rust
 
 # Check worker logs for memory warnings
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep -i "memory\|oom"
+docker-compose -f docker-compose.yml logs worker-rust | grep -i "memory\|oom"
 ```
 
 ### Profile Workflow Execution
@@ -368,7 +368,7 @@ class MyWorkflow:
 ### Enable Temporal Worker Debug Logs
 
 ```bash
-# Edit docker-compose.temporal.yaml
+# Edit docker-compose.yml
 services:
   worker-rust:
     environment:
@@ -376,7 +376,7 @@ services:
       LOG_LEVEL: DEBUG
 
 # Restart
-docker-compose -f docker-compose.temporal.yaml restart worker-rust
+docker-compose -f docker-compose.yml restart worker-rust
 ```
 
 ### Inspect Temporal Workflows via CLI
@@ -405,7 +405,7 @@ docker exec fuzzforge-worker-rust ping temporal
 docker exec fuzzforge-worker-rust curl http://minio:9000
 
 # From host to services
-curl http://localhost:8233  # Temporal UI
+curl http://localhost:8080  # Temporal UI
 curl http://localhost:9000  # MinIO
 curl http://localhost:8000/health  # Backend
 ```
@@ -431,10 +431,10 @@ If you're still stuck:
 1. **Collect diagnostic info:**
    ```bash
    # Save all logs
-   docker-compose -f docker-compose.temporal.yaml logs > fuzzforge-logs.txt
+   docker-compose -f docker-compose.yml logs > fuzzforge-logs.txt
 
    # Check service status
-   docker-compose -f docker-compose.temporal.yaml ps > service-status.txt
+   docker-compose -f docker-compose.yml ps > service-status.txt
    ```
 
 2. **Check Temporal UI** and take screenshots of:

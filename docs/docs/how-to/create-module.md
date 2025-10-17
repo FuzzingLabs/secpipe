@@ -25,7 +25,7 @@ All FuzzForge modules inherit from a common `BaseModule` interface and use Pydan
 - `ModuleResult`: Standardized result format for module execution
 - `ModuleMetadata`: Describes module capabilities and requirements
 
-Modules are located in `backend/src/toolbox/modules/`.
+Modules are located in `backend/toolbox/modules/`.
 
 ---
 
@@ -34,7 +34,7 @@ Modules are located in `backend/src/toolbox/modules/`.
 Let’s create a simple example: a **License Scanner** module that detects license files and extracts license information.
 
 Create a new file:
-`backend/src/toolbox/modules/license_scanner.py`
+`backend/toolbox/modules/license_scanner.py`
 
 ```python
 import re
@@ -98,7 +98,7 @@ class LicenseScanner(BaseModule):
 
 ## Step 3: Register Your Module
 
-Add your module to `backend/src/toolbox/modules/__init__.py`:
+Add your module to `backend/toolbox/modules/__init__.py`:
 
 ```python
 from .license_scanner import LicenseScanner
@@ -115,7 +115,7 @@ Create a test file (e.g., `test_license_scanner.py`) and run your module against
 ```python
 import asyncio
 from pathlib import Path
-from backend.src.toolbox.modules.license_scanner import LicenseScanner
+from toolbox.modules.license_scanner import LicenseScanner
 
 async def main():
     workspace = Path("/path/to/your/test/project")

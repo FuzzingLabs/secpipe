@@ -134,14 +134,16 @@ FuzzForge supports the Model Context Protocol (MCP), allowing LLM clients and AI
 {
   "tool": "submit_security_scan_mcp",
   "parameters": {
-    "workflow_name": "infrastructure_scan",
+    "workflow_name": "security_assessment",
     "target_path": "/path/to/your/project",
     "parameters": {
-      "checkov_config": {
-        "severity": ["HIGH", "MEDIUM", "LOW"]
+      "scanner_config": {
+        "patterns": ["*"],
+        "check_sensitive": true
       },
-      "hadolint_config": {
-        "severity": ["error", "warning", "info", "style"]
+      "analyzer_config": {
+        "file_extensions": [".py", ".js"],
+        "check_secrets": true
       }
     }
   }
@@ -161,11 +163,16 @@ FuzzForge supports the Model Context Protocol (MCP), allowing LLM clients and AI
 
 ### Available Workflows
 
-1. **infrastructure_scan** — Docker/Kubernetes/Terraform security analysis
-2. **static_analysis_scan** — Code vulnerability detection
-3. **secret_detection_scan** — Credential and secret scanning
-4. **penetration_testing_scan** — Network and web app testing
-5. **security_assessment** — Comprehensive security evaluation
+**Production-ready:**
+1. **security_assessment** — Comprehensive security analysis (secrets, SQL, dangerous functions)
+2. **gitleaks_detection** — Pattern-based secret scanning
+3. **trufflehog_detection** — Pattern-based secret scanning
+4. **llm_secret_detection** — AI-powered secret detection (requires API key)
+
+**In development:**
+- **atheris_fuzzing** — Python fuzzing
+- **cargo_fuzzing** — Rust fuzzing
+- **ossfuzz_campaign** — OSS-Fuzz integration
 
 ### MCP Client Configuration Example
 
@@ -192,7 +199,7 @@ FuzzForge supports the Model Context Protocol (MCP), allowing LLM clients and AI
   `curl http://localhost:8000/workflows/`
 
 - **Scan Submission Errors:**
-  `curl -X POST http://localhost:8000/workflows/infrastructure_scan/submit -H "Content-Type: application/json" -d '{"target_path": "/your/path"}'`
+  `curl -X POST http://localhost:8000/workflows/security_assessment/submit -H "Content-Type: application/json" -d '{"target_path": "/your/path"}'`
 
 - **General Support:**
   - Check Docker Compose logs: `docker compose logs fuzzforge-backend`

@@ -8,16 +8,13 @@ Welcome to FuzzForge, a comprehensive security analysis platform built on Tempor
 Perfect for newcomers who want to learn FuzzForge step by step.
 
 - [**Getting Started**](tutorials/getting-started.md) - Complete setup from installation to first workflow
-- [**First Workflow**](tutorials/first-workflow.md) - Run your first security workflow
-- [**Building Custom Workflows**](tutorials/building-custom-workflow.md) - Create and deploy custom workflows
 
 ### 🛠️ **How-To Guides** - *Problem-focused solutions*
 Step-by-step guides for specific tasks and common problems.
 
-- [**Installation**](how-to/installation.md) - Install FuzzForge with proper Docker setup
-- [**Docker Setup**](how-to/docker-setup.md) - Configure Docker with insecure registry (required)
-- [**Running Workflows**](how-to/running-workflows.md) - Execute different workflow types
-- [**CLI Usage**](how-to/cli-usage.md) - Command-line interface patterns
+- [**Docker Setup**](how-to/docker-setup.md) - Docker requirements and worker profiles
+- [**Create Workflow**](how-to/create-workflow.md) - Build custom security workflows
+- [**Create Module**](how-to/create-module.md) - Develop security analysis modules
 - [**API Integration**](how-to/api-integration.md) - REST API usage and integration
 - [**MCP Integration**](how-to/mcp-integration.md) - AI assistant integration setup
 - [**Troubleshooting**](how-to/troubleshooting.md) - Common issues and solutions
@@ -59,16 +56,19 @@ Technical reference materials and specifications.
 
 ## 🎯 FuzzForge at a Glance
 
-**6 Production Workflows:**
-- Static Analysis (Semgrep, Bandit, CodeQL)
-- Secret Detection (TruffleHog, Gitleaks, detect-secrets)
-- Infrastructure Scan (Checkov, Hadolint, Kubesec)
-- Penetration Testing (Nuclei, Nmap, SQLMap, Nikto)
-- Language Fuzzing (AFL++, libFuzzer, Cargo Fuzz)
-- Security Assessment (Comprehensive multi-tool analysis)
+**Production-Ready Workflows:**
+- Security Assessment - Regex-based analysis for secrets, SQL injection, dangerous functions
+- Gitleaks Detection - Pattern-based secret scanning
+- TruffleHog Detection - Pattern-based secret scanning
+- LLM Secret Detection - AI-powered secret detection (requires API key)
+
+**Development Workflows:**
+- Atheris Fuzzing - Python fuzzing (early development)
+- Cargo Fuzzing - Rust fuzzing (early development)
+- OSS-Fuzz Campaign - OSS-Fuzz integration (heavy development)
 
 **Multiple Interfaces:**
-- 💻 **CLI**: `fuzzforge runs submit static_analysis_scan /path/to/code`
+- 💻 **CLI**: `fuzzforge workflow run security_assessment /path/to/code`
 - 🐍 **Python SDK**: Programmatic workflow integration
 - 🌐 **REST API**: HTTP-based workflow management
 - 🤖 **MCP**: AI assistant integration (Claude, ChatGPT)
@@ -84,17 +84,17 @@ Technical reference materials and specifications.
 
 ## 🚨 Important Setup Requirement
 
-**Docker Insecure Registry Configuration Required**
+**Environment Configuration Required**
 
-FuzzForge uses a local Docker registry for workflow images. You **must** configure Docker to allow insecure registries:
+Before starting FuzzForge, you **must** create the environment configuration file:
 
-```json
-{
-  "insecure-registries": ["localhost:5001"]
-}
+```bash
+cp volumes/env/.env.example volumes/env/.env
 ```
 
-See [Docker Setup Guide](how-to/docker-setup.md) for detailed configuration instructions.
+Docker Compose will fail without this file. You can leave it with default values if you're only using basic workflows (no AI features).
+
+See [Getting Started Guide](tutorials/getting-started.md) for detailed setup instructions.
 
 ---
 

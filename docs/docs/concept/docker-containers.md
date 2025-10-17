@@ -141,7 +141,7 @@ Example build:
 cd workers/rust
 docker build -t fuzzforge-worker-rust:latest .
 # Or via docker-compose
-docker-compose -f docker-compose.temporal.yaml build worker-rust
+docker-compose -f docker-compose.yml build worker-rust
 ```
 
 ---

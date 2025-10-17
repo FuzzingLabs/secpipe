@@ -45,7 +45,7 @@ Each FuzzForge workflow produces a SARIF "run" containing:
     "driver": {
       "name": "FuzzForge",
       "version": "1.0.0",
-      "informationUri": "https://github.com/FuzzingLabs/fuzzforge",
+      "informationUri": "https://github.com/FuzzingLabs/fuzzforge_ai",
       "organization": "FuzzingLabs",
       "rules": [ /* Security rules applied */ ]
     },

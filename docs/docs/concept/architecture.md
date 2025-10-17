@@ -52,14 +52,14 @@ graph TB
     end
 
     subgraph "Execution Layer"
-        Docker[Docker Engine]
-        Containers[Workflow Containers]
-        Registry[Docker Registry]
+        VerticalWorkers[Vertical Worker Containers]
+        Tools[Pre-installed Toolchains]
+        WorkerCache[Worker Cache /cache]
     end
 
     subgraph "Storage Layer"
         PostgreSQL[PostgreSQL Database]
-        Volumes[Docker Volumes]
+        MinIO[MinIO S3 Storage]
         Cache[Result Cache]
     end
 
@@ -73,15 +73,15 @@ graph TB
 
     Temporal --> Workers
     Workers --> Scheduler
-    Scheduler --> Docker
+    Scheduler --> VerticalWorkers
 
-    Docker --> Containers
-    Docker --> Registry
-    Containers --> Volumes
+    VerticalWorkers --> Tools
+    VerticalWorkers --> WorkerCache
+    VerticalWorkers --> MinIO
 
     FastAPI --> PostgreSQL
     Workers --> PostgreSQL
-    Containers --> Cache
+    FastAPI --> MinIO
 ```
 
 ## What Are the Main Components?
@@ -201,7 +201,6 @@ services:
 
 Example configuration:
 ```bash
-COMPOSE_PROJECT_NAME=fuzzforge
 DATABASE_URL=postgresql://postgres:postgres@postgres:5432/fuzzforge
 TEMPORAL_ADDRESS=temporal:7233
 S3_ENDPOINT=http://minio:9000

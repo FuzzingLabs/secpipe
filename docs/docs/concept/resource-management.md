@@ -124,7 +124,7 @@ docker ps -a --filter "name=fuzzforge-worker"
 
 ## Level 1: Docker Container Limits (Primary)
 
-Docker container limits are the **primary enforcement mechanism** for CPU and memory resources. These are configured in `docker-compose.temporal.yaml` and enforced by the Docker runtime.
+Docker container limits are the **primary enforcement mechanism** for CPU and memory resources. These are configured in `docker-compose.yml` and enforced by the Docker runtime.
 
 ### Configuration
 
@@ -267,10 +267,10 @@ Check how many workflows are running:
 
 ```bash
 # View worker logs
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "Starting"
+docker-compose -f docker-compose.yml logs worker-rust | grep "Starting"
 
 # Check Temporal UI
-# Open http://localhost:8233
+# Open http://localhost:8080
 # Navigate to "Task Queues" → "rust" → See pending/running counts
 ```
 
@@ -324,7 +324,7 @@ class SecurityAssessmentWorkflow:
 ```
 
 **Check timeout in Temporal UI:**
-1. Open http://localhost:8233
+1. Open http://localhost:8080
 2. Navigate to workflow execution
 3. See "Timeout" in workflow details
 4. If exceeded, status shows "TIMED_OUT"
@@ -383,7 +383,7 @@ Watch for these warning signs:
 
 ```bash
 # Check for OOM kills
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep -i "oom\|killed"
+docker-compose -f docker-compose.yml logs worker-rust | grep -i "oom\|killed"
 
 # Check for CPU throttling
 docker stats fuzzforge-worker-rust
@@ -413,7 +413,7 @@ To handle more workflows, scale worker containers horizontally:
 
 ```bash
 # Scale rust worker to 3 instances
-docker-compose -f docker-compose.temporal.yaml up -d --scale worker-rust=3
+docker-compose -f docker-compose.yml up -d --scale worker-rust=3
 
 # Now you can run:
 # - 3 workers × 5 concurrent activities = 15 workflows simultaneously
@@ -435,13 +435,13 @@ docker-compose -f docker-compose.temporal.yaml up -d --scale worker-rust=3
 **Diagnosis:**
 ```bash
 # Check worker is alive
-docker-compose -f docker-compose.temporal.yaml ps worker-rust
+docker-compose -f docker-compose.yml ps worker-rust
 
 # Check worker resource usage
 docker stats fuzzforge-worker-rust
 
 # Check for OOM kills
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep -i oom
+docker-compose -f docker-compose.yml logs worker-rust | grep -i oom
 ```
 
 **Solution:**
@@ -459,7 +459,7 @@ docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep -i oom
 docker exec fuzzforge-worker-rust env | grep MAX_CONCURRENT_ACTIVITIES
 
 # Check current workload
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "Starting"
+docker-compose -f docker-compose.yml logs worker-rust | grep "Starting"
 ```
 
 **Solution:**
@@ -557,10 +557,10 @@ Check cache size and cleanup logs:
 docker exec fuzzforge-worker-rust du -sh /cache
 
 # Monitor cache evictions
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep "Evicted from cache"
+docker-compose -f docker-compose.yml logs worker-rust | grep "Evicted from cache"
 
 # Check download vs cache hit rate
-docker-compose -f docker-compose.temporal.yaml logs worker-rust | grep -E "Cache (HIT|MISS)"
+docker-compose -f docker-compose.yml logs worker-rust | grep -E "Cache (HIT|MISS)"
 ```
 
 See the [Workspace Isolation](/docs/concept/workspace-isolation) guide for complete details on isolation modes and when to use each.
@@ -588,7 +588,7 @@ FuzzForge's resource management strategy:
 ---
 
 **Next Steps:**
-- Review `docker-compose.temporal.yaml` resource configuration
+- Review `docker-compose.yml` resource configuration
 - Profile your workflows to determine actual resource usage
 - Adjust limits based on monitoring data
 - Set up alerts for resource exhaustion

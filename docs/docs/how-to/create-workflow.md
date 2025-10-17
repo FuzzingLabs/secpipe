@@ -397,7 +397,7 @@ class DependencyAnalysisWorkflow:
 
 ```bash
 # Start FuzzForge with Temporal
-docker-compose -f docker-compose.temporal.yaml up -d
+docker-compose -f docker-compose.yml up -d
 
 # Wait for services to initialize
 sleep 10
@@ -445,7 +445,7 @@ client.close()
 
 ### Check Temporal UI
 
-Open http://localhost:8233 to see:
+Open http://localhost:8080 to see:
 - Workflow execution timeline
 - Activity results
 - Logs and errors

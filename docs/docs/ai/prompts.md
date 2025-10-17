@@ -20,7 +20,7 @@ Use the `fuzzforge ai agent` shell to mix structured slash commands with natural
 You> list available fuzzforge workflows
 Assistant> [returns workflow names, descriptions, and required parameters]
 
-You> run fuzzforge workflow static_analysis_scan on ./backend with target_branch=main
+You> run fuzzforge workflow security_assessment on ./backend
 Assistant> Submits the run, emits TaskStatusUpdateEvent entries, and links the SARIF artifact when complete.
 
 You> show findings for that run once it finishes
