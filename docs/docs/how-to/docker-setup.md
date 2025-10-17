@@ -1,226 +1,242 @@
-# How to Configure Docker for FuzzForge
+# Docker Requirements for FuzzForge
 
-Getting Docker set up correctly is essential for running FuzzForge workflows. This guide will walk you through the process, explain why each step matters, and help you troubleshoot common issues—so you can get up and running with confidence.
-
----
-
-## Why Does FuzzForge Need Special Docker Configuration?
-
-FuzzForge builds and runs custom workflow images using a local Docker registry at `localhost:5001`. By default, Docker only trusts secure (HTTPS) registries, so you need to explicitly allow this local, insecure registry for development. Without this, workflows that build or pull images will fail.
+FuzzForge runs entirely in Docker containers with Temporal orchestration. This guide covers system requirements, worker profiles, and resource management to help you run FuzzForge efficiently.
 
 ---
 
-## Quick Setup: The One-Liner
+## System Requirements
 
-Add this to your Docker daemon configuration:
+### Docker Version
 
-```json
-{
-  "insecure-registries": ["localhost:5001"]
-}
+- **Docker Engine**: 20.10.0 or later
+- **Docker Compose**: 2.0.0 or later
+
+Verify your installation:
+
+```bash
+docker --version
+docker compose version
 ```
 
-After editing, **restart Docker** for changes to take effect.
+### Hardware Requirements
+
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| CPU | 2 cores | 4+ cores |
+| RAM | 4 GB | 8 GB+ |
+| Disk | 20 GB free | 50 GB+ free |
+| Network | Internet access | Stable connection |
+
+### Port Requirements
+
+FuzzForge services use these ports (must be available):
+
+| Port | Service | Purpose |
+|------|---------|---------|
+| 8000 | Backend API | FastAPI server |
+| 8080 | Temporal UI | Workflow monitoring |
+| 7233 | Temporal gRPC | Workflow execution |
+| 9000 | MinIO API | S3-compatible storage |
+| 9001 | MinIO Console | Storage management |
+| 5432 | PostgreSQL | Temporal database |
+
+Check for port conflicts:
+
+```bash
+# macOS/Linux
+lsof -i :8000,8080,7233,9000,9001,5432
+
+# Or just try starting FuzzForge
+docker compose -f docker-compose.yml up -d
+```
 
 ---
 
-## Step-by-Step: Platform-Specific Instructions
+## Worker Profiles (Resource Optimization)
 
-### Docker Desktop (macOS & Windows)
+FuzzForge uses Docker Compose **profiles** to prevent workers from auto-starting. This saves 5-7GB of RAM by only running workers when needed.
 
-#### Using the Docker Desktop UI
+### Profile Configuration
 
-1. Open Docker Desktop.
-2. Go to **Settings** (Windows) or **Preferences** (macOS).
-3. Navigate to **Docker Engine**.
-4. Add or update the `"insecure-registries"` section as shown above.
-5. Click **Apply & Restart**.
-6. Wait for Docker to restart (this may take a minute).
-
-#### Editing the Config File Directly
-
-- **macOS:** Edit `~/.docker/daemon.json`
-- **Windows:** Edit `%USERPROFILE%\.docker\daemon.json`
-
-Add or update the `"insecure-registries"` entry, then restart Docker Desktop.
-
----
-
-### Docker Engine (Linux)
-
-1. Edit (or create) `/etc/docker/daemon.json`:
-   ```bash
-   sudo nano /etc/docker/daemon.json
-   ```
-2. Add:
-   ```json
-   {
-     "insecure-registries": ["localhost:5001"]
-   }
-   ```
-3. Restart Docker:
-   ```bash
-   sudo systemctl restart docker
-   ```
-4. Confirm Docker is running:
-   ```bash
-   sudo systemctl status docker
-   ```
-
-#### Alternative: Systemd Drop-in (Advanced)
-
-If you prefer, you can use a systemd override to add the registry flag. See the original guide for details.
-
----
-
-## Verifying Your Configuration
-
-1. **Check Docker’s registry settings:**
-   ```bash
-   docker info | grep -i "insecure registries"
-   ```
-   You should see `localhost:5001` listed.
-
-2. **Test the registry:**
-   ```bash
-   curl -f http://localhost:5001/v2/ && echo "✅ Registry accessible" || echo "❌ Registry not accessible"
-   ```
-
-3. **Try pushing and pulling an image:**
-   ```bash
-   docker pull hello-world
-   docker tag hello-world localhost:5001/hello-world:test
-   docker push localhost:5001/hello-world:test
-   docker rmi localhost:5001/hello-world:test
-   docker pull localhost:5001/hello-world:test
-   ```
-
----
-
-## Worker Profiles (Resource Optimization - v0.7.0)
-
-FuzzForge workers use Docker Compose profiles to prevent auto-startup:
+Workers are configured with profiles in `docker-compose.yml`:
 
 ```yaml
-# docker-compose.yml
 worker-ossfuzz:
   profiles:
     - workers    # For starting all workers
     - ossfuzz    # For starting just this worker
   restart: "no"  # Don't auto-restart
+
+worker-python:
+  profiles:
+    - workers
+    - python
+  restart: "no"
+
+worker-rust:
+  profiles:
+    - workers
+    - rust
+  restart: "no"
 ```
 
-### Behavior
+### Default Behavior
 
-- **`docker-compose up -d`**: Workers DON'T start (saves ~6-7GB RAM)
-- **CLI workflows**: Workers start automatically on-demand
-- **Manual start**: `docker start fuzzforge-worker-ossfuzz`
+**`docker compose up -d`** starts only core services:
+- temporal
+- temporal-ui
+- postgresql
+- minio
+- minio-setup
+- backend
+- task-agent
 
-### Resource Savings
+Workers remain stopped until needed.
+
+### On-Demand Worker Startup
+
+When you run a workflow via the CLI, FuzzForge automatically starts the required worker:
+
+```bash
+# Automatically starts worker-python
+fuzzforge workflow run atheris_fuzzing ./project
+
+# Automatically starts worker-rust
+fuzzforge workflow run cargo_fuzzing ./rust-project
+
+# Automatically starts worker-secrets
+fuzzforge workflow run secret_detection ./codebase
+```
+
+### Manual Worker Management
+
+Start specific workers when needed:
+
+```bash
+# Start a single worker
+docker start fuzzforge-worker-python
+
+# Start all workers at once (uses more RAM)
+docker compose --profile workers up -d
+
+# Stop a worker to free resources
+docker stop fuzzforge-worker-ossfuzz
+```
+
+### Resource Comparison
 
 | Command | Workers Started | RAM Usage |
 |---------|----------------|-----------|
-| `docker-compose up -d` | None (core only) | ~1.2 GB |
-| `ff workflow run ossfuzz_campaign .` | ossfuzz worker only | ~3-5 GB |
-| `docker-compose --profile workers up -d` | All workers | ~8 GB |
+| `docker compose up -d` | None (core only) | ~1.2 GB |
+| `fuzzforge workflow run atheris_fuzzing .` | Python worker only | ~2-3 GB |
+| `fuzzforge workflow run ossfuzz_campaign .` | OSS-Fuzz worker only | ~3-5 GB |
+| `docker compose --profile workers up -d` | All workers | ~8 GB |
 
-### Starting All Workers (Legacy Behavior)
+---
 
-If you prefer the old behavior where all workers start:
+## Storage Management
+
+### Docker Volume Cleanup
+
+FuzzForge creates Docker volumes for persistent data. Clean them up periodically:
 
 ```bash
-docker-compose --profile workers up -d
+# Remove unused volumes (safe - keeps volumes for running containers)
+docker volume prune
+
+# List FuzzForge volumes
+docker volume ls | grep fuzzforge
+
+# Remove specific volume (WARNING: deletes data)
+docker volume rm fuzzforge_minio-data
+```
+
+### Cache Directory
+
+Workers use `/cache` inside containers for downloaded targets. This is managed automatically with LRU eviction, but you can check usage:
+
+```bash
+# Check cache usage in a worker
+docker exec fuzzforge-worker-python du -sh /cache
+
+# Clear cache manually if needed (safe - will re-download targets)
+docker exec fuzzforge-worker-python rm -rf /cache/*
 ```
 
 ---
 
-## Common Issues & How to Fix Them
+## Environment Configuration
 
-### "x509: certificate signed by unknown authority"
+FuzzForge requires `volumes/env/.env` to start. This file contains API keys and configuration:
 
-- **What’s happening?** Docker is trying to use HTTPS for the registry.
-- **How to fix:** Double-check your `"insecure-registries"` config and restart Docker.
+```bash
+# Copy the example file
+cp volumes/env/.env.example volumes/env/.env
 
-### "connection refused" to localhost:5001
+# Edit to add your API keys (if using AI features)
+nano volumes/env/.env
+```
 
-- **What’s happening?** The registry isn’t running or the port is blocked.
-- **How to fix:** Make sure FuzzForge services are up (`docker compose ps`), and that nothing else is using port 5001.
-
-### Docker Desktop doesn’t apply settings
-
-- **How to fix:** Fully quit and restart Docker Desktop. Check for typos in your JSON config.
-
-### "permission denied" on Linux
-
-- **How to fix:** Add your user to the `docker` group:
-  ```bash
-  sudo usermod -aG docker $USER
-  newgrp docker
-  ```
+See [Getting Started](../tutorial/getting-started.md) for detailed environment setup.
 
 ---
 
-## Security Notes
+## Troubleshooting
 
-- Using an insecure registry on `localhost:5001` is safe for local development.
-- For production, always use a secure (HTTPS) registry and proper authentication.
+### Services Won't Start
+
+**Check ports are available:**
+```bash
+docker compose -f docker-compose.yml ps
+lsof -i :8000,8080,7233,9000,9001
+```
+
+**Check Docker resources:**
+```bash
+docker system df
+docker system prune  # Free up space if needed
+```
+
+### Worker Memory Issues
+
+If workers crash with OOM (out of memory) errors:
+
+1. **Close other applications** to free RAM
+2. **Start only needed workers** (don't use `--profile workers`)
+3. **Increase Docker Desktop memory limit** (Settings → Resources)
+4. **Monitor usage**: `docker stats`
+
+### Slow Worker Startup
+
+Workers pull large images (~2-5GB each) on first run:
+
+```bash
+# Check download progress
+docker compose logs worker-python -f
+
+# Pre-pull images (optional)
+docker compose pull
+```
 
 ---
 
-## Where Are Docker Config Files?
+## Best Practices
 
-- **Docker Desktop (macOS):** `~/.docker/daemon.json`
-- **Docker Desktop (Windows):** `%USERPROFILE%\.docker\daemon.json`
-- **Docker Engine (Linux):** `/etc/docker/daemon.json`
-
-**Tip:** Always back up your config before making changes.
-
----
-
-## Advanced: Example Configurations
-
-### Minimal
-
-```json
-{
-  "insecure-registries": ["localhost:5001"]
-}
-```
-
-### With Logging and Storage Options
-
-```json
-{
-  "insecure-registries": ["localhost:5001"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "10m",
-    "max-file": "3"
-  },
-  "storage-driver": "overlay2"
-}
-```
-
-### Multiple Registries
-
-```json
-{
-  "insecure-registries": [
-    "localhost:5001",
-    "192.168.1.100:5000",
-    "registry.internal:5000"
-  ]
-}
-```
+1. **Default startup**: Use `docker compose up -d` (core services only)
+2. **Let CLI manage workers**: Workers start automatically when workflows run
+3. **Stop unused workers**: Free RAM when not running workflows
+4. **Monitor resources**: `docker stats` shows real-time usage
+5. **Regular cleanup**: `docker system prune` removes unused images/containers
+6. **Backup volumes**: `docker volume ls` shows persistent data locations
 
 ---
 
 ## Next Steps
 
-- [Getting Started Guide](../tutorial/getting-started.md): Continue with FuzzForge setup.
-- [Troubleshooting](troubleshooting.md): For more help if things don’t work.
+- [Getting Started Guide](../tutorial/getting-started.md): Complete setup walkthrough
+- [Running Workflows](running-workflows.md): Execute security workflows
+- [Troubleshooting](troubleshooting.md): Fix common issues
 
 ---
 
-**Remember:**
-After any Docker config change, always restart Docker and verify your settings with `docker info` before running FuzzForge.
+**Remember:** FuzzForge's on-demand worker startup saves resources. You don't need to manually manage workers - the CLI does it automatically!

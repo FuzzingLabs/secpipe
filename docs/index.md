@@ -84,17 +84,17 @@ Technical reference materials and specifications.
 
 ## 🚨 Important Setup Requirement
 
-**Docker Insecure Registry Configuration Required**
+**Environment Configuration Required**
 
-FuzzForge uses a local Docker registry for workflow images. You **must** configure Docker to allow insecure registries:
+Before starting FuzzForge, you **must** create the environment configuration file:
 
-```json
-{
-  "insecure-registries": ["localhost:5001"]
-}
+```bash
+cp volumes/env/.env.example volumes/env/.env
 ```
 
-See [Docker Setup Guide](how-to/docker-setup.md) for detailed configuration instructions.
+Docker Compose will fail without this file. You can leave it with default values if you're only using basic workflows (no AI features).
+
+See [Getting Started Guide](tutorials/getting-started.md) for detailed setup instructions.
 
 ---
 

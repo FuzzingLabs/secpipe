@@ -18,67 +18,39 @@ First, let's clone the FuzzForge repository:
 
 ```bash
 git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
-cd fuzzforge
+cd fuzzforge_ai
 ```
 
-Create the required environment configuration:
+## Step 2: Configure Environment (Required)
+
+**⚠️ This step is mandatory - Docker Compose will fail without it.**
+
+Create the environment configuration file:
 
 ```bash
-echo "COMPOSE_PROJECT_NAME=fuzzforge" > .env
+cp volumes/env/.env.example volumes/env/.env
 ```
 
-## Step 2: Configure Docker (Critical Step)
+This file is required for FuzzForge to start. You can leave it with default values if you're only using basic workflows.
 
-**⚠️ This step is mandatory - workflows will fail without proper Docker configuration.**
+### When you need to add API keys:
 
-FuzzForge uses a local Docker registry at `localhost:5001` for workflow images. You must configure Docker to allow this insecure registry.
+Edit `volumes/env/.env` and add your API keys if using:
+- **AI-powered workflows**: `llm_secret_detection`
+- **AI agent**: `ff ai agent`
 
-### For Docker Desktop (macOS/Windows):
-
-1. Open Docker Desktop
-2. Go to Settings/Preferences → Docker Engine
-3. Add the following to the JSON configuration:
-
-```json
-{
-  "builder": {
-    "gc": {
-      "defaultKeepStorage": "20GB",
-      "enabled": true
-    }
-  },
-  "experimental": false,
-  "insecure-registries": [
-    "localhost:5001"
-  ]
-}
+Example:
+```env
+LITELLM_MODEL=gpt-4o-mini
+OPENAI_API_KEY=sk-your-key-here
 ```
 
-4. Click "Apply & Restart"
-
-### For Docker Engine (Linux):
-
-Edit `/etc/docker/daemon.json` (create if it doesn't exist):
-
-```json
-{
-  "insecure-registries": ["localhost:5001"]
-}
-```
-
-Restart Docker:
-```bash
-sudo systemctl restart docker
-```
-
-### Verify Docker Configuration
-
-Test that Docker can access the insecure registry:
-
-```bash
-# After starting FuzzForge (next step), this should work without certificate errors
-docker pull localhost:5001/hello-world 2>/dev/null || echo "Registry not accessible yet (normal before startup)"
-```
+### Basic workflows that don't need API keys:
+- `security_assessment`
+- `gitleaks_detection`
+- `trufflehog_detection`
+- `atheris_fuzzing`
+- `cargo_fuzzing`
 
 ## Step 3: Start FuzzForge
 
@@ -88,14 +60,23 @@ Start all FuzzForge services:
 docker-compose -f docker-compose.yml up -d
 ```
 
-This will start 6+ services:
-- **temporal**: Workflow orchestration server (includes embedded PostgreSQL for dev)
-- **minio**: S3-compatible storage for uploaded targets and results
-- **minio-setup**: One-time setup for MinIO buckets (exits after setup)
-- **fuzzforge-backend**: FastAPI backend and workflow management
-- **worker-rust**: Long-lived worker for Rust/native security analysis
-- **worker-android**: Long-lived worker for Android security analysis (if configured)
-- **worker-web**: Long-lived worker for web security analysis (if configured)
+This will start the FuzzForge platform with multiple services:
+
+**Core Services:**
+- **temporal**: Workflow orchestration server
+- **temporal-ui**: Web UI for workflow monitoring (port 8080)
+- **postgresql**: Database for Temporal state
+- **minio**: S3-compatible storage for targets and results
+- **minio-setup**: One-time MinIO bucket configuration (exits after setup)
+- **backend**: FastAPI server and workflow management API
+- **task-agent**: A2A agent coordination service
+
+**Security Workers** (vertical toolchains):
+- **worker-python**: Python security analysis and Atheris fuzzing
+- **worker-rust**: Rust/Cargo fuzzing and native code analysis
+- **worker-secrets**: Secret detection and credential scanning
+- **worker-ossfuzz**: OSS-Fuzz integration (heavy development)
+- **worker-android**: Android security analysis (early development)
 
 Wait for all services to be healthy (this may take 2-3 minutes on first startup):
 

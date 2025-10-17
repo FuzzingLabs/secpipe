@@ -10,10 +10,7 @@ Before diving into specific errors, let’s check the basics:
 
 ```bash
 # Check all FuzzForge services
-docker-compose -f docker-compose.yml ps
-
-# Verify Docker registry config (if using workflow registry)
-docker info | grep -i "insecure registries"
+docker compose -f docker-compose.yml ps
 
 # Test service health endpoints
 curl http://localhost:8000/health
@@ -26,52 +23,45 @@ If any of these commands fail, note the error message and continue below.
 
 ---
 
-## Docker Registry Problems
+## Environment Configuration Issues
 
-### "x509: certificate signed by unknown authority"
+### Docker Compose fails with "file not found" or variable errors
 
-**What’s happening?**
-Docker is trying to use HTTPS for the local registry, but it’s set up for HTTP.
+**What's happening?**
+The required `volumes/env/.env` file is missing. Docker Compose needs this file to start.
 
 **How to fix:**
-1. Add this to your Docker daemon config (e.g., `/etc/docker/daemon.json`):
-   ```json
-   {
-     "insecure-registries": ["localhost:5001"]
-   }
+```bash
+# Create the environment file from the template
+cp volumes/env/.env.example volumes/env/.env
+
+# Restart Docker Compose
+docker compose -f docker-compose.yml down
+docker compose -f docker-compose.yml up -d
+```
+
+**Note:** You can leave the `.env` file with default values if you're only using basic workflows (no AI features).
+
+### API key errors for AI features
+
+**What's happening?**
+AI-powered workflows (like `llm_secret_detection`) or the AI agent need API keys.
+
+**How to fix:**
+1. Edit `volumes/env/.env` and add your keys:
+   ```env
+   LITELLM_MODEL=gpt-4o-mini
+   OPENAI_API_KEY=sk-your-key-here
    ```
-2. Restart Docker.
-3. Confirm with:
+
+2. Restart the backend to pick up new environment variables:
    ```bash
-   docker info | grep -A 5 -i "insecure registries"
+   docker compose restart backend
    ```
 
-### "connection refused" to localhost:5001
-
-**What’s happening?**
-The registry isn’t running or the port is blocked.
-
-**How to fix:**
-- Make sure the registry container is up (if using registry for workflow images):
-  ```bash
-  docker-compose -f docker-compose.yml ps registry
-  ```
-- Check logs for errors:
-  ```bash
-  docker-compose -f docker-compose.yml logs registry
-  ```
-- If port 5001 is in use, change it in `docker-compose.yml` and your Docker config.
-
-**Note:** With Temporal architecture, target files use MinIO (port 9000), not the registry.
-
-### "no such host" error
-
-**What’s happening?**
-Docker can’t resolve `localhost`.
-
-**How to fix:**
-- Try using `127.0.0.1` instead of `localhost` in your Docker config.
-- Check your `/etc/hosts` file for a correct `127.0.0.1 localhost` entry.
+**Which workflows need API keys?**
+- ✅ **Don't need keys**: `security_assessment`, `gitleaks_detection`, `trufflehog_detection`, `atheris_fuzzing`, `cargo_fuzzing`
+- ⚠️ **Need keys**: `llm_secret_detection`, AI agent (`fuzzforge ai agent`)
 
 ---
 
@@ -189,10 +179,12 @@ File upload to MinIO failed or worker can't download target.
   ```bash
   docker system prune -f
   docker image prune -f
+  docker volume prune -f  # Remove unused volumes
   ```
-- Remove old workflow images:
+- Clean worker cache manually if needed:
   ```bash
-  docker images | grep localhost:5001 | awk '{print $3}' | xargs docker rmi -f
+  docker exec fuzzforge-worker-python rm -rf /cache/*
+  docker exec fuzzforge-worker-rust rm -rf /cache/*
   ```
 
 ### High memory usage
@@ -258,12 +250,11 @@ Save and run this script to gather info for support:
 #!/bin/bash
 echo "=== FuzzForge Diagnostics ==="
 date
-docker-compose -f docker-compose.yml ps
-docker info | grep -A 5 -i "insecure registries"
+docker compose -f docker-compose.yml ps
 curl -s http://localhost:8000/health || echo "Backend unhealthy"
 curl -s http://localhost:8080 >/dev/null && echo "Temporal UI healthy" || echo "Temporal UI unhealthy"
 curl -s http://localhost:9000 >/dev/null && echo "MinIO healthy" || echo "MinIO unhealthy"
-docker-compose -f docker-compose.yml logs --tail 10
+docker compose -f docker-compose.yml logs --tail 10
 ```
 
 ### Still stuck?
