@@ -147,6 +147,78 @@ services:
       - fuzzforge-network
 
   # ============================================================================
+  # LLM Proxy (Default) - Bifrost Gateway
+  # ============================================================================
+  llm-proxy:
+    image: maximhq/bifrost:latest
+    container_name: fuzzforge-llm-proxy
+    env_file:
+      - ./volumes/env/.env
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 8080
+      LOG_STYLE: pretty
+      OPENAI_API_KEY: ""
+    ports:
+      - "10999:8080"   # Web UI + OpenAI-compatible API
+    volumes:
+      - llm_proxy_data:/app/data
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # LLM Proxy Bootstrap - Seed providers and virtual keys
+  # ============================================================================
+  llm-proxy-bootstrap:
+    image: python:3.11-slim
+    container_name: fuzzforge-llm-proxy-bootstrap
+    depends_on:
+      llm-proxy:
+        condition: service_started
+    env_file:
+      - ./volumes/env/.env
+    environment:
+      PROXY_BASE_URL: http://llm-proxy:8080
+      ENV_FILE_PATH: /bootstrap/env/.env
+      CONFIG_FILE_PATH: /bootstrap/data/config.json
+    volumes:
+      - ./docker/scripts/bootstrap_llm_proxy.py:/app/bootstrap.py:ro
+      - ./volumes/env:/bootstrap/env
+      - llm_proxy_data:/bootstrap/data
+    networks:
+      - fuzzforge-network
+    command: ["python", "/app/bootstrap.py"]
+    restart: "no"
+
+  # ============================================================================
+  # LLM Proxy (Alternative) - LiteLLM Gateway
+  # ============================================================================
+  llm-proxy-litellm:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: fuzzforge-llm-proxy-litellm
+    profiles:
+      - proxy-litellm
+    env_file:
+      - ./volumes/env/.env
+    environment:
+      DATABASE_URL: sqlite:////var/lib/litellm/litellm.db
+      STORE_MODEL_IN_DB: "True"
+    ports:
+      - "4110:4000"   # HTTP API + UI
+    volumes:
+      - litellm_proxy_data:/var/lib/litellm
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  # ============================================================================
   # Vertical Worker: Rust/Native Security
   # ============================================================================
   # This is a template/example worker. In production, you'll have multiple
@@ -460,6 +532,9 @@ services:
       context: ./ai/agents/task_agent
       dockerfile: Dockerfile
     container_name: fuzzforge-task-agent
+    depends_on:
+      llm-proxy-bootstrap:
+        condition: service_completed_successfully
     ports:
       - "10900:8000"
     env_file:
@@ -560,6 +635,10 @@ volumes:
     name: fuzzforge_worker_ossfuzz_cache
   worker_ossfuzz_build:
     name: fuzzforge_worker_ossfuzz_build
+  llm_proxy_data:
+    name: fuzzforge_llm_proxy_data
+  litellm_proxy_data:
+    name: fuzzforge_litellm_proxy_data
   # Add more worker caches as you add verticals:
   # worker_web_cache:
   # worker_ios_cache:
@@ -593,6 +672,8 @@ networks:
 # 4. Web UIs:
 #    - Temporal UI: http://localhost:8233
 #    - MinIO Console: http://localhost:9001 (user: fuzzforge, pass: fuzzforge123)
+#    - Bifrost Proxy: http://localhost:8110 (requires --profile proxy)
+#    - LiteLLM Proxy: http://localhost:4110 (requires --profile proxy-litellm)
 #
 # 5. Resource Usage (Baseline):
 #    - Temporal: ~500MB
