@@ -1257,7 +1257,7 @@ wheels = [
 
 [[package]]
 name = "fuzzforge-ai"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "../ai" }
 dependencies = [
     { name = "a2a-sdk" },
@@ -1303,7 +1303,7 @@ dev = [
 
 [[package]]
 name = "fuzzforge-cli"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "." }
 dependencies = [
     { name = "fuzzforge-ai" },
@@ -1347,7 +1347,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "fuzzforge-sdk"
-version = "0.6.0"
+version = "0.7.0"
 source = { editable = "../sdk" }
 dependencies = [
     { name = "httpx" },
