@@ -42,6 +42,10 @@ The container binds its SQLite databases underneath the named volume `fuzzforge_
    (backed by the `fuzzforge_llm_proxy_data` volume) populated with provider entries,
    `client.drop_excess_requests=false`, and an enabled SQLite `config_store`, so
    budgets and UI-driven configuration persist exactly the way the docs expect.
+   To raise the upstream timeout beyond the 30 s default, set `BIFROST_DEFAULT_TIMEOUT_SECONDS`
+   or provider-specific overrides such as `BIFROST_ANTHROPIC_TIMEOUT_SECONDS` in
+   `volumes/env/.env` before bootstrapping; the script propagates them to the proxy’s
+   network configuration automatically.
 3. (Optional) Set `BIFROST_OPENAI_MODELS` to a comma-separated list if you want
    to scope a key to specific models (for example `openai/gpt-5,openai/gpt-5-nano`).
    When you target Responses-only models, flip `BIFROST_OPENAI_USE_RESPONSES_API=true`

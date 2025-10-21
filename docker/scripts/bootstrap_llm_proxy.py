@@ -201,10 +201,72 @@ def _should_use_responses_api(
     return False
 
 
+def _read_positive_int(
+    candidate: str | None,
+    *,
+    var_name: str,
+) -> int | None:
+    if candidate is None:
+        return None
+    value = candidate.strip()
+    if not value:
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        log(f"Ignoring non-integer timeout for {var_name}: {value}")
+        return None
+    if parsed <= 0:
+        log(f"Ignoring non-positive timeout for {var_name}: {parsed}")
+        return None
+    return parsed
+
+
+def _lookup_timeout_var(
+    var_name: str,
+    env_map: dict[str, str],
+    bifrost_map: dict[str, str],
+) -> int | None:
+    for source in (
+        bifrost_map.get(var_name),
+        env_map.get(var_name),
+        os.getenv(var_name),
+    ):
+        parsed = _read_positive_int(source, var_name=var_name)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _get_timeout_seconds(
+    provider: ProviderSpec,
+    env_map: dict[str, str],
+    bifrost_map: dict[str, str],
+) -> int | None:
+    provider_specific_var = f"BIFROST_{provider.name.upper()}_TIMEOUT_SECONDS"
+    timeout = _lookup_timeout_var(provider_specific_var, env_map, bifrost_map)
+    if timeout is not None:
+        return timeout
+    return _lookup_timeout_var("BIFROST_DEFAULT_TIMEOUT_SECONDS", env_map, bifrost_map)
+
+
+def build_network_config(
+    provider: ProviderSpec,
+    env_map: dict[str, str],
+    bifrost_map: dict[str, str],
+) -> dict[str, object] | None:
+    timeout = _get_timeout_seconds(provider, env_map, bifrost_map)
+    if timeout is None:
+        return None
+    return {"default_request_timeout_in_seconds": timeout}
+
+
 def build_provider_config_entry(
     provider: ProviderSpec,
     env_map: dict[str, str],
     bifrost_map: dict[str, str],
+    *,
+    network_config: dict[str, object] | None = None,
 ) -> dict[str, object]:
     models = get_models_for_provider(provider, env_map, bifrost_map)
     key_entry: dict[str, object] = {
@@ -216,6 +278,8 @@ def build_provider_config_entry(
         key_entry["openai_key_config"] = {"use_responses_api": True}
 
     entry: dict[str, object] = {"keys": [key_entry]}
+    if network_config:
+        entry["network_config"] = network_config
     return entry
 
 
@@ -371,6 +435,7 @@ def configure_providers() -> dict[str, dict[str, object]]:
         if not key_value:
             continue
 
+        network_config = build_network_config(provider, env_map, bifrost_map)
         payload = {
             "provider": provider.name,
             "keys": [
@@ -381,6 +446,8 @@ def configure_providers() -> dict[str, dict[str, object]]:
                 }
             ],
         }
+        if network_config:
+            payload["network_config"] = network_config
         status, body = post_json("/api/providers", payload)
         if status in {200, 201}:
             log(f"Configured provider '{provider.name}'")
@@ -403,7 +470,10 @@ def configure_providers() -> dict[str, dict[str, object]]:
                 bifrost_map[provider.env_var] = key_value
 
         config_updates[provider.name] = build_provider_config_entry(
-            provider, env_map, bifrost_map
+            provider,
+            env_map,
+            bifrost_map,
+            network_config=network_config,
         )
 
     if bifrost_lines_changed:
