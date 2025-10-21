@@ -138,7 +138,7 @@ class HotSwapState:
                         except httpx.HTTPStatusError as exc:
                             text = exc.response.text
                             raise RuntimeError(
-                                f"Bifrost responses request failed: {text}"
+                                f"LiteLLM responses request failed: {text}"
                             ) from exc
                         data = response.json()
 

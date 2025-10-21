@@ -1,149 +1,194 @@
 ---
 title: "Run the LLM Proxy"
-description: "Deploy Bifrost (default) or LiteLLM as an LLM gateway and connect it to the task agent."
+description: "Run the LiteLLM gateway that ships with FuzzForge and connect it to the task agent."
 ---
 
 ## Overview
 
-FuzzForge routes every LLM request through a proxy so that usage can be metered, priced, and rate limited per user. The repository now ships with Docker Compose profiles for two supported gateways:
+FuzzForge routes every LLM request through a LiteLLM proxy so that usage can be
+metered, priced, and rate limited per user. Docker Compose starts the proxy in a
+hardened container, while a bootstrap job seeds upstream provider secrets and
+issues a virtual key for the task agent automatically.
 
-- **Bifrost** (`maximhq/bifrost`) — default option with granular governance and budgeting
-- **LiteLLM Proxy** (`ghcr.io/berriai/litellm`) — drop-in alternative that exposes similar OpenAI-compatible endpoints
-
-Both services read provider credentials from `volumes/env/.env` and persist their internal state in dedicated Docker volumes, so configuration survives container restarts.
+LiteLLM exposes the OpenAI-compatible APIs (`/v1/*`) plus a rich admin UI. All
+traffic stays on your network and upstream credentials never leave the proxy
+container.
 
 ## Before You Start
 
-1. Copy `volumes/env/.env.example` to `volumes/env/.env` and fill in:
-   - Leave `OPENAI_API_KEY=sk-proxy-default`, or paste your raw OpenAI key if you
-     want the bootstrapper to migrate it automatically into `volumes/env/.env.bifrost`
-   - `FF_LLM_PROXY_BASE_URL` pointing to the proxy hostname inside Docker
-   - Optional `LITELLM_MASTER_KEY`/`LITELLM_SALT_KEY` if you plan to run the LiteLLM proxy
-2. When running tools outside Docker, change `FF_LLM_PROXY_BASE_URL` to the published host port (for example `http://localhost:10999`).
+1. Copy `volumes/env/.env.example` to `volumes/env/.env` and set the basics:
+   - `LITELLM_MASTER_KEY` — admin token used to manage the proxy
+   - `LITELLM_SALT_KEY` — random string used to encrypt provider credentials
+   - Provider secrets under `LITELLM_<PROVIDER>_API_KEY` (for example
+     `LITELLM_OPENAI_API_KEY`)
+   - Leave `OPENAI_API_KEY=sk-proxy-default`; the bootstrap job replaces it with a
+     LiteLLM-issued virtual key
+2. When running tools outside Docker, change `FF_LLM_PROXY_BASE_URL` to the
+   published host port (`http://localhost:10999`). Inside Docker the default
+   value `http://llm-proxy:4000` already resolves to the container.
 
-## Bifrost Gateway (default)
-
-Start the service with the new Compose profile:
+## Start the Proxy
 
 ```bash
-# Launch the proxy + UI (http://localhost:10999)
 docker compose up llm-proxy
 ```
 
-The container binds its SQLite databases underneath the named volume `fuzzforge_llm_proxy_data`, so your configuration, request logs, and issued virtual keys persist. On startup a bootstrap job seeds the default providers, creates the `fuzzforge-task-agent` virtual key, and writes the generated token back to `volumes/env/.env` so the agent picks it up automatically.
+The service publishes two things:
 
-### Configure providers
+- HTTP API + admin UI on `http://localhost:10999`
+- Persistent SQLite state inside the named volume
+  `fuzzforge_litellm_proxy_data`
 
-1. Open `http://localhost:10999` and follow the onboarding flow.
-2. Upstream keys are added automatically when the bootstrap job finds standard
-   variables such as `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc. The raw secrets
-   are mirrored into `volumes/env/.env.bifrost`, so future restarts rehydrate the
-   proxy without more manual edits. The same pass also generates `/app/data/config.json`
-   (backed by the `fuzzforge_llm_proxy_data` volume) populated with provider entries,
-   `client.drop_excess_requests=false`, and an enabled SQLite `config_store`, so
-   budgets and UI-driven configuration persist exactly the way the docs expect.
-   To raise the upstream timeout beyond the 30 s default, set `BIFROST_DEFAULT_TIMEOUT_SECONDS`
-   or provider-specific overrides such as `BIFROST_ANTHROPIC_TIMEOUT_SECONDS` in
-   `volumes/env/.env` before bootstrapping; the script propagates them to the proxy’s
-   network configuration automatically.
-3. (Optional) Set `BIFROST_OPENAI_MODELS` to a comma-separated list if you want
-   to scope a key to specific models (for example `openai/gpt-5,openai/gpt-5-nano`).
-   When you target Responses-only models, flip `BIFROST_OPENAI_USE_RESPONSES_API=true`
-   so the proxy runs them against the newer endpoint. You can still add or rotate
-   keys manually via **Providers → Add key**—reference either the migrated
-   `env.BIFROST_*` variables or paste the secret directly.
-4. (Optional) Add price caps, context window overrides, or caching policies from the same UI. Settings are stored immediately in the mounted data volume.
-
-If you prefer a file-based bootstrap, mount a `config.json` under `/app/data` that references the same environment variables:
-
-```json
-{
-  "providers": {
-    "openai": {
-      "keys": [{ "value": "env.BIFROST_OPENAI_KEY", "weight": 1.0 }]
-    }
-  }
-}
-```
-
-### Issue per-user virtual keys
-
-Virtual keys let you attach budgets and rate limits to each downstream agent. Create them from the UI (**Governance → Virtual Keys**) or via the API:
+The UI login uses the `UI_USERNAME` / `UI_PASSWORD` pair (defaults to
+`fuzzforge` / `fuzzforge123`). To change them, set the environment variables
+before you run `docker compose up`:
 
 ```bash
-curl -X POST http://localhost:10999/api/governance/virtual-keys \
-  -H "Authorization: Bearer <admin-access-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "task-agent default",
-    "user_id": "fuzzforge-task-agent",
-    "budget": {"max_limit": 10.0, "reset_duration": "1d"}
-  }'
+export UI_USERNAME=myadmin
+export UI_PASSWORD=super-secret
+docker compose up llm-proxy
 ```
 
-Use the returned `key` value as the agent's `OPENAI_API_KEY`. When making requests manually, send the header `x-bf-vk: <virtual-key>` (the task agent handles this automatically once the key is in the environment).
+You can also edit the values directly in `docker-compose.yml` if you prefer to
+check them into a different secrets manager.
 
-You can generate scoped keys for teammates the same way to give each person isolated quotas and audit trails.
+Proxy-wide settings now live in `volumes/litellm/proxy_config.yaml`. By
+default it enables `store_model_in_db` and `store_prompts_in_spend_logs`, which
+lets the UI display request/response payloads for new calls. Update this file
+if you need additional LiteLLM options and restart the `llm-proxy` container.
 
-## LiteLLM Proxy (alternative)
-
-If you prefer LiteLLM's gateway, enable the second profile:
+LiteLLM's health endpoint lives at `/health/liveliness`. You can verify it from
+another terminal:
 
 ```bash
-# Requires LITELLM_MASTER_KEY + LITELLM_SALT_KEY in volumes/env/.env
-docker compose --profile proxy-litellm up llm-proxy-litellm
+curl http://localhost:10999/health/liveliness
 ```
 
-The service exposes the admin UI at `http://localhost:4110/ui` and stores state in the `fuzzforge_litellm_proxy_data` volume (SQLite by default).
+## What the Bootstrapper Does
 
-Generate user-facing keys with the built-in `/key/generate` endpoint:
+During startup the `llm-proxy-bootstrap` container performs three actions:
+
+1. **Wait for the proxy** — Blocks until `/health/liveliness` becomes healthy.
+2. **Mirror provider secrets** — Reads `volumes/env/.env` and writes any
+   `LITELLM_*_API_KEY` values into `volumes/env/.env.litellm`. Only the proxy
+   container loads that file, so the task agent never sees the raw provider
+   credentials.
+3. **Issue the default virtual key** — Calls `/key/generate` with the master key
+   and persists the generated token back into `volumes/env/.env` (replacing the
+   `sk-proxy-default` placeholder). The key is scoped to
+   `LITELLM_DEFAULT_MODELS` when that variable is set; otherwise it uses the
+   model from `LITELLM_MODEL`.
+
+The sequence is idempotent. Existing provider secrets and virtual keys are
+reused on subsequent runs, and the allowed-model list is refreshed via
+`/key/update` if you change the defaults.
+
+## Managing Virtual Keys
+
+LiteLLM keys act as per-user credentials. The default key, named
+`task-agent default`, is created automatically for the task agent. You can issue
+more keys for teammates or CI jobs with the same management API:
 
 ```bash
-curl http://localhost:4110/key/generate \
+curl http://localhost:10999/key/generate \
   -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
   -H "Content-Type: application/json" \
   -d '{
+    "key_alias": "demo-user",
+    "user_id": "demo",
     "models": ["openai/gpt-4o-mini"],
-    "metadata": {"user": "fuzzforge-task-agent"},
-    "duration": "7d",
-    "budget": {"soft": 8.0, "hard": 10.0}
+    "duration": "30d",
+    "max_budget": 50,
+    "metadata": {"team": "sandbox"}
   }'
 ```
 
-Set the returned key as `OPENAI_API_KEY` for the task agent and update its base URL to `http://llm-proxy-litellm:4000` (or `http://localhost:4110` outside Docker).
+Use `/key/update` to adjust budgets or the allowed-model list on existing keys:
+
+```bash
+curl http://localhost:10999/key/update \
+  -H "Authorization: Bearer $LITELLM_MASTER_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "key": "sk-...",            
+    "models": ["openai/*", "anthropic/*"],
+    "max_budget": 100
+  }'
+```
+
+The admin UI (navigate to `http://localhost:10999/ui`) provides equivalent
+controls for creating keys, routing models, auditing spend, and exporting logs.
 
 ## Wiring the Task Agent
 
-Both proxies expose an OpenAI-compatible API. The LiteLLM agent only needs the base URL and a bearer token:
+The task agent already expects to talk to the proxy. Confirm these values in
+`volumes/env/.env` before launching the stack:
 
 ```bash
-FF_LLM_PROXY_BASE_URL=http://llm-proxy:8080          # or http://llm-proxy-litellm:4000 when switching proxies
-OPENAI_API_KEY=sk-proxy-default                      # virtual key issued by the gateway
+FF_LLM_PROXY_BASE_URL=http://llm-proxy:4000          # or http://localhost:10999 when outside Docker
+OPENAI_API_KEY=<virtual key created by bootstrap>
 LITELLM_MODEL=openai/gpt-5
 LITELLM_PROVIDER=openai
 ```
 
-The agent automatically forwards requests to the configured proxy and never touches the raw provider secrets. When you hot-swap models from the UI or CLI, the proxy enforces the budgets and rate limits tied to the virtual key.
+Restart the agent container after changing environment variables so the process
+picks up the updates.
 
-To verify end‑to‑end connectivity, run:
+To validate the integration end to end, call the proxy directly:
 
 ```bash
 curl -X POST http://localhost:10999/v1/chat/completions \
   -H "Authorization: Bearer $OPENAI_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-5",
+    "model": "openai/gpt-4o-mini",
     "messages": [{"role": "user", "content": "Proxy health check"}]
   }'
 ```
 
-Replace the host/port with the LiteLLM endpoint when using that gateway.
+A JSON response indicates the proxy can reach your upstream provider using the
+mirrored secrets.
 
-## Switching Between Proxies
+## Local Runtimes (Ollama, etc.)
 
-1. Stop the current proxy container.
-2. Update `FF_LLM_PROXY_BASE_URL` in `volumes/env/.env` to the new service host (`llm-proxy` or `llm-proxy-litellm`).
-3. Replace `OPENAI_API_KEY` with the virtual key generated by the selected proxy.
-4. Restart the `task-agent` container so it picks up the new environment.
+LiteLLM supports non-hosted providers as well. To route requests to a local
+runtime such as Ollama:
 
-Because the agent only knows about the OpenAI-compatible interface, no further code changes are required when alternating between Bifrost and LiteLLM.
+1. Set the appropriate provider key in the env file
+   (for Ollama, point LiteLLM at `OLLAMA_API_BASE` inside the container).
+2. Add the passthrough model either from the UI (**Models → Add Model**) or
+   by calling `/model/new` with the master key.
+3. Update `LITELLM_DEFAULT_MODELS` (and regenerate the virtual key if you want
+the default key to include it).
+
+The task agent keeps using the same OpenAI-compatible surface while LiteLLM
+handles the translation to your runtime.
+
+## Next Steps
+
+- Explore [LiteLLM's documentation](https://docs.litellm.ai/docs/simple_proxy)
+  for advanced routing, cost controls, and observability hooks.
+- Configure Slack/Prometheus integrations from the UI to monitor usage.
+- Rotate the master key periodically and store it in your secrets manager, as it
+  grants full admin access to the proxy.
+
+## Observability
+
+LiteLLM ships with OpenTelemetry hooks for traces and metrics. This repository
+already includes an OTLP collector (`otel-collector` service) and mounts a
+default configuration that forwards traces to standard output. To wire it up:
+
+1. Edit `volumes/otel/collector-config.yaml` if you want to forward to Jaeger,
+   Datadog, etc. The initial config uses the logging exporter so you can see
+   spans immediately via `docker compose logs -f otel-collector`.
+2. Customize `volumes/litellm/proxy_config.yaml` if you need additional
+   callbacks; `general_settings.otel: true` and `litellm_settings.callbacks:
+   ["otel"]` are already present so no extra code changes are required.
+3. (Optional) Override `OTEL_EXPORTER_OTLP_*` environment variables in
+   `docker-compose.yml` or your shell to point at a remote collector.
+
+After updating the configs, run `docker compose up -d otel-collector llm-proxy`
+and generate a request (for example, trigger `ff workflow run llm_analysis`).
+New traces will show up in the collector logs or whichever backend you
+configured. See the official LiteLLM guide for advanced exporter options:
+<https://docs.litellm.ai/docs/observability/opentelemetry_integration>.

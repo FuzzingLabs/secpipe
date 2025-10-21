@@ -147,22 +147,72 @@ services:
       - fuzzforge-network
 
   # ============================================================================
-  # LLM Proxy (Default) - Bifrost Gateway
+  # LLM Proxy - LiteLLM Gateway
   # ============================================================================
   llm-proxy:
-    image: maximhq/bifrost:latest
+    image: ghcr.io/berriai/litellm:main-stable
     container_name: fuzzforge-llm-proxy
+    depends_on:
+      llm-proxy-db:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
     env_file:
       - ./volumes/env/.env
+      - ./volumes/env/.env.litellm
     environment:
-      APP_HOST: 0.0.0.0
-      APP_PORT: 8080
-      LOG_STYLE: pretty
-      OPENAI_API_KEY: ""
+      PORT: 4000
+      DATABASE_URL: postgresql://litellm:litellm@llm-proxy-db:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+      UI_USERNAME: ${UI_USERNAME:-fuzzforge}
+      UI_PASSWORD: ${UI_PASSWORD:-fuzzforge123}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+    command:
+      - "--config"
+      - "/etc/litellm/proxy_config.yaml"
     ports:
-      - "10999:8080"   # Web UI + OpenAI-compatible API
+      - "10999:4000"   # Web UI + OpenAI-compatible API
     volumes:
-      - llm_proxy_data:/app/data
+      - litellm_proxy_data:/var/lib/litellm
+      - ./volumes/litellm/proxy_config.yaml:/etc/litellm/proxy_config.yaml:ro
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: fuzzforge-otel-collector
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    volumes:
+      - ./volumes/otel/collector-config.yaml:/etc/otel-collector/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  llm-proxy-db:
+    image: postgres:16
+    container_name: fuzzforge-llm-proxy-db
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d litellm -U litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - litellm_proxy_db:/var/lib/postgresql/data
     networks:
       - fuzzforge-network
     restart: unless-stopped
@@ -179,44 +229,18 @@ services:
     env_file:
       - ./volumes/env/.env
     environment:
-      PROXY_BASE_URL: http://llm-proxy:8080
+      PROXY_BASE_URL: http://llm-proxy:4000
       ENV_FILE_PATH: /bootstrap/env/.env
-      CONFIG_FILE_PATH: /bootstrap/data/config.json
+      UI_USERNAME: ${UI_USERNAME:-fuzzforge}
+      UI_PASSWORD: ${UI_PASSWORD:-fuzzforge123}
     volumes:
       - ./docker/scripts/bootstrap_llm_proxy.py:/app/bootstrap.py:ro
       - ./volumes/env:/bootstrap/env
-      - llm_proxy_data:/bootstrap/data
+      - litellm_proxy_data:/bootstrap/data
     networks:
       - fuzzforge-network
     command: ["python", "/app/bootstrap.py"]
     restart: "no"
-
-  # ============================================================================
-  # LLM Proxy (Alternative) - LiteLLM Gateway
-  # ============================================================================
-  llm-proxy-litellm:
-    image: ghcr.io/berriai/litellm:main-stable
-    container_name: fuzzforge-llm-proxy-litellm
-    profiles:
-      - proxy-litellm
-    env_file:
-      - ./volumes/env/.env
-    environment:
-      DATABASE_URL: sqlite:////var/lib/litellm/litellm.db
-      STORE_MODEL_IN_DB: "True"
-    ports:
-      - "4110:4000"   # HTTP API + UI
-    volumes:
-      - litellm_proxy_data:/var/lib/litellm
-    networks:
-      - fuzzforge-network
-    healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    restart: unless-stopped
 
   # ============================================================================
   # Vertical Worker: Rust/Native Security
@@ -635,10 +659,10 @@ volumes:
     name: fuzzforge_worker_ossfuzz_cache
   worker_ossfuzz_build:
     name: fuzzforge_worker_ossfuzz_build
-  llm_proxy_data:
-    name: fuzzforge_llm_proxy_data
   litellm_proxy_data:
     name: fuzzforge_litellm_proxy_data
+  litellm_proxy_db:
+    name: fuzzforge_litellm_proxy_db
   # Add more worker caches as you add verticals:
   # worker_web_cache:
   # worker_ios_cache:
@@ -672,8 +696,7 @@ networks:
 # 4. Web UIs:
 #    - Temporal UI: http://localhost:8233
 #    - MinIO Console: http://localhost:9001 (user: fuzzforge, pass: fuzzforge123)
-#    - Bifrost Proxy: http://localhost:8110 (requires --profile proxy)
-#    - LiteLLM Proxy: http://localhost:4110 (requires --profile proxy-litellm)
+#    - LiteLLM Proxy: http://localhost:10999
 #
 # 5. Resource Usage (Baseline):
 #    - Temporal: ~500MB
