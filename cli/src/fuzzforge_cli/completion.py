@@ -95,12 +95,6 @@ def complete_target_paths(incomplete: str) -> List[str]:
         return []
 
 
-def complete_volume_modes(incomplete: str) -> List[str]:
-    """Auto-complete volume mount modes."""
-    modes = ["ro", "rw"]
-    return [mode for mode in modes if mode.startswith(incomplete)]
-
-
 def complete_export_formats(incomplete: str) -> List[str]:
     """Auto-complete export formats."""
     formats = ["json", "csv", "html", "sarif"]
@@ -139,7 +133,6 @@ def complete_config_keys(incomplete: str) -> List[str]:
         "api_url",
         "api_timeout",
         "default_workflow",
-        "default_volume_mode",
         "project_name",
         "data_retention_days",
         "auto_save_findings",
@@ -162,11 +155,6 @@ RunIdComplete = typer.Option(
 TargetPathComplete = typer.Argument(
     autocompletion=complete_target_paths,
     help="Target path (tab completion available)"
-)
-
-VolumeModetComplete = typer.Option(
-    autocompletion=complete_volume_modes,
-    help="Volume mode: ro or rw (tab completion available)"
 )
 
 ExportFormatComplete = typer.Option(

@@ -22,7 +22,6 @@
         "parameters": {
           "workflow_name": "string",
           "target_path": "string",
-          "volume_mode": "string (ro|rw)",
           "parameters": "object"
         }
       },

@@ -217,9 +217,6 @@ services:
       context: ./workers/python
       dockerfile: Dockerfile
     container_name: fuzzforge-worker-python
-    profiles:
-      - workers
-      - python
     depends_on:
       postgresql:
         condition: service_healthy

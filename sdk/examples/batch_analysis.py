@@ -135,23 +135,18 @@ class BatchAnalyzer:
             # Determine appropriate timeout based on workflow type
             if "fuzzing" in metadata.tags:
                 timeout = 1800  # 30 minutes for fuzzing
-                volume_mode = "rw"
             elif "dynamic" in metadata.tags:
                 timeout = 900   # 15 minutes for dynamic analysis
-                volume_mode = "rw"
             else:
                 timeout = 300   # 5 minutes for static analysis
-                volume_mode = "ro"
 
         except Exception:
             # Fallback settings
             timeout = 600
-            volume_mode = "ro"
 
         # Create submission
         submission = create_workflow_submission(
             target_path=project_path,
-            volume_mode=volume_mode,
             timeout=timeout
         )
 

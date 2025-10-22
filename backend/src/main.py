@@ -212,14 +212,6 @@ def _lookup_workflow(workflow_name: str):
     metadata = info.metadata
     defaults = metadata.get("default_parameters", {})
     default_target_path = metadata.get("default_target_path") or defaults.get("target_path")
-    supported_modes = metadata.get("supported_volume_modes") or ["ro", "rw"]
-    if not isinstance(supported_modes, list) or not supported_modes:
-        supported_modes = ["ro", "rw"]
-    default_volume_mode = (
-        metadata.get("default_volume_mode")
-        or defaults.get("volume_mode")
-        or supported_modes[0]
-    )
     return {
         "name": workflow_name,
         "version": metadata.get("version", "0.6.0"),
@@ -229,9 +221,7 @@ def _lookup_workflow(workflow_name: str):
         "parameters": metadata.get("parameters", {}),
         "default_parameters": metadata.get("default_parameters", {}),
         "required_modules": metadata.get("required_modules", []),
-        "supported_volume_modes": supported_modes,
-        "default_target_path": default_target_path,
-        "default_volume_mode": default_volume_mode
+        "default_target_path": default_target_path
     }
 
 
@@ -256,10 +246,6 @@ async def list_workflows_mcp() -> Dict[str, Any]:
             "description": metadata.get("description", ""),
             "author": metadata.get("author"),
             "tags": metadata.get("tags", []),
-            "supported_volume_modes": metadata.get("supported_volume_modes", ["ro", "rw"]),
-            "default_volume_mode": metadata.get("default_volume_mode")
-            or defaults.get("volume_mode")
-            or "ro",
             "default_target_path": metadata.get("default_target_path")
             or defaults.get("target_path")
         })

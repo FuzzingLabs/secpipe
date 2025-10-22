@@ -17,7 +17,7 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from .constants import SUPPORTED_VOLUME_MODES, SUPPORTED_EXPORT_FORMATS
+from .constants import SUPPORTED_EXPORT_FORMATS
 from .exceptions import ValidationError
 
 
@@ -63,15 +63,6 @@ def validate_target_path(target_path: str, must_exist: bool = True) -> Path:
         raise ValidationError("target_path", target_path, "an existing path")
 
     return path
-
-
-def validate_volume_mode(volume_mode: str) -> None:
-    """Validate volume mode"""
-    if volume_mode not in SUPPORTED_VOLUME_MODES:
-        raise ValidationError(
-            "volume_mode", volume_mode,
-            f"one of: {', '.join(SUPPORTED_VOLUME_MODES)}"
-        )
 
 
 def validate_export_format(export_format: str) -> None:

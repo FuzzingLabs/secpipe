@@ -16,12 +16,6 @@ tags:
 # - "copy-on-write": Download once, copy for each run (balances performance and isolation)
 workspace_isolation: "isolated"
 
-default_parameters:
-  target_name: null
-  max_iterations: 1000000
-  timeout_seconds: 1800
-  sanitizer: "address"
-
 parameters:
   type: object
   properties:

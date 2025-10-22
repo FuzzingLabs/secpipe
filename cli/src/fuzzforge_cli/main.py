@@ -28,7 +28,6 @@ from .commands import (
     ai,
     ingest,
 )
-from .constants import DEFAULT_VOLUME_MODE
 from .fuzzy import enhanced_command_not_found_handler
 
 # Install rich traceback handler
@@ -184,10 +183,6 @@ def run_workflow(
         None, "--param-file", "-f",
         help="JSON file containing workflow parameters"
     ),
-    volume_mode: str = typer.Option(
-        DEFAULT_VOLUME_MODE, "--volume-mode", "-v",
-        help="Volume mount mode: ro (read-only) or rw (read-write)"
-    ),
     timeout: Optional[int] = typer.Option(
         None, "--timeout", "-t",
         help="Execution timeout in seconds"
@@ -234,7 +229,6 @@ def run_workflow(
         target_path=target,
         params=params,
         param_file=param_file,
-        volume_mode=volume_mode,
         timeout=timeout,
         interactive=interactive,
         wait=wait,
