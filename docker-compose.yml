@@ -9,8 +9,6 @@
 #   Development: docker-compose -f docker-compose.temporal.yaml up
 #   Production:  docker-compose -f docker-compose.temporal.yaml -f docker-compose.temporal.prod.yaml up
 
-version: '3.8'
-
 services:
   # ============================================================================
   # Temporal Server - Workflow Orchestration

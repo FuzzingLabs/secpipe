@@ -260,57 +260,17 @@ def workflow_main():
 
 # === Finding commands (singular) ===
 
-@finding_app.command("export")
-def export_finding(
-    execution_id: Optional[str] = typer.Argument(None, help="Execution ID (defaults to latest)"),
-    format: str = typer.Option(
-        "sarif", "--format", "-f",
-        help="Export format: sarif, json, csv"
-    ),
-    output: Optional[str] = typer.Option(
-        None, "--output", "-o",
-        help="Output file (defaults to stdout)"
-    )
+@finding_app.command("show")
+def show_finding_detail(
+    run_id: str = typer.Argument(..., help="Run ID to get finding from"),
+    rule_id: str = typer.Option(..., "--rule", "-r", help="Rule ID of the specific finding to show")
 ):
     """
-    📤 Export findings to file
+    🔍 Show detailed information about a specific finding
     """
-    from .commands.findings import export_findings
-    from .database import get_project_db
-    from .exceptions import require_project
+    from .commands.findings import show_finding
+    show_finding(run_id=run_id, rule_id=rule_id)
 
-    try:
-        require_project()
-
-        # If no ID provided, get the latest
-        if not execution_id:
-            db = get_project_db()
-            if db:
-                recent_runs = db.list_runs(limit=1)
-                if recent_runs:
-                    execution_id = recent_runs[0].run_id
-                    console.print(f"🔍 Using most recent execution: {execution_id}")
-                else:
-                    console.print("⚠️  No findings found in project database", style="yellow")
-                    return
-            else:
-                console.print("❌ No project database found", style="red")
-                return
-
-        export_findings(run_id=execution_id, format=format, output=output)
-    except Exception as e:
-        console.print(f"❌ Failed to export findings: {e}", style="red")
-
-
-@finding_app.command("analyze")
-def analyze_finding(
-    finding_id: Optional[str] = typer.Argument(None, help="Finding ID to analyze")
-):
-    """
-    🤖 AI analysis of a finding
-    """
-    from .commands.ai import analyze_finding as ai_analyze
-    ai_analyze(finding_id)
 
 @finding_app.callback(invoke_without_command=True)
 def finding_main(
@@ -320,9 +280,9 @@ def finding_main(
     View and analyze individual findings
 
     Examples:
-        fuzzforge finding                # Show latest finding
-        fuzzforge finding <id>           # Show specific finding
-        fuzzforge finding export         # Export latest findings
+        fuzzforge finding                            # Show latest finding
+        fuzzforge finding <id>                       # Show specific finding
+        fuzzforge finding show <run-id> --rule <id>  # Show specific finding detail
     """
     # Check if a subcommand is being invoked
     if ctx.invoked_subcommand is not None:
@@ -418,7 +378,7 @@ def main():
 
         # Handle finding command with pattern recognition
         if len(args) >= 2 and args[0] == 'finding':
-            finding_subcommands = ['export', 'analyze']
+            finding_subcommands = ['show']
             # Skip custom dispatching if help flags are present
             if not any(arg in ['--help', '-h', '--version', '-v'] for arg in args):
                 if args[1] not in finding_subcommands:

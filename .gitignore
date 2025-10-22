@@ -244,6 +244,10 @@ yarn-error.log*
 !**/secret_detection_benchmark_GROUND_TRUTH.json
 !**/secret_detection/results/
 
+# Exception: Allow workers/secrets/ directory (secrets detection worker)
+!workers/secrets/
+!workers/secrets/**
+
 secret*
 secrets/
 credentials*

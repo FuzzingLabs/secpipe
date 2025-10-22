@@ -365,7 +365,7 @@ def execute_workflow(
     should_auto_start = auto_start if auto_start is not None else config.workers.auto_start_workers
     should_auto_stop = auto_stop if auto_stop is not None else config.workers.auto_stop_workers
 
-    worker_container = None  # Track for cleanup
+    worker_service = None  # Track for cleanup
     worker_mgr = None
     wait_completed = False  # Track if wait completed successfully
 
@@ -384,7 +384,6 @@ def execute_workflow(
                 )
 
                 # Ensure worker is running
-                worker_container = worker_info["worker_container"]
                 worker_service = worker_info.get("worker_service", f"worker-{worker_info['vertical']}")
                 if not worker_mgr.ensure_worker_running(worker_info, auto_start=should_auto_start):
                     console.print(
@@ -434,7 +433,7 @@ def execute_workflow(
                 # Don't fail the whole operation if database save fails
                 console.print(f"⚠️  Failed to save execution to database: {e}", style="yellow")
 
-            console.print(f"\n💡 Monitor progress: [bold cyan]fuzzforge monitor stats {response.run_id}[/bold cyan]")
+            console.print(f"\n💡 Monitor progress: [bold cyan]fuzzforge monitor live {response.run_id}[/bold cyan]")
             console.print(f"💡 Check status: [bold cyan]fuzzforge workflow status {response.run_id}[/bold cyan]")
 
             # Suggest --live for fuzzing workflows
@@ -461,7 +460,7 @@ def execute_workflow(
                     console.print("\n⏹️  Live monitoring stopped (execution continues in background)", style="yellow")
                 except Exception as e:
                     console.print(f"⚠️  Failed to start live monitoring: {e}", style="yellow")
-                    console.print(f"💡 You can still monitor manually: [bold cyan]fuzzforge monitor {response.run_id}[/bold cyan]")
+                    console.print(f"💡 You can still monitor manually: [bold cyan]fuzzforge monitor live {response.run_id}[/bold cyan]")
 
             # Wait for completion if requested
             elif wait:
@@ -527,11 +526,11 @@ def execute_workflow(
         handle_error(e, "executing workflow")
     finally:
         # Stop worker if auto-stop is enabled and wait completed
-        if should_auto_stop and worker_container and worker_mgr and wait_completed:
+        if should_auto_stop and worker_service and worker_mgr and wait_completed:
             try:
                 console.print("\n🛑 Stopping worker (auto-stop enabled)...")
-                if worker_mgr.stop_worker(worker_container):
-                    console.print(f"✅ Worker stopped: {worker_container}")
+                if worker_mgr.stop_worker(worker_service):
+                    console.print(f"✅ Worker stopped: {worker_service}")
             except Exception as e:
                 console.print(
                     f"⚠️  Failed to stop worker: {e}",
@@ -608,7 +607,7 @@ def workflow_status(
 
         # Show next steps
         if status.is_running:
-            console.print(f"\n💡 Monitor live: [bold cyan]fuzzforge monitor {execution_id}[/bold cyan]")
+            console.print(f"\n💡 Monitor live: [bold cyan]fuzzforge monitor live {execution_id}[/bold cyan]")
         elif status.is_completed:
             console.print(f"💡 View findings: [bold cyan]fuzzforge finding {execution_id}[/bold cyan]")
         elif status.is_failed:
@@ -770,7 +769,7 @@ def retry_workflow(
             except Exception as e:
                 console.print(f"⚠️  Failed to save execution to database: {e}", style="yellow")
 
-            console.print(f"\n💡 Monitor progress: [bold cyan]fuzzforge monitor stats {response.run_id}[/bold cyan]")
+            console.print(f"\n💡 Monitor progress: [bold cyan]fuzzforge monitor live {response.run_id}[/bold cyan]")
 
     except Exception as e:
         handle_error(e, "retrying workflow")

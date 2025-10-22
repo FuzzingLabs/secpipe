@@ -59,66 +59,6 @@ def format_number(num: int) -> str:
         return str(num)
 
 
-@app.command("stats")
-def fuzzing_stats(
-    run_id: str = typer.Argument(..., help="Run ID to get statistics for"),
-    refresh: int = typer.Option(
-        5, "--refresh", "-r",
-        help="Refresh interval in seconds"
-    ),
-    once: bool = typer.Option(
-        False, "--once",
-        help="Show stats once and exit"
-    )
-):
-    """
-    📊 Show current fuzzing statistics for a run
-    """
-    try:
-        with get_client() as client:
-            if once:
-                # Show stats once
-                stats = client.get_fuzzing_stats(run_id)
-                display_stats_table(stats)
-            else:
-                # Live updating stats
-                console.print(f"📊 [bold]Live Fuzzing Statistics[/bold] (Run: {run_id[:12]}...)")
-                console.print(f"Refreshing every {refresh}s. Press Ctrl+C to stop.\n")
-
-                with Live(auto_refresh=False, console=console) as live:
-                    while True:
-                        try:
-                            # Check workflow status
-                            run_status = client.get_run_status(run_id)
-                            stats = client.get_fuzzing_stats(run_id)
-                            table = create_stats_table(stats)
-                            live.update(table, refresh=True)
-
-                            # Exit if workflow completed or failed
-                            if getattr(run_status, 'is_completed', False) or getattr(run_status, 'is_failed', False):
-                                final_status = getattr(run_status, 'status', 'Unknown')
-                                if getattr(run_status, 'is_completed', False):
-                                    console.print("\n✅ [bold green]Workflow completed[/bold green]", style="green")
-                                else:
-                                    console.print(f"\n⚠️ [bold yellow]Workflow ended[/bold yellow] | Status: {final_status}", style="yellow")
-                                break
-
-                            time.sleep(refresh)
-                        except KeyboardInterrupt:
-                            console.print("\n📊 Monitoring stopped", style="yellow")
-                            break
-
-    except Exception as e:
-        console.print(f"❌ Failed to get fuzzing stats: {e}", style="red")
-        raise typer.Exit(1)
-
-
-def display_stats_table(stats):
-    """Display stats in a simple table"""
-    table = create_stats_table(stats)
-    console.print(table)
-
-
 def create_stats_table(stats) -> Panel:
     """Create a rich table for fuzzing statistics"""
     # Create main stats table
@@ -266,8 +206,8 @@ def crash_reports(
         raise typer.Exit(1)
 
 
-def _live_monitor(run_id: str, refresh: int):
-    """Helper for live monitoring with inline real-time display"""
+def _live_monitor(run_id: str, refresh: int, once: bool = False, style: str = "inline"):
+    """Helper for live monitoring with inline real-time display or table display"""
     with get_client() as client:
         start_time = time.time()
 
@@ -319,16 +259,29 @@ def _live_monitor(run_id: str, refresh: int):
                 self.elapsed_time = 0
                 self.last_crash_time = None
 
-        with Live(auto_refresh=False, console=console) as live:
-            # Initial fetch
-            try:
-                run_status = client.get_run_status(run_id)
-                stats = client.get_fuzzing_stats(run_id)
-            except Exception:
-                stats = FallbackStats(run_id)
-                run_status = type("RS", (), {"status":"Unknown","is_completed":False,"is_failed":False})()
+        # Initial fetch
+        try:
+            run_status = client.get_run_status(run_id)
+            stats = client.get_fuzzing_stats(run_id)
+        except Exception:
+            stats = FallbackStats(run_id)
+            run_status = type("RS", (), {"status":"Unknown","is_completed":False,"is_failed":False})()
 
-            live.update(render_inline_stats(run_status, stats), refresh=True)
+        # Handle --once mode: show stats once and exit
+        if once:
+            if style == "table":
+                console.print(create_stats_table(stats))
+            else:
+                console.print(render_inline_stats(run_status, stats))
+            return
+
+        # Live monitoring mode
+        with Live(auto_refresh=False, console=console) as live:
+            # Render based on style
+            if style == "table":
+                live.update(create_stats_table(stats), refresh=True)
+            else:
+                live.update(render_inline_stats(run_status, stats), refresh=True)
 
             # Polling loop
             consecutive_errors = 0
@@ -354,8 +307,11 @@ def _live_monitor(run_id: str, refresh: int):
                     except Exception:
                         stats = FallbackStats(run_id)
 
-                    # Update display
-                    live.update(render_inline_stats(run_status, stats), refresh=True)
+                    # Update display based on style
+                    if style == "table":
+                        live.update(create_stats_table(stats), refresh=True)
+                    else:
+                        live.update(render_inline_stats(run_status, stats), refresh=True)
 
                     # Check if completed
                     if getattr(run_status, 'is_completed', False) or getattr(run_status, 'is_failed', False):
@@ -386,17 +342,36 @@ def live_monitor(
     refresh: int = typer.Option(
         2, "--refresh", "-r",
         help="Refresh interval in seconds"
+    ),
+    once: bool = typer.Option(
+        False, "--once",
+        help="Show stats once and exit"
+    ),
+    style: str = typer.Option(
+        "inline", "--style",
+        help="Display style: 'inline' (default) or 'table'"
     )
 ):
     """
-    📺 Real-time inline monitoring with live statistics updates
+    📺 Real-time monitoring with live statistics updates
+
+    Display styles:
+    - inline: Visual inline display with emojis (default)
+    - table: Clean table-based display
+
+    Use --once to show stats once without continuous monitoring (useful for scripts)
     """
     try:
-        _live_monitor(run_id, refresh)
+        # Validate style
+        if style not in ["inline", "table"]:
+            console.print(f"❌ Invalid style: {style}. Must be 'inline' or 'table'", style="red")
+            raise typer.Exit(1)
+
+        _live_monitor(run_id, refresh, once, style)
     except KeyboardInterrupt:
         console.print("\n\n📊 Monitoring stopped by user.", style="yellow")
     except Exception as e:
-        console.print(f"\n❌ Failed to start live monitoring: {e}", style="red")
+        console.print(f"\n❌ Failed to start monitoring: {e}", style="red")
         raise typer.Exit(1)
 
 
@@ -423,6 +398,5 @@ def monitor_callback(ctx: typer.Context):
     console = Console()
     console.print("📊 [bold cyan]Monitor Command[/bold cyan]")
     console.print("\nAvailable subcommands:")
-    console.print("  • [cyan]ff monitor stats <run-id>[/cyan] - Show execution statistics")
+    console.print("  • [cyan]ff monitor live <run-id>[/cyan] - Monitor with live updates (supports --once, --style)")
     console.print("  • [cyan]ff monitor crashes <run-id>[/cyan] - Show crash reports")
-    console.print("  • [cyan]ff monitor live <run-id>[/cyan] - Real-time inline monitoring")

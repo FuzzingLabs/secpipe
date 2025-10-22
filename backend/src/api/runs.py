@@ -55,9 +55,12 @@ async def get_run_status(
         is_failed = workflow_status == "FAILED"
         is_running = workflow_status == "RUNNING"
 
+        # Extract workflow name from run_id (format: workflow_name-unique_id)
+        workflow_name = run_id.rsplit('-', 1)[0] if '-' in run_id else "unknown"
+
         return WorkflowStatus(
             run_id=run_id,
-            workflow="unknown",  # Temporal doesn't track workflow name in status
+            workflow=workflow_name,
             status=workflow_status,
             is_completed=is_completed,
             is_failed=is_failed,
@@ -123,6 +126,9 @@ async def get_run_findings(
         else:
             sarif = {}
 
+        # Extract workflow name from run_id (format: workflow_name-unique_id)
+        workflow_name = run_id.rsplit('-', 1)[0] if '-' in run_id else "unknown"
+
         # Metadata
         metadata = {
             "completion_time": status.get("close_time"),
@@ -130,7 +136,7 @@ async def get_run_findings(
         }
 
         return WorkflowFindings(
-            workflow="unknown",
+            workflow=workflow_name,
             run_id=run_id,
             sarif=sarif,
             metadata=metadata
