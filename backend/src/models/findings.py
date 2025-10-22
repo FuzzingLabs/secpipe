@@ -73,10 +73,6 @@ class WorkflowMetadata(BaseModel):
         default_factory=list,
         description="Required module names"
     )
-    supported_volume_modes: List[Literal["ro", "rw"]] = Field(
-        default=["ro", "rw"],
-        description="Supported volume mount modes"
-    )
 
 
 class WorkflowListItem(BaseModel):

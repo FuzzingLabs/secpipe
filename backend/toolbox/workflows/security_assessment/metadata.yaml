@@ -18,11 +18,6 @@ tags:
 # Using "shared" mode for read-only security analysis (no file modifications)
 workspace_isolation: "shared"
 
-default_parameters:
-  scanner_config: {}
-  analyzer_config: {}
-  reporter_config: {}
-
 parameters:
   type: object
   properties:

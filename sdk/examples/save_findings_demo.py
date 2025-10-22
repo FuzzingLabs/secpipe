@@ -33,7 +33,6 @@ def main():
         workflow_name = workflows[0].name
         submission = create_workflow_submission(
             target_path=Path.cwd().absolute(),
-            volume_mode="ro",
             timeout=300
         )
 

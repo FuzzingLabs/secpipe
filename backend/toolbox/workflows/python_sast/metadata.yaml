@@ -18,12 +18,6 @@ tags:
 # Using "shared" mode for read-only SAST analysis (no file modifications)
 workspace_isolation: "shared"
 
-default_parameters:
-  dependency_config: {}
-  bandit_config: {}
-  mypy_config: {}
-  reporter_config: {}
-
 parameters:
   type: object
   properties:

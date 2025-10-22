@@ -440,7 +440,6 @@ class FuzzForgeClient:
         workflow_name: str,
         target_path: Union[str, Path],
         parameters: Optional[Dict[str, Any]] = None,
-        volume_mode: str = "ro",
         timeout: Optional[int] = None,
         progress_callback: Optional[Callable[[int, int], None]] = None
     ) -> RunSubmissionResponse:
@@ -454,7 +453,6 @@ class FuzzForgeClient:
             workflow_name: Name of the workflow to execute
             target_path: Local path to file or directory to analyze
             parameters: Workflow-specific parameters
-            volume_mode: Volume mount mode ("ro" or "rw")
             timeout: Timeout in seconds
             progress_callback: Optional callback(bytes_uploaded, total_bytes) for progress
 
