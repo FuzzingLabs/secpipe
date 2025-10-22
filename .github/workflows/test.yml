@@ -21,17 +21,43 @@ jobs:
   build-workers:
     name: Build Worker Docker Images
     runs-on: ubuntu-latest
-    # Only run if workers directory is modified
-    if: |
-      github.event_name == 'pull_request' &&
-      contains(github.event.pull_request.changed_files, 'workers/')
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper diff
+
+      - name: Check if workers were modified
+        id: check-workers
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, check changed files
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+
+            if echo "$CHANGED_FILES" | grep -q "^workers/\|^docker-compose.yml"; then
+              echo "workers_modified=true" >> $GITHUB_OUTPUT
+              echo "✅ Workers or docker-compose.yml modified - will build"
+            else
+              echo "workers_modified=false" >> $GITHUB_OUTPUT
+              echo "⏭️  No worker changes detected - skipping build"
+            fi
+          else
+            # For direct pushes, check last commit
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+            if echo "$CHANGED_FILES" | grep -q "^workers/\|^docker-compose.yml"; then
+              echo "workers_modified=true" >> $GITHUB_OUTPUT
+            else
+              echo "workers_modified=false" >> $GITHUB_OUTPUT
+            fi
+          fi
 
       - name: Set up Docker Buildx
+        if: steps.check-workers.outputs.workers_modified == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Build worker images
+        if: steps.check-workers.outputs.workers_modified == 'true'
         run: |
           echo "Building worker Docker images..."
           docker compose build worker-python worker-secrets worker-rust worker-android worker-ossfuzz --no-cache
