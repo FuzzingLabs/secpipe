@@ -70,9 +70,9 @@ During startup the `llm-proxy-bootstrap` container performs three actions:
 
 1. **Wait for the proxy** — Blocks until `/health/liveliness` becomes healthy.
 2. **Mirror provider secrets** — Reads `volumes/env/.env` and writes any
-   `LITELLM_*_API_KEY` values into `volumes/env/.env.litellm`. Only the proxy
-   container loads that file, so the task agent never sees the raw provider
-   credentials.
+   `LITELLM_*_API_KEY` values into `volumes/env/.env.litellm`. The file is
+   created automatically on first boot; if you delete it, bootstrap will
+   recreate it and the proxy continues to read secrets from `.env`.
 3. **Issue the default virtual key** — Calls `/key/generate` with the master key
    and persists the generated token back into `volumes/env/.env` (replacing the
    `sk-proxy-default` placeholder). The key is scoped to

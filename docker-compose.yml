@@ -157,7 +157,6 @@ services:
         condition: service_started
     env_file:
       - ./volumes/env/.env
-      - ./volumes/env/.env.litellm
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://litellm:litellm@llm-proxy-db:5432/litellm
