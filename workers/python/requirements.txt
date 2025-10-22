@@ -16,3 +16,8 @@ a2a-sdk[all]>=0.1.0
 
 # Fuzzing
 atheris>=2.3.0
+
+# SAST Tools
+bandit>=1.7.0
+pip-audit>=2.6.0
+mypy>=1.8.0
