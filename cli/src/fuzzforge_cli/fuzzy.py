@@ -52,7 +52,6 @@ class FuzzyMatcher:
         # Common parameter names
         self.parameter_names = [
             "target_path",
-            "volume_mode",
             "timeout",
             "workflow",
             "param",
@@ -70,7 +69,6 @@ class FuzzyMatcher:
 
         # Common values
         self.common_values = {
-            "volume_mode": ["ro", "rw"],
             "format": ["json", "csv", "html", "sarif"],
             "severity": ["critical", "high", "medium", "low", "info"],
         }

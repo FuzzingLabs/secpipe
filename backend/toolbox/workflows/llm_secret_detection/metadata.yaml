@@ -30,14 +30,5 @@ parameters:
       type: integer
       default: 20
 
-default_parameters:
-  agent_url: "http://fuzzforge-task-agent:8000/a2a/litellm_agent"
-  llm_model: "gpt-5-mini"
-  llm_provider: "openai"
-  max_files: 20
-
 required_modules:
   - "llm_secret_detector"
-
-supported_volume_modes:
-  - "ro"

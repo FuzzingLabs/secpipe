@@ -1,0 +1,110 @@
+name: python_sast
+version: "1.0.0"
+vertical: python
+description: "Python Static Application Security Testing (SAST) workflow combining dependency scanning (pip-audit), security linting (Bandit), and type checking (Mypy)"
+author: "FuzzForge Team"
+tags:
+  - "python"
+  - "sast"
+  - "security"
+  - "type-checking"
+  - "dependencies"
+  - "bandit"
+  - "mypy"
+  - "pip-audit"
+  - "sarif"
+
+# Workspace isolation mode (system-level configuration)
+# Using "shared" mode for read-only SAST analysis (no file modifications)
+workspace_isolation: "shared"
+
+parameters:
+  type: object
+  properties:
+    dependency_config:
+      type: object
+      description: "Dependency scanner (pip-audit) configuration"
+      properties:
+        dependency_files:
+          type: array
+          items:
+            type: string
+          description: "List of dependency files to scan (auto-discovered if empty)"
+          default: []
+        ignore_vulns:
+          type: array
+          items:
+            type: string
+          description: "List of vulnerability IDs to ignore"
+          default: []
+    bandit_config:
+      type: object
+      description: "Bandit security analyzer configuration"
+      properties:
+        severity_level:
+          type: string
+          enum: ["low", "medium", "high"]
+          description: "Minimum severity level to report"
+          default: "low"
+        confidence_level:
+          type: string
+          enum: ["low", "medium", "high"]
+          description: "Minimum confidence level to report"
+          default: "medium"
+        exclude_tests:
+          type: boolean
+          description: "Exclude test files from analysis"
+          default: true
+        skip_ids:
+          type: array
+          items:
+            type: string
+          description: "List of Bandit test IDs to skip"
+          default: []
+    mypy_config:
+      type: object
+      description: "Mypy type checker configuration"
+      properties:
+        strict_mode:
+          type: boolean
+          description: "Enable strict type checking"
+          default: false
+        ignore_missing_imports:
+          type: boolean
+          description: "Ignore errors about missing imports"
+          default: true
+        follow_imports:
+          type: string
+          enum: ["normal", "silent", "skip", "error"]
+          description: "How to handle imports"
+          default: "silent"
+    reporter_config:
+      type: object
+      description: "SARIF reporter configuration"
+      properties:
+        include_code_flows:
+          type: boolean
+          description: "Include code flow information"
+          default: false
+
+output_schema:
+  type: object
+  properties:
+    sarif:
+      type: object
+      description: "SARIF-formatted SAST findings from all tools"
+    summary:
+      type: object
+      description: "SAST execution summary"
+      properties:
+        total_findings:
+          type: integer
+        vulnerabilities:
+          type: integer
+          description: "CVEs found in dependencies"
+        security_issues:
+          type: integer
+          description: "Security issues found by Bandit"
+        type_errors:
+          type: integer
+          description: "Type errors found by Mypy"

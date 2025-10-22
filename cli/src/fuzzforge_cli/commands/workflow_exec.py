@@ -39,7 +39,7 @@ from ..validation import (
 )
 from ..progress import step_progress
 from ..constants import (
-    STATUS_EMOJIS, MAX_RUN_ID_DISPLAY_LENGTH, DEFAULT_VOLUME_MODE,
+    STATUS_EMOJIS, MAX_RUN_ID_DISPLAY_LENGTH,
     PROGRESS_STEP_DELAYS, MAX_RETRIES, RETRY_DELAY, POLL_INTERVAL
 )
 from ..worker_manager import WorkerManager
@@ -112,7 +112,6 @@ def execute_workflow_submission(
     workflow: str,
     target_path: str,
     parameters: Dict[str, Any],
-    volume_mode: str,
     timeout: Optional[int],
     interactive: bool
 ) -> Any:
@@ -160,13 +159,10 @@ def execute_workflow_submission(
                     except ValueError as e:
                         console.print(f"❌ Invalid {param_type}: {e}", style="red")
 
-    # Note: volume_mode is no longer used (Temporal uses MinIO storage)
-
     # Show submission summary
     console.print("\n🎯 [bold]Executing workflow:[/bold]")
     console.print(f"   Workflow: {workflow}")
     console.print(f"   Target: {target_path}")
-    console.print(f"   Volume Mode: {volume_mode}")
     if parameters:
         console.print(f"   Parameters: {len(parameters)} provided")
     if timeout:
@@ -252,8 +248,6 @@ def execute_workflow_submission(
 
             progress.next_step()  # Submitting
             submission = WorkflowSubmission(
-                target_path=target_path,
-                volume_mode=volume_mode,
                 parameters=parameters,
                 timeout=timeout
             )
@@ -280,10 +274,6 @@ def execute_workflow(
     param_file: Optional[str] = typer.Option(
         None, "--param-file", "-f",
         help="JSON file containing workflow parameters"
-    ),
-    volume_mode: str = typer.Option(
-        DEFAULT_VOLUME_MODE, "--volume-mode", "-v",
-        help="Volume mount mode: ro (read-only) or rw (read-write)"
     ),
     timeout: Optional[int] = typer.Option(
         None, "--timeout", "-t",
@@ -410,7 +400,7 @@ def execute_workflow(
 
             response = execute_workflow_submission(
                 client, workflow, target_path, parameters,
-                volume_mode, timeout, interactive
+                timeout, interactive
             )
 
             console.print("✅ Workflow execution started!", style="green")
@@ -453,9 +443,9 @@ def execute_workflow(
                 console.print("Press Ctrl+C to stop monitoring (execution continues in background).\n")
 
                 try:
-                    from ..commands.monitor import live_monitor
-                    # Import monitor command and run it
-                    live_monitor(response.run_id, refresh=3)
+                    from ..commands.monitor import _live_monitor
+                    # Call helper function directly with proper parameters
+                    _live_monitor(response.run_id, refresh=3, once=False, style="inline")
                 except KeyboardInterrupt:
                     console.print("\n⏹️  Live monitoring stopped (execution continues in background)", style="yellow")
                 except Exception as e:

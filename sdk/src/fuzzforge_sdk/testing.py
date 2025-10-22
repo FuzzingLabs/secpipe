@@ -193,8 +193,6 @@ class WorkflowTester:
 
             # Create workflow submission
             submission = create_workflow_submission(
-                target_path=str(test_path),
-                volume_mode="ro",
                 **workflow_params
             )
 

@@ -253,15 +253,15 @@ def display_finding_detail(finding: Dict[str, Any], tool: Dict[str, Any], run_id
     content_lines.append(f"[bold]Tool:[/bold] {tool.get('name', 'Unknown')} v{tool.get('version', 'unknown')}")
     content_lines.append(f"[bold]Run ID:[/bold] {run_id}")
     content_lines.append("")
-    content_lines.append(f"[bold]Summary:[/bold]")
+    content_lines.append("[bold]Summary:[/bold]")
     content_lines.append(message_text)
     content_lines.append("")
-    content_lines.append(f"[bold]Description:[/bold]")
+    content_lines.append("[bold]Description:[/bold]")
     content_lines.append(message_markdown)
 
     if code_snippet:
         content_lines.append("")
-        content_lines.append(f"[bold]Code Snippet:[/bold]")
+        content_lines.append("[bold]Code Snippet:[/bold]")
         content_lines.append(f"[dim]{code_snippet}[/dim]")
 
     content = "\n".join(content_lines)
@@ -270,7 +270,7 @@ def display_finding_detail(finding: Dict[str, Any], tool: Dict[str, Any], run_id
     console.print()
     console.print(Panel(
         content,
-        title=f"🔍 Finding Detail",
+        title="🔍 Finding Detail",
         border_style=severity_color,
         box=box.ROUNDED,
         padding=(1, 2)

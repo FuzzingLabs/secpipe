@@ -40,7 +40,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### Documentation
 - Updated README for Temporal + MinIO architecture
-- Removed obsolete `volume_mode` references across all documentation
 - Added `.env` configuration guide for AI agent API keys
 - Fixed worker startup instructions with correct service names
 - Updated docker compose commands to modern syntax

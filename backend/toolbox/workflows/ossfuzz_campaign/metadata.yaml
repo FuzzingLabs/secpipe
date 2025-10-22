@@ -16,13 +16,6 @@ tags:
 # OSS-Fuzz campaigns use isolated mode for safe concurrent campaigns
 workspace_isolation: "isolated"
 
-default_parameters:
-  project_name: null
-  campaign_duration_hours: 1
-  override_engine: null
-  override_sanitizer: null
-  max_iterations: null
-
 parameters:
   type: object
   required:

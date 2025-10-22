@@ -8,8 +8,3 @@
 # See the LICENSE-APACHE file or http://www.apache.org/licenses/LICENSE-2.0
 #
 # Additional attribution and requirements are provided in the NOTICE file.
-
-from .file_scanner import FileScanner
-from .dependency_scanner import DependencyScanner
-
-__all__ = ["FileScanner", "DependencyScanner"]

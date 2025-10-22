@@ -64,7 +64,6 @@ def main():
         print("📝 Workflow metadata:")
         print(f"  Author: {metadata.author}")
         print(f"  Required modules: {metadata.required_modules}")
-        print(f"  Supported volume modes: {metadata.supported_volume_modes}")
         print()
 
         # Prepare target path (use current directory as example)
@@ -74,7 +73,6 @@ def main():
         # Create workflow submission
         submission = create_workflow_submission(
             target_path=target_path,
-            volume_mode="ro",
             timeout=300,  # 5 minutes
         )
 
@@ -234,7 +232,6 @@ async def async_main():
             target_path = Path.cwd().absolute()
             submission = create_workflow_submission(
                 target_path=target_path,
-                volume_mode="ro",
                 timeout=300,
             )
 

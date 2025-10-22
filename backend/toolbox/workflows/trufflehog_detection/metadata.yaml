@@ -23,12 +23,5 @@ parameters:
       default: 10
       description: "Maximum directory depth to scan"
 
-default_parameters:
-  verify: true
-  max_depth: 10
-
 required_modules:
   - "trufflehog"
-
-supported_volume_modes:
-  - "ro"

@@ -57,10 +57,6 @@ SEVERITY_STYLES = {
     "info": "bold cyan"
 }
 
-# Default volume modes
-DEFAULT_VOLUME_MODE = "ro"
-SUPPORTED_VOLUME_MODES = ["ro", "rw"]
-
 # Default export formats
 DEFAULT_EXPORT_FORMAT = "sarif"
 SUPPORTED_EXPORT_FORMATS = ["sarif", "json", "csv"]

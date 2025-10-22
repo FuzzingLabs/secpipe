@@ -14,7 +14,7 @@ Models for workflow findings and submissions
 # Additional attribution and requirements are provided in the NOTICE file.
 
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional, Literal, List
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 
 
@@ -72,10 +72,6 @@ class WorkflowMetadata(BaseModel):
     required_modules: List[str] = Field(
         default_factory=list,
         description="Required module names"
-    )
-    supported_volume_modes: List[Literal["ro", "rw"]] = Field(
-        default=["ro", "rw"],
-        description="Supported volume mount modes"
     )
 
 

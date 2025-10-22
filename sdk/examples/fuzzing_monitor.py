@@ -193,7 +193,6 @@ async def main():
 
         submission = create_workflow_submission(
             target_path=target_path,
-            volume_mode="rw",  # Fuzzing may need to write files
             timeout=3600,      # 1 hour timeout
             resource_limits=resource_limits,
             parameters={

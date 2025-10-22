@@ -2,11 +2,100 @@ name: Tests
 
 on:
   push:
-    branches: [ main, master, develop, feature/** ]
+    branches: [ main, master, dev, develop, feature/** ]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [ main, master, dev, develop ]
 
 jobs:
+  validate-workers:
+    name: Validate Workers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run worker validation
+        run: |
+          chmod +x .github/scripts/validate-workers.sh
+          .github/scripts/validate-workers.sh
+
+  build-workers:
+    name: Build Worker Docker Images
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for proper diff
+
+      - name: Check which workers were modified
+        id: check-workers
+        run: |
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            # For PRs, check changed files
+            CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD)
+            echo "Changed files:"
+            echo "$CHANGED_FILES"
+          else
+            # For direct pushes, check last commit
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD)
+          fi
+
+          # Check if docker-compose.yml changed (build all workers)
+          if echo "$CHANGED_FILES" | grep -q "^docker-compose.yml"; then
+            echo "workers_to_build=worker-python worker-secrets worker-rust worker-android worker-ossfuzz" >> $GITHUB_OUTPUT
+            echo "workers_modified=true" >> $GITHUB_OUTPUT
+            echo "✅ docker-compose.yml modified - building all workers"
+            exit 0
+          fi
+
+          # Detect which specific workers changed
+          WORKERS_TO_BUILD=""
+
+          if echo "$CHANGED_FILES" | grep -q "^workers/python/"; then
+            WORKERS_TO_BUILD="$WORKERS_TO_BUILD worker-python"
+            echo "✅ Python worker modified"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^workers/secrets/"; then
+            WORKERS_TO_BUILD="$WORKERS_TO_BUILD worker-secrets"
+            echo "✅ Secrets worker modified"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^workers/rust/"; then
+            WORKERS_TO_BUILD="$WORKERS_TO_BUILD worker-rust"
+            echo "✅ Rust worker modified"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^workers/android/"; then
+            WORKERS_TO_BUILD="$WORKERS_TO_BUILD worker-android"
+            echo "✅ Android worker modified"
+          fi
+
+          if echo "$CHANGED_FILES" | grep -q "^workers/ossfuzz/"; then
+            WORKERS_TO_BUILD="$WORKERS_TO_BUILD worker-ossfuzz"
+            echo "✅ OSS-Fuzz worker modified"
+          fi
+
+          if [ -z "$WORKERS_TO_BUILD" ]; then
+            echo "workers_modified=false" >> $GITHUB_OUTPUT
+            echo "⏭️  No worker changes detected - skipping build"
+          else
+            echo "workers_to_build=$WORKERS_TO_BUILD" >> $GITHUB_OUTPUT
+            echo "workers_modified=true" >> $GITHUB_OUTPUT
+            echo "Building workers:$WORKERS_TO_BUILD"
+          fi
+
+      - name: Set up Docker Buildx
+        if: steps.check-workers.outputs.workers_modified == 'true'
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build worker images
+        if: steps.check-workers.outputs.workers_modified == 'true'
+        run: |
+          WORKERS="${{ steps.check-workers.outputs.workers_to_build }}"
+          echo "Building worker Docker images: $WORKERS"
+          docker compose build $WORKERS --no-cache
+        continue-on-error: false
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -143,11 +232,15 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [lint, unit-tests]
+    needs: [validate-workers, lint, unit-tests]
     if: always()
     steps:
       - name: Check test results
         run: |
+          if [ "${{ needs.validate-workers.result }}" != "success" ]; then
+            echo "Worker validation failed"
+            exit 1
+          fi
           if [ "${{ needs.unit-tests.result }}" != "success" ]; then
             echo "Unit tests failed"
             exit 1
