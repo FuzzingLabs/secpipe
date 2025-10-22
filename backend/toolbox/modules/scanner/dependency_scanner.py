@@ -19,7 +19,6 @@ import logging
 import time
 from pathlib import Path
 from typing import Dict, Any, List
-import uuid
 
 try:
     from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
@@ -200,7 +199,6 @@ class DependencyScanner(BaseModule):
                 except ValueError:
                     rel_path = file_path
 
-                finding_id = str(uuid.uuid4())
                 recommendation = f"Upgrade {package_name} to a fixed version: {', '.join(fix_versions)}" if fix_versions else f"Check for updates to {package_name}"
 
                 finding = self.create_finding(

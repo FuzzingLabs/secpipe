@@ -19,7 +19,6 @@ import logging
 import time
 from pathlib import Path
 from typing import Dict, Any, List
-import uuid
 
 try:
     from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
