@@ -35,16 +35,51 @@ LITELLM_ENV_FILE_PATH = Path(
 LEGACY_ENV_FILE_PATH = Path(
     os.getenv("LEGACY_ENV_FILE_PATH", "/bootstrap/env/.env.bifrost")
 )
-DEFAULT_VIRTUAL_KEY_ALIAS = os.getenv(
-    "LITELLM_DEFAULT_KEY_ALIAS", "task-agent default"
-)
-DEFAULT_VIRTUAL_KEY_USER = os.getenv(
-    "LITELLM_DEFAULT_KEY_USER", "fuzzforge-task-agent"
-)
-PLACEHOLDER_KEY = os.getenv("LITELLM_PLACEHOLDER_KEY", "sk-proxy-default")
-DEFAULT_KEY_DURATION = os.getenv("LITELLM_DEFAULT_KEY_DURATION", "7d")
-DEFAULT_KEY_BUDGET = os.getenv("LITELLM_DEFAULT_KEY_BUDGET", "25")
 MAX_WAIT_SECONDS = int(os.getenv("LITELLM_PROXY_WAIT_SECONDS", "120"))
+
+
+@dataclass(frozen=True)
+class VirtualKeySpec:
+    """Configuration for a virtual key to be provisioned."""
+    env_var: str
+    alias: str
+    user_id: str
+    budget_env_var: str
+    duration_env_var: str
+    default_budget: float
+    default_duration: str
+
+
+# Multiple virtual keys for different services
+VIRTUAL_KEYS: tuple[VirtualKeySpec, ...] = (
+    VirtualKeySpec(
+        env_var="OPENAI_API_KEY",
+        alias="fuzzforge-cli",
+        user_id="fuzzforge-cli",
+        budget_env_var="CLI_BUDGET",
+        duration_env_var="CLI_DURATION",
+        default_budget=100.0,
+        default_duration="30d",
+    ),
+    VirtualKeySpec(
+        env_var="TASK_AGENT_API_KEY",
+        alias="fuzzforge-task-agent",
+        user_id="fuzzforge-task-agent",
+        budget_env_var="TASK_AGENT_BUDGET",
+        duration_env_var="TASK_AGENT_DURATION",
+        default_budget=25.0,
+        default_duration="30d",
+    ),
+    VirtualKeySpec(
+        env_var="COGNEE_API_KEY",
+        alias="fuzzforge-cognee",
+        user_id="fuzzforge-cognee",
+        budget_env_var="COGNEE_BUDGET",
+        duration_env_var="COGNEE_DURATION",
+        default_budget=50.0,
+        default_duration="30d",
+    ),
+)
 
 
 @dataclass(frozen=True)
@@ -273,12 +308,12 @@ def ensure_litellm_env(provider_values: Mapping[str, str]) -> None:
         log(f"Wrote provider secrets to {LITELLM_ENV_FILE_PATH}")
 
 
-def current_env_key(env_map: Mapping[str, str]) -> str | None:
-    candidate = os.getenv("OPENAI_API_KEY") or env_map.get("OPENAI_API_KEY")
+def current_env_key(env_map: Mapping[str, str], env_var: str) -> str | None:
+    candidate = os.getenv(env_var) or env_map.get(env_var)
     if not candidate:
         return None
     value = candidate.strip()
-    if not value or value == PLACEHOLDER_KEY:
+    if not value or value.startswith("sk-proxy-"):
         return None
     return value
 
@@ -311,11 +346,16 @@ def collect_default_models(env_map: Mapping[str, str]) -> list[str]:
             models.append(configured_model)
         elif configured_provider:
             models.append(f"{configured_provider}/{configured_model}")
+        else:
+            log(
+                "LITELLM_MODEL is set without a provider; configure LITELLM_PROVIDER or "
+                "use the provider/model format (e.g. openai/gpt-4o-mini)."
+            )
     elif configured_provider:
-        models.append(f"{configured_provider}/gpt-4o-mini")
-
-    if not models:
-        models.append("openai/gpt-4o-mini")
+        log(
+            "LITELLM_PROVIDER configured without a default model. Bootstrap will issue an "
+            "unrestricted virtual key allowing any proxy-registered model."
+        )
 
     return sorted(dict.fromkeys(models))
 
@@ -336,48 +376,91 @@ def fetch_existing_key_record(master_key: str, key_value: str) -> Mapping[str, o
     return None
 
 
+def fetch_key_by_alias(master_key: str, alias: str) -> str | None:
+    """Fetch existing key value by alias from LiteLLM proxy."""
+    status, body = request_json("/key/info", auth_token=master_key)
+    if status != 200:
+        return None
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError:
+        return None
+    if isinstance(data, dict) and "keys" in data:
+        for key_info in data.get("keys", []):
+            if isinstance(key_info, dict) and key_info.get("key_alias") == alias:
+                return str(key_info.get("key", "")).strip() or None
+    return None
+
+
 def generate_virtual_key(
     master_key: str,
     models: list[str],
+    spec: VirtualKeySpec,
+    env_map: Mapping[str, str],
 ) -> str:
+    budget_str = os.getenv(spec.budget_env_var) or env_map.get(spec.budget_env_var) or str(spec.default_budget)
     try:
-        budget = float(DEFAULT_KEY_BUDGET)
+        budget = float(budget_str)
     except ValueError:
-        budget = 25.0
+        budget = spec.default_budget
+
+    duration = os.getenv(spec.duration_env_var) or env_map.get(spec.duration_env_var) or spec.default_duration
 
     payload: dict[str, object] = {
-        "key_alias": DEFAULT_VIRTUAL_KEY_ALIAS,
-        "user_id": DEFAULT_VIRTUAL_KEY_USER,
-        "models": models,
-        "duration": DEFAULT_KEY_DURATION,
+        "key_alias": spec.alias,
+        "user_id": spec.user_id,
+        "duration": duration,
         "max_budget": budget,
         "metadata": {
             "provisioned_by": "bootstrap",
+            "service": spec.alias,
             "default_models": models,
         },
         "key_type": "llm_api",
     }
+    if models:
+        payload["models"] = models
     status, body = request_json(
         "/key/generate", method="POST", payload=payload, auth_token=master_key
     )
+    if status == 400 and "already exists" in body.lower():
+        # Key alias already exists but .env is out of sync (e.g., after docker prune)
+        # Delete the old key and regenerate
+        log(f"Key alias '{spec.alias}' already exists in database but not in .env; deleting and regenerating")
+        # Try to delete by alias using POST /key/delete with key_aliases array
+        delete_payload = {"key_aliases": [spec.alias]}
+        delete_status, delete_body = request_json(
+            "/key/delete", method="POST", payload=delete_payload, auth_token=master_key
+        )
+        if delete_status not in {200, 201}:
+            log(f"Warning: Could not delete existing key alias {spec.alias} ({delete_status}): {delete_body}")
+            # Continue anyway and try to generate
+        else:
+            log(f"Deleted existing key alias {spec.alias}")
+
+        # Retry generation
+        status, body = request_json(
+            "/key/generate", method="POST", payload=payload, auth_token=master_key
+        )
     if status not in {200, 201}:
-        raise RuntimeError(f"Failed to generate virtual key ({status}): {body}")
+        raise RuntimeError(f"Failed to generate virtual key for {spec.alias} ({status}): {body}")
     try:
         data = json.loads(body)
     except json.JSONDecodeError as exc:
-        raise RuntimeError("Virtual key response was not valid JSON") from exc
+        raise RuntimeError(f"Virtual key response for {spec.alias} was not valid JSON") from exc
     if isinstance(data, Mapping):
         key_value = str(data.get("key") or data.get("token") or "").strip()
         if key_value:
-            log("Generated new LiteLLM virtual key for the task agent")
+            log(f"Generated new LiteLLM virtual key for {spec.alias} (budget: ${budget}, duration: {duration})")
             return key_value
-    raise RuntimeError("Virtual key response did not include a key field")
+    raise RuntimeError(f"Virtual key response for {spec.alias} did not include a key field")
 
 
 def update_virtual_key(
     master_key: str,
     key_value: str,
     models: list[str],
+    spec: VirtualKeySpec,
 ) -> None:
     if not models:
         return
@@ -389,44 +472,46 @@ def update_virtual_key(
         "/key/update", method="POST", payload=payload, auth_token=master_key
     )
     if status != 200:
-        log(f"Virtual key update skipped ({status}): {body}")
+        log(f"Virtual key update for {spec.alias} skipped ({status}): {body}")
     else:
-        log("Refreshed allowed models on existing virtual key")
+        log(f"Refreshed allowed models for {spec.alias}")
 
 
-def persist_key_to_env(new_key: str) -> None:
+def persist_key_to_env(new_key: str, env_var: str) -> None:
     lines = read_env_file()
-    updated_lines, changed = set_env_value(lines, "OPENAI_API_KEY", new_key)
+    updated_lines, changed = set_env_value(lines, env_var, new_key)
+    # Always update the environment variable, even if file wasn't changed
+    os.environ[env_var] = new_key
     if changed:
         write_env_file(updated_lines)
-        os.environ["OPENAI_API_KEY"] = new_key
-        log(f"Persisted virtual key to {ENV_FILE_PATH}")
+        log(f"Persisted {env_var} to {ENV_FILE_PATH}")
     else:
-        log("Virtual key already present in env file; no update needed")
+        log(f"{env_var} already up-to-date in env file")
 
 
 def ensure_virtual_key(
     master_key: str,
     models: list[str],
     env_map: Mapping[str, str],
+    spec: VirtualKeySpec,
 ) -> str:
-    allowed_models = []
+    allowed_models: list[str] = []
     sync_flag = os.getenv("LITELLM_SYNC_VIRTUAL_KEY_MODELS", "").strip().lower()
-    if sync_flag in {"1", "true", "yes", "on"}:
+    if models and (sync_flag in {"1", "true", "yes", "on"} or models == ["*"]):
         allowed_models = models
-    existing_key = current_env_key(env_map)
+    existing_key = current_env_key(env_map, spec.env_var)
     if existing_key:
         record = fetch_existing_key_record(master_key, existing_key)
         if record:
-            log("Reusing existing LiteLLM virtual key")
+            log(f"Reusing existing LiteLLM virtual key for {spec.alias}")
             if allowed_models:
-                update_virtual_key(master_key, existing_key, allowed_models)
+                update_virtual_key(master_key, existing_key, allowed_models, spec)
             return existing_key
-        log("Existing OPENAI_API_KEY not registered with proxy; issuing a new key")
+        log(f"Existing {spec.env_var} not registered with proxy; generating new key")
 
-    new_key = generate_virtual_key(master_key, models)
+    new_key = generate_virtual_key(master_key, models, spec, env_map)
     if allowed_models:
-        update_virtual_key(master_key, new_key, allowed_models)
+        update_virtual_key(master_key, new_key, allowed_models, spec)
     return new_key
 
 
@@ -521,12 +606,24 @@ def main() -> int:
         ensure_litellm_env(provider_values)
 
         models = collect_default_models(env_map)
-        log("Default models for virtual key: %s" % ", ".join(models))
+        if models:
+            log("Default models for virtual keys: %s" % ", ".join(models))
+            models_for_key = models
+        else:
+            log(
+                "No default models configured; provisioning virtual keys without model "
+                "restrictions (model-agnostic)."
+            )
+            models_for_key = ["*"]
 
-        virtual_key = ensure_virtual_key(master_key, models, env_map)
-        persist_key_to_env(virtual_key)
+        # Generate virtual keys for each service
+        for spec in VIRTUAL_KEYS:
+            virtual_key = ensure_virtual_key(master_key, models_for_key, env_map, spec)
+            persist_key_to_env(virtual_key, spec.env_var)
 
-        ensure_models_registered(master_key, models, env_map)
+        # Register models if any were specified
+        if models:
+            ensure_models_registered(master_key, models, env_map)
 
         log("Bootstrap complete")
         return 0

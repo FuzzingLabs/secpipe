@@ -82,7 +82,7 @@ class HotSwapState:
                 kwargs["api_base"] = f"{PROXY_BASE_URL.rstrip('/')}/{provider}"
             else:
                 kwargs["api_base"] = PROXY_BASE_URL
-        kwargs.setdefault("api_key", os.environ.get("OPENAI_API_KEY"))
+        kwargs.setdefault("api_key", os.environ.get("TASK_AGENT_API_KEY") or os.environ.get("OPENAI_API_KEY"))
 
         provider = (self.provider or DEFAULT_PROVIDER or "").lower()
         model_suffix = self.model.split("/", 1)[-1]
@@ -169,7 +169,7 @@ class HotSwapState:
             llm.llm_client = _ResponsesAwareClient(
                 llm.llm_client,
                 PROXY_BASE_URL,
-                os.environ.get("OPENAI_API_KEY", ""),
+                os.environ.get("TASK_AGENT_API_KEY") or os.environ.get("OPENAI_API_KEY", ""),
             )
 
         return llm

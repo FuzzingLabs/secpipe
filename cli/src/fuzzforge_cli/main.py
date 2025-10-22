@@ -19,6 +19,8 @@ from rich.traceback import install
 from typing import Optional, List
 import sys
 
+from .config import load_project_env
+
 from .commands import (
     workflows,
     workflow_exec,
@@ -33,6 +35,9 @@ from .fuzzy import enhanced_command_not_found_handler
 
 # Install rich traceback handler
 install(show_locals=True)
+
+# Ensure environment variables are available before command execution
+load_project_env()
 
 # Create console for rich output
 console = Console()
