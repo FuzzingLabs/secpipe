@@ -32,9 +32,7 @@ except ImportError:  # pragma: no cover - optional dependency
 def _load_env_file_if_exists(path: Path, override: bool = False) -> bool:
     if not path.exists():
         return False
-    if load_dotenv and not override:
-        load_dotenv(path, override=override)
-        return True
+    # Always use manual parsing to handle empty values correctly
     try:
         for line in path.read_text(encoding="utf-8").splitlines():
             stripped = line.strip()
@@ -44,9 +42,11 @@ def _load_env_file_if_exists(path: Path, override: bool = False) -> bool:
             key = key.strip()
             value = value.strip()
             if override:
+                # Only override if value is non-empty
                 if value:
                     os.environ[key] = value
             else:
+                # Set if not already in environment and value is non-empty
                 if key not in os.environ and value:
                     os.environ[key] = value
         return True
