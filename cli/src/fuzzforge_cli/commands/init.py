@@ -193,12 +193,33 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
     llm_provider = "openai"
     llm_model = "litellm_proxy/gpt-5-mini"
 
+    # Check for global virtual keys from volumes/env/.env
+    global_env_key = None
+    for parent in fuzzforge_dir.parents:
+        global_env = parent / "volumes" / "env" / ".env"
+        if global_env.exists():
+            try:
+                for line in global_env.read_text(encoding="utf-8").splitlines():
+                    if line.strip().startswith("OPENAI_API_KEY=") and "=" in line:
+                        key_value = line.split("=", 1)[1].strip()
+                        if key_value and not key_value.startswith("your-") and key_value.startswith("sk-"):
+                            global_env_key = key_value
+                            console.print(f"   • Found virtual key in {global_env.relative_to(parent)}")
+                            break
+            except Exception:
+                pass
+            break
+
     api_key = Prompt.ask(
-        "OpenAI API key (leave blank to fill manually)",
+        "OpenAI API key (leave blank to use global virtual key)" if global_env_key else "OpenAI API key (leave blank to fill manually)",
         default="",
         show_default=False,
         console=console,
     )
+
+    # Use global key if user didn't provide one
+    if not api_key and global_env_key:
+        api_key = global_env_key
 
     session_db_path = fuzzforge_dir / "fuzzforge_sessions.db"
     session_db_rel = session_db_path.relative_to(fuzzforge_dir.parent)
