@@ -342,7 +342,7 @@ services:
   worker-android:
     build:
       context: ./workers/android
-      dockerfile: Dockerfile
+      dockerfile: ${ANDROID_DOCKERFILE:-Dockerfile.amd64}
     container_name: fuzzforge-worker-android
     profiles:
       - workers
@@ -429,6 +429,9 @@ services:
       # Python configuration
       PYTHONPATH: /app
       PYTHONUNBUFFERED: 1
+
+      # Host filesystem paths (for CLI worker management)
+      FUZZFORGE_HOST_ROOT: ${PWD}
 
       # Logging
       LOG_LEVEL: INFO

@@ -196,9 +196,16 @@ class AndroidStaticAnalysisWorkflow:
                         maximum_attempts=2  # MobSF can be flaky, limit retries
                     ),
                 )
-                workflow.logger.info(
-                    f"✓ MobSF completed: {mobsf_result.get('summary', {}).get('total_findings', 0)} findings"
-                )
+
+                # Handle skipped or completed status
+                if mobsf_result.get("status") == "skipped":
+                    workflow.logger.warning(
+                        f"⚠️  MobSF skipped: {mobsf_result.get('summary', {}).get('skip_reason', 'Unknown reason')}"
+                    )
+                else:
+                    workflow.logger.info(
+                        f"✓ MobSF completed: {mobsf_result.get('summary', {}).get('total_findings', 0)} findings"
+                    )
             except Exception as e:
                 workflow.logger.warning(f"MobSF scan failed (continuing without it): {e}")
                 mobsf_result = None

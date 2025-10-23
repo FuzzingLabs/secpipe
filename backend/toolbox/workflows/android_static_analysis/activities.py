@@ -112,9 +112,22 @@ async def scan_with_mobsf_activity(workspace_path: str, config: dict) -> dict:
         config: MobSFScanner configuration
 
     Returns:
-        Scan results dictionary
+        Scan results dictionary (or skipped status if MobSF unavailable)
     """
     logger.info(f"Activity: scan_with_mobsf (workspace={workspace_path})")
+
+    # Check if MobSF is installed (graceful degradation for ARM64 platform)
+    mobsf_path = Path("/app/mobsf")
+    if not mobsf_path.exists():
+        logger.warning("MobSF not installed on this platform (ARM64/Rosetta limitation)")
+        return {
+            "status": "skipped",
+            "findings": [],
+            "summary": {
+                "total_findings": 0,
+                "skip_reason": "MobSF unavailable on ARM64 platform (Rosetta 2 incompatibility)"
+            }
+        }
 
     try:
         from modules.android import MobSFScanner

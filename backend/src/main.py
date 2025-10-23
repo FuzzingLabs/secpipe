@@ -24,7 +24,7 @@ from fastmcp.server.http import create_sse_app
 
 from src.temporal.manager import TemporalManager
 from src.core.setup import setup_result_storage, validate_infrastructure
-from src.api import workflows, runs, fuzzing
+from src.api import workflows, runs, fuzzing, system
 
 from fastmcp import FastMCP
 
@@ -76,6 +76,7 @@ app = FastAPI(
 app.include_router(workflows.router)
 app.include_router(runs.router)
 app.include_router(fuzzing.router)
+app.include_router(system.router)
 
 
 def get_temporal_status() -> Dict[str, Any]:

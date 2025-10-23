@@ -15,11 +15,15 @@ Manages on-demand startup and shutdown of Temporal workers using Docker Compose.
 # Additional attribution and requirements are provided in the NOTICE file.
 
 import logging
+import os
+import platform
 import subprocess
 import time
 from pathlib import Path
 from typing import Optional, Dict, Any
 
+import requests
+import yaml
 from rich.console import Console
 
 logger = logging.getLogger(__name__)
@@ -57,27 +61,181 @@ class WorkerManager:
 
     def _find_compose_file(self) -> Path:
         """
-        Auto-detect docker-compose.yml location.
+        Auto-detect docker-compose.yml location using multiple strategies.
 
-        Searches upward from current directory to find the compose file.
+        Strategies (in order):
+        1. Query backend API for host path
+        2. Search upward for .fuzzforge marker directory
+        3. Use FUZZFORGE_ROOT environment variable
+        4. Fallback to current directory
+
+        Returns:
+            Path to docker-compose.yml
+
+        Raises:
+            FileNotFoundError: If docker-compose.yml cannot be located
         """
-        current = Path.cwd()
+        # Strategy 1: Ask backend for location
+        try:
+            backend_url = os.getenv("FUZZFORGE_API_URL", "http://localhost:8000")
+            response = requests.get(f"{backend_url}/system/info", timeout=2)
+            if response.ok:
+                info = response.json()
+                if compose_path_str := info.get("docker_compose_path"):
+                    compose_path = Path(compose_path_str)
+                    if compose_path.exists():
+                        logger.debug(f"Found docker-compose.yml via backend API: {compose_path}")
+                        return compose_path
+        except Exception as e:
+            logger.debug(f"Backend API not reachable for path lookup: {e}")
 
-        # Try current directory and parents
+        # Strategy 2: Search upward for .fuzzforge marker directory
+        current = Path.cwd()
         for parent in [current] + list(current.parents):
-            compose_path = parent / "docker-compose.yml"
+            if (parent / ".fuzzforge").exists():
+                compose_path = parent / "docker-compose.yml"
+                if compose_path.exists():
+                    logger.debug(f"Found docker-compose.yml via .fuzzforge marker: {compose_path}")
+                    return compose_path
+
+        # Strategy 3: Environment variable
+        if fuzzforge_root := os.getenv("FUZZFORGE_ROOT"):
+            compose_path = Path(fuzzforge_root) / "docker-compose.yml"
             if compose_path.exists():
+                logger.debug(f"Found docker-compose.yml via FUZZFORGE_ROOT: {compose_path}")
                 return compose_path
 
-        # Fallback to default location
-        return Path("docker-compose.yml")
+        # Strategy 4: Fallback to current directory
+        compose_path = Path("docker-compose.yml")
+        if compose_path.exists():
+            return compose_path
 
-    def _run_docker_compose(self, *args: str) -> subprocess.CompletedProcess:
+        raise FileNotFoundError(
+            "Cannot find docker-compose.yml. Ensure backend is running, "
+            "run from FuzzForge directory, or set FUZZFORGE_ROOT environment variable."
+        )
+
+    def _get_workers_dir(self) -> Path:
         """
-        Run docker-compose command.
+        Get the workers directory path.
+
+        Uses same strategy as _find_compose_file():
+        1. Query backend API
+        2. Derive from compose_file location
+        3. Use FUZZFORGE_ROOT
+
+        Returns:
+            Path to workers directory
+        """
+        # Strategy 1: Ask backend
+        try:
+            backend_url = os.getenv("FUZZFORGE_API_URL", "http://localhost:8000")
+            response = requests.get(f"{backend_url}/system/info", timeout=2)
+            if response.ok:
+                info = response.json()
+                if workers_dir_str := info.get("workers_dir"):
+                    workers_dir = Path(workers_dir_str)
+                    if workers_dir.exists():
+                        return workers_dir
+        except Exception:
+            pass
+
+        # Strategy 2: Derive from compose file location
+        if self.compose_file.exists():
+            workers_dir = self.compose_file.parent / "workers"
+            if workers_dir.exists():
+                return workers_dir
+
+        # Strategy 3: Use environment variable
+        if fuzzforge_root := os.getenv("FUZZFORGE_ROOT"):
+            workers_dir = Path(fuzzforge_root) / "workers"
+            if workers_dir.exists():
+                return workers_dir
+
+        # Fallback
+        return Path("workers")
+
+    def _detect_platform(self) -> str:
+        """
+        Detect the current platform.
+
+        Returns:
+            Platform string: "linux/amd64" or "linux/arm64"
+        """
+        machine = platform.machine().lower()
+        if machine in ["x86_64", "amd64"]:
+            return "linux/amd64"
+        elif machine in ["arm64", "aarch64"]:
+            return "linux/arm64"
+        return "unknown"
+
+    def _read_worker_metadata(self, vertical: str) -> dict:
+        """
+        Read worker metadata.yaml for a vertical.
+
+        Args:
+            vertical: Worker vertical name (e.g., "android", "python")
+
+        Returns:
+            Dictionary containing metadata, or empty dict if not found
+        """
+        try:
+            workers_dir = self._get_workers_dir()
+            metadata_file = workers_dir / vertical / "metadata.yaml"
+
+            if not metadata_file.exists():
+                logger.debug(f"No metadata.yaml found for {vertical}")
+                return {}
+
+            with open(metadata_file, 'r') as f:
+                return yaml.safe_load(f) or {}
+        except Exception as e:
+            logger.debug(f"Failed to read metadata for {vertical}: {e}")
+            return {}
+
+    def _select_dockerfile(self, vertical: str) -> str:
+        """
+        Select the appropriate Dockerfile for the current platform.
+
+        Args:
+            vertical: Worker vertical name
+
+        Returns:
+            Dockerfile name (e.g., "Dockerfile.amd64", "Dockerfile.arm64")
+        """
+        detected_platform = self._detect_platform()
+        metadata = self._read_worker_metadata(vertical)
+
+        if not metadata:
+            # No metadata: use default Dockerfile
+            logger.debug(f"No metadata for {vertical}, using Dockerfile")
+            return "Dockerfile"
+
+        platforms = metadata.get("platforms", {})
+
+        # Try detected platform first
+        if detected_platform in platforms:
+            dockerfile = platforms[detected_platform].get("dockerfile", "Dockerfile")
+            logger.debug(f"Selected {dockerfile} for {vertical} on {detected_platform}")
+            return dockerfile
+
+        # Fallback to default platform
+        default_platform = metadata.get("default_platform", "linux/amd64")
+        if default_platform in platforms:
+            dockerfile = platforms[default_platform].get("dockerfile", "Dockerfile.amd64")
+            logger.debug(f"Using default platform {default_platform}: {dockerfile}")
+            return dockerfile
+
+        # Last resort
+        return "Dockerfile"
+
+    def _run_docker_compose(self, *args: str, env: Optional[Dict[str, str]] = None) -> subprocess.CompletedProcess:
+        """
+        Run docker-compose command with optional environment variables.
 
         Args:
             *args: Arguments to pass to docker-compose
+            env: Optional environment variables to set
 
         Returns:
             CompletedProcess with result
@@ -88,11 +246,18 @@ class WorkerManager:
         cmd = ["docker-compose", "-f", str(self.compose_file)] + list(args)
         logger.debug(f"Running: {' '.join(cmd)}")
 
+        # Merge with current environment
+        full_env = os.environ.copy()
+        if env:
+            full_env.update(env)
+            logger.debug(f"Environment overrides: {env}")
+
         return subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            env=full_env
         )
 
     def _service_to_container_name(self, service_name: str) -> str:
@@ -135,21 +300,35 @@ class WorkerManager:
 
     def start_worker(self, service_name: str) -> bool:
         """
-        Start a worker service using docker-compose.
+        Start a worker service using docker-compose with platform-specific Dockerfile.
 
         Args:
-            service_name: Name of the Docker Compose service to start (e.g., "worker-python")
+            service_name: Name of the Docker Compose service to start (e.g., "worker-android")
 
         Returns:
             True if started successfully, False otherwise
         """
         try:
-            console.print(f"🚀 Starting worker: {service_name}")
+            # Extract vertical name from service name
+            vertical = service_name.replace("worker-", "")
 
-            # Use docker-compose up to create and start the service
-            result = self._run_docker_compose("up", "-d", service_name)
+            # Detect platform and select appropriate Dockerfile
+            detected_platform = self._detect_platform()
+            dockerfile = self._select_dockerfile(vertical)
 
-            logger.info(f"Worker {service_name} started")
+            # Set environment variable for docker-compose
+            env_var_name = f"{vertical.upper()}_DOCKERFILE"
+            env = {env_var_name: dockerfile}
+
+            console.print(
+                f"🚀 Starting worker: {service_name} "
+                f"(platform: {detected_platform}, using {dockerfile})"
+            )
+
+            # Use docker-compose up with --build to ensure correct Dockerfile is used
+            result = self._run_docker_compose("up", "-d", "--build", service_name, env=env)
+
+            logger.info(f"Worker {service_name} started with {dockerfile}")
             return True
 
         except subprocess.CalledProcessError as e:
