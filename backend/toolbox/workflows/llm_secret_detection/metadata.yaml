@@ -30,5 +30,42 @@ parameters:
       type: integer
       default: 20
 
+    max_file_size:
+      type: integer
+      default: 30000
+      description: "Maximum file size in bytes"
+
+    timeout:
+      type: integer
+      default: 30
+      description: "Timeout per file in seconds"
+
+    file_patterns:
+      type: array
+      items:
+        type: string
+      default:
+        - "*.py"
+        - "*.js"
+        - "*.ts"
+        - "*.java"
+        - "*.go"
+        - "*.env"
+        - "*.yaml"
+        - "*.yml"
+        - "*.json"
+        - "*.xml"
+        - "*.ini"
+        - "*.sql"
+        - "*.properties"
+        - "*.sh"
+        - "*.bat"
+        - "*.config"
+        - "*.conf"
+        - "*.toml"
+        - "*id_rsa*"
+        - "*.txt"
+      description: "File patterns to scan for secrets"
+
 required_modules:
   - "llm_secret_detector"

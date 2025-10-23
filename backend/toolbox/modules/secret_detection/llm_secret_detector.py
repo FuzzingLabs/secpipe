@@ -107,7 +107,8 @@ class LLMSecretDetectorModule(BaseModule):
             )
 
         agent_url = config.get("agent_url")
-        if not agent_url or not isinstance(agent_url, str):
+        # agent_url is optional - will have default from metadata.yaml
+        if agent_url is not None and not isinstance(agent_url, str):
             raise ValueError("agent_url must be a valid URL string")
 
         max_files = config.get("max_files", 20)
@@ -131,14 +132,14 @@ class LLMSecretDetectorModule(BaseModule):
 
         logger.info(f"Starting LLM secret detection in workspace: {workspace}")
 
-        # Extract configuration
-        agent_url = config.get("agent_url", "http://fuzzforge-task-agent:8000/a2a/litellm_agent")
-        llm_model = config.get("llm_model", "gpt-4o-mini")
-        llm_provider = config.get("llm_provider", "openai")
-        file_patterns = config.get("file_patterns", ["*.py", "*.js", "*.ts", "*.java", "*.go", "*.env", "*.yaml", "*.yml", "*.json", "*.xml", "*.ini", "*.sql", "*.properties", "*.sh", "*.bat", "*.config", "*.conf", "*.toml", "*id_rsa*", "*.txt"])
-        max_files = config.get("max_files", 20)
-        max_file_size = config.get("max_file_size", 30000)
-        timeout = config.get("timeout", 30)  # Reduced from 45s
+        # Extract configuration (defaults come from metadata.yaml via API)
+        agent_url = config["agent_url"]
+        llm_model = config["llm_model"]
+        llm_provider = config["llm_provider"]
+        file_patterns = config["file_patterns"]
+        max_files = config["max_files"]
+        max_file_size = config["max_file_size"]
+        timeout = config["timeout"]
 
         # Find files to analyze
         # Skip files that are unlikely to contain secrets
