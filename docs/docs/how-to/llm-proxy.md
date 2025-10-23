@@ -191,4 +191,4 @@ After updating the configs, run `docker compose up -d otel-collector llm-proxy`
 and generate a request (for example, trigger `ff workflow run llm_analysis`).
 New traces will show up in the collector logs or whichever backend you
 configured. See the official LiteLLM guide for advanced exporter options:
-<https://docs.litellm.ai/docs/observability/opentelemetry_integration>.
+https://docs.litellm.ai/docs/observability/opentelemetry_integration.
