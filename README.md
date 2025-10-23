@@ -117,7 +117,9 @@ For AI-powered workflows, configure your LLM API keys:
 ```bash
 cp volumes/env/.env.example volumes/env/.env
 # Edit volumes/env/.env and add your API keys (OpenAI, Anthropic, Google, etc.)
+# Add your key to LITELLM_GEMINI_API_KEY 
 ```
+> Dont change the OPENAI_API_KEY default value, as it is used for the LLM proxy. 
 
 This is required for:
 - `llm_secret_detection` workflow
