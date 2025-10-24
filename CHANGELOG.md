@@ -5,7 +5,93 @@ All notable changes to FuzzForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.7.0] - 2025-01-16
+## [Unreleased]
+
+### 🎯 Major Features
+
+#### Android Static Analysis Workflow
+- **Added comprehensive Android security testing workflow** (`android_static_analysis`):
+  - Jadx decompiler for APK → Java source code decompilation
+  - OpenGrep/Semgrep static analysis with custom Android security rules
+  - MobSF integration for comprehensive mobile security scanning
+  - SARIF report generation with unified findings format
+  - Test results: Successfully decompiled 4,145 Java files, found 8 security vulnerabilities
+  - Full workflow completes in ~1.5 minutes
+
+#### Platform-Aware Worker Architecture
+- **ARM64 (Apple Silicon) support**:
+  - Automatic platform detection (ARM64 vs x86_64) in CLI using `platform.machine()`
+  - Worker metadata convention (`metadata.yaml`) for platform-specific capabilities
+  - Multi-Dockerfile support: `Dockerfile.amd64` (full toolchain) and `Dockerfile.arm64` (optimized)
+  - Conditional module imports for graceful degradation (MobSF skips on ARM64)
+  - Backend path resolution via `FUZZFORGE_HOST_ROOT` for CLI worker management
+- **Worker selection logic**:
+  - CLI automatically selects appropriate Dockerfile based on detected platform
+  - Multi-strategy path resolution (API → .fuzzforge marker → environment variable)
+  - Platform-specific tool availability documented in metadata
+
+#### Python SAST Workflow
+- **Added Python Static Application Security Testing workflow** (`python_sast`):
+  - Bandit for Python security linting (SAST)
+  - MyPy for static type checking
+  - Safety for dependency vulnerability scanning
+  - Integrated SARIF reporter for unified findings format
+  - Auto-start Python worker on-demand
+
+### ✨ Enhancements
+
+#### CI/CD Improvements
+- Added automated worker validation in CI pipeline
+- Docker build checks for all workers before merge
+- Worker file change detection for selective builds
+- Optimized Docker layer caching for faster builds
+- Dev branch testing workflow triggers
+
+#### CLI Improvements
+- Fixed live monitoring bug in `ff monitor live` command
+- Enhanced `ff findings` command with better table formatting
+- Improved `ff monitor` with clearer status displays
+- Auto-start workers on-demand when workflows require them
+- Better error messages with actionable manual start commands
+
+#### Worker Management
+- Standardized worker service names (`worker-python`, `worker-android`, etc.)
+- Added missing `worker-secrets` to repository
+- Improved worker naming consistency across codebase
+
+#### LiteLLM Integration
+- Centralized LLM provider management with proxy
+- Governance and request/response routing
+- OTEL collector integration for observability
+- Environment-based configurable timeouts
+- Optional `.env.litellm` configuration
+
+### 🐛 Bug Fixes
+
+- Fixed MobSF API key generation from secret file (SHA256 hash)
+- Corrected Temporal activity names (decompile_with_jadx, scan_with_opengrep, scan_with_mobsf)
+- Resolved linter errors across codebase
+- Fixed unused import issues to pass CI checks
+- Removed deprecated workflow parameters
+- Docker Compose version compatibility fixes
+
+### 🔧 Technical Changes
+
+- Conditional import pattern for optional dependencies (MobSF on ARM64)
+- Multi-platform Dockerfile architecture
+- Worker metadata convention for capability declaration
+- Improved CI worker build optimization
+- Enhanced storage activity error handling
+
+### 📝 Test Projects
+
+- Added `test_projects/android_test/` with BeetleBug.apk and shopnest.apk
+- Android workflow validation with real APK samples
+- ARM64 platform testing and validation
+
+---
+
+## [0.7.0] - 2025-10-16
 
 ### 🎯 Major Features
 
