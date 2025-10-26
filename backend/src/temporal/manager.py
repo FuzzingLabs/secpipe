@@ -187,12 +187,28 @@ class TemporalManager:
 
         # Add parameters in order based on metadata schema
         # This ensures parameters match the workflow signature order
-        if workflow_params and 'parameters' in workflow_info.metadata:
+        # Apply defaults from metadata.yaml if parameter not provided
+        if 'parameters' in workflow_info.metadata:
             param_schema = workflow_info.metadata['parameters'].get('properties', {})
+            logger.debug(f"Found {len(param_schema)} parameters in schema")
             # Iterate parameters in schema order and add values
             for param_name in param_schema.keys():
-                param_value = workflow_params.get(param_name)
+                param_spec = param_schema[param_name]
+
+                # Use provided param, or fall back to default from metadata
+                if workflow_params and param_name in workflow_params:
+                    param_value = workflow_params[param_name]
+                    logger.debug(f"Using provided value for {param_name}: {param_value}")
+                elif 'default' in param_spec:
+                    param_value = param_spec['default']
+                    logger.debug(f"Using default for {param_name}: {param_value}")
+                else:
+                    param_value = None
+                    logger.debug(f"No value or default for {param_name}, using None")
+
                 workflow_args.append(param_value)
+        else:
+            logger.debug("No 'parameters' section found in workflow metadata")
 
         # Determine task queue from workflow vertical
         vertical = workflow_info.metadata.get("vertical", "default")
