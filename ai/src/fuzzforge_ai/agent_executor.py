@@ -1049,10 +1049,19 @@ class FuzzForgeExecutor:
             FunctionTool(get_task_list)
         ])
 
-        
-        # Create the agent
+
+        # Create the agent with LiteLLM configuration
+        llm_kwargs = {}
+        api_key = os.getenv('OPENAI_API_KEY') or os.getenv('LLM_API_KEY')
+        api_base = os.getenv('LLM_ENDPOINT') or os.getenv('LLM_API_BASE') or os.getenv('OPENAI_API_BASE')
+
+        if api_key:
+            llm_kwargs['api_key'] = api_key
+        if api_base:
+            llm_kwargs['api_base'] = api_base
+
         self.agent = LlmAgent(
-            model=LiteLlm(model=self.model),
+            model=LiteLlm(model=self.model, **llm_kwargs),
             name="fuzzforge_executor",
             description="Intelligent A2A orchestrator with memory",
             instruction=self._build_instruction(),

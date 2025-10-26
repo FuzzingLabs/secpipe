@@ -28,6 +28,58 @@ try:  # Optional dependency; fall back if not installed
 except ImportError:  # pragma: no cover - optional dependency
     load_dotenv = None
 
+
+def _load_env_file_if_exists(path: Path, override: bool = False) -> bool:
+    if not path.exists():
+        return False
+    # Always use manual parsing to handle empty values correctly
+    try:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, value = stripped.split("=", 1)
+            key = key.strip()
+            value = value.strip()
+            if override:
+                # Only override if value is non-empty
+                if value:
+                    os.environ[key] = value
+            else:
+                # Set if not already in environment and value is non-empty
+                if key not in os.environ and value:
+                    os.environ[key] = value
+        return True
+    except Exception:  # pragma: no cover - best effort fallback
+        return False
+
+
+def _find_shared_env_file(project_dir: Path) -> Path | None:
+    for directory in [project_dir] + list(project_dir.parents):
+        candidate = directory / "volumes" / "env" / ".env"
+        if candidate.exists():
+            return candidate
+    return None
+
+
+def load_project_env(project_dir: Optional[Path] = None) -> Path | None:
+    """Load project-local env, falling back to shared volumes/env/.env."""
+
+    project_dir = Path(project_dir or Path.cwd())
+    shared_env = _find_shared_env_file(project_dir)
+    loaded_shared = False
+    if shared_env:
+        loaded_shared = _load_env_file_if_exists(shared_env, override=False)
+
+    project_env = project_dir / ".fuzzforge" / ".env"
+    if _load_env_file_if_exists(project_env, override=True):
+        return project_env
+
+    if loaded_shared:
+        return shared_env
+
+    return None
+
 import yaml
 from pydantic import BaseModel, Field
 
@@ -312,23 +364,7 @@ class ProjectConfigManager:
         if not cognee.get("enabled", True):
             return
 
-        # Load project-specific environment overrides from .fuzzforge/.env if available
-        env_file = self.project_dir / ".fuzzforge" / ".env"
-        if env_file.exists():
-            if load_dotenv:
-                load_dotenv(env_file, override=False)
-            else:
-                try:
-                    for line in env_file.read_text(encoding="utf-8").splitlines():
-                        stripped = line.strip()
-                        if not stripped or stripped.startswith("#"):
-                            continue
-                        if "=" not in stripped:
-                            continue
-                        key, value = stripped.split("=", 1)
-                        os.environ.setdefault(key.strip(), value.strip())
-                except Exception:  # pragma: no cover - best effort fallback
-                    pass
+        load_project_env(self.project_dir)
 
         backend_access = "true" if cognee.get("backend_access_control", True) else "false"
         os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = backend_access
@@ -374,6 +410,17 @@ class ProjectConfigManager:
             "OPENAI_API_KEY",
         )
         endpoint = _env("LLM_COGNEE_ENDPOINT", "COGNEE_LLM_ENDPOINT", "LLM_ENDPOINT")
+        embedding_model = _env(
+            "LLM_COGNEE_EMBEDDING_MODEL",
+            "COGNEE_LLM_EMBEDDING_MODEL",
+            "LLM_EMBEDDING_MODEL",
+        )
+        embedding_endpoint = _env(
+            "LLM_COGNEE_EMBEDDING_ENDPOINT",
+            "COGNEE_LLM_EMBEDDING_ENDPOINT",
+            "LLM_EMBEDDING_ENDPOINT",
+            "LLM_ENDPOINT",
+        )
         api_version = _env(
             "LLM_COGNEE_API_VERSION",
             "COGNEE_LLM_API_VERSION",
@@ -398,6 +445,20 @@ class ProjectConfigManager:
                 os.environ.setdefault("OPENAI_API_KEY", api_key)
         if endpoint:
             os.environ["LLM_ENDPOINT"] = endpoint
+            os.environ.setdefault("LLM_API_BASE", endpoint)
+            os.environ.setdefault("LLM_EMBEDDING_ENDPOINT", endpoint)
+            os.environ.setdefault("LLM_EMBEDDING_API_BASE", endpoint)
+            os.environ.setdefault("OPENAI_API_BASE", endpoint)
+            # Set LiteLLM proxy environment variables for SDK usage
+            os.environ.setdefault("LITELLM_PROXY_API_BASE", endpoint)
+        if api_key:
+            # Set LiteLLM proxy API key from the virtual key
+            os.environ.setdefault("LITELLM_PROXY_API_KEY", api_key)
+        if embedding_model:
+            os.environ["LLM_EMBEDDING_MODEL"] = embedding_model
+        if embedding_endpoint:
+            os.environ["LLM_EMBEDDING_ENDPOINT"] = embedding_endpoint
+            os.environ.setdefault("LLM_EMBEDDING_API_BASE", embedding_endpoint)
         if api_version:
             os.environ["LLM_API_VERSION"] = api_version
         if max_tokens:

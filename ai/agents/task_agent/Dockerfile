@@ -16,4 +16,9 @@ COPY . /app/agent_with_adk_format
 WORKDIR /app/agent_with_adk_format
 ENV PYTHONPATH=/app
 
+# Copy and set up entrypoint
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

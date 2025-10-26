@@ -137,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- Fixed default parameters from metadata.yaml not being applied to workflows when no parameters provided
 - Fixed gitleaks workflow failing on uploaded directories without Git history
 - Fixed worker startup command suggestions (now uses `docker compose up -d` with service names)
 - Fixed missing `cognify_text` method in CogneeProjectIntegration

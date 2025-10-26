@@ -43,17 +43,33 @@ cd task_agent
 # cp .env.example .env
 ```
 
-Edit `.env` (or `.env.example`) and add your API keys. The agent must be restarted after changes so the values are picked up:
+Edit `.env` (or `.env.example`) and add your proxy + API keys. The agent must be restarted after changes so the values are picked up:
 ```bash
-# Set default model
-LITELLM_MODEL=gemini/gemini-2.0-flash-001
+# Route every request through the proxy container (use http://localhost:10999 from the host)
+FF_LLM_PROXY_BASE_URL=http://llm-proxy:4000
 
-# Add API keys for providers you want to use
-GOOGLE_API_KEY=your_google_api_key
-OPENAI_API_KEY=your_openai_api_key
-ANTHROPIC_API_KEY=your_anthropic_api_key
-OPENROUTER_API_KEY=your_openrouter_api_key
+# Default model + provider the agent boots with
+LITELLM_MODEL=openai/gpt-4o-mini
+LITELLM_PROVIDER=openai
+
+# Virtual key issued by the proxy to the task agent (bootstrap replaces the placeholder)
+OPENAI_API_KEY=sk-proxy-default
+
+# Upstream keys stay inside the proxy. Store real secrets under the LiteLLM
+# aliases and the bootstrapper mirrors them into .env.litellm for the proxy container.
+LITELLM_OPENAI_API_KEY=your_real_openai_api_key
+LITELLM_ANTHROPIC_API_KEY=your_real_anthropic_key
+LITELLM_GEMINI_API_KEY=your_real_gemini_key
+LITELLM_MISTRAL_API_KEY=your_real_mistral_key
+LITELLM_OPENROUTER_API_KEY=your_real_openrouter_key
 ```
+
+> When running the agent outside of Docker, swap `FF_LLM_PROXY_BASE_URL` to the host port (default `http://localhost:10999`).
+
+The bootstrap container provisions LiteLLM, copies provider secrets into
+`volumes/env/.env.litellm`, and rewrites `volumes/env/.env` with the virtual key.
+Populate the `LITELLM_*_API_KEY` values before the first launch so the proxy can
+reach your upstream providers as soon as the bootstrap script runs.
 
 ### 2. Install Dependencies
 
