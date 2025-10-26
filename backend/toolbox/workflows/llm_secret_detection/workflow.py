@@ -17,6 +17,7 @@ class LlmSecretDetectionWorkflow:
         llm_model: Optional[str] = None,
         llm_provider: Optional[str] = None,
         max_files: Optional[int] = None,
+        max_file_size: Optional[int] = None,
         timeout: Optional[int] = None,
         file_patterns: Optional[list] = None
     ) -> Dict[str, Any]:
@@ -67,6 +68,8 @@ class LlmSecretDetectionWorkflow:
                 config["llm_provider"] = llm_provider
             if max_files:
                 config["max_files"] = max_files
+            if max_file_size:
+                config["max_file_size"] = max_file_size
             if timeout:
                 config["timeout"] = timeout
             if file_patterns:

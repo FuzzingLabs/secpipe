@@ -188,6 +188,10 @@ logs/
 # Docker volume configs (keep .env.example but ignore actual .env)
 volumes/env/.env
 
+# Vendored proxy sources (kept locally for reference)
+ai/proxy/bifrost/
+ai/proxy/litellm/
+
 # Test project databases and configurations
 test_projects/*/.fuzzforge/
 test_projects/*/findings.db*

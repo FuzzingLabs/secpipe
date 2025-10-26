@@ -43,6 +43,42 @@ ALLOWED_CONTENT_TYPES = [
 router = APIRouter(prefix="/workflows", tags=["workflows"])
 
 
+def extract_defaults_from_json_schema(metadata: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Extract default parameter values from JSON Schema format.
+
+    Converts from:
+        parameters:
+          properties:
+            param_name:
+              default: value
+
+    To:
+        {param_name: value}
+
+    Args:
+        metadata: Workflow metadata dictionary
+
+    Returns:
+        Dictionary of parameter defaults
+    """
+    defaults = {}
+
+    # Check if there's a legacy default_parameters field
+    if "default_parameters" in metadata:
+        defaults.update(metadata["default_parameters"])
+
+    # Extract defaults from JSON Schema parameters
+    parameters = metadata.get("parameters", {})
+    properties = parameters.get("properties", {})
+
+    for param_name, param_spec in properties.items():
+        if "default" in param_spec:
+            defaults[param_name] = param_spec["default"]
+
+    return defaults
+
+
 def create_structured_error_response(
     error_type: str,
     message: str,
@@ -164,7 +200,7 @@ async def get_workflow_metadata(
         author=metadata.get("author"),
         tags=metadata.get("tags", []),
         parameters=metadata.get("parameters", {}),
-        default_parameters=metadata.get("default_parameters", {}),
+        default_parameters=extract_defaults_from_json_schema(metadata),
         required_modules=metadata.get("required_modules", [])
     )
 
@@ -221,7 +257,7 @@ async def submit_workflow(
         # Merge default parameters with user parameters
         workflow_info = temporal_mgr.workflows[workflow_name]
         metadata = workflow_info.metadata or {}
-        defaults = metadata.get("default_parameters", {})
+        defaults = extract_defaults_from_json_schema(metadata)
         user_params = submission.parameters or {}
         workflow_params = {**defaults, **user_params}
 
@@ -450,7 +486,7 @@ async def upload_and_submit_workflow(
         # Merge default parameters with user parameters
         workflow_info = temporal_mgr.workflows.get(workflow_name)
         metadata = workflow_info.metadata or {}
-        defaults = metadata.get("default_parameters", {})
+        defaults = extract_defaults_from_json_schema(metadata)
         workflow_params = {**defaults, **workflow_params}
 
         # Start workflow execution
@@ -617,11 +653,8 @@ async def get_workflow_parameters(
     else:
         param_definitions = parameters_schema
 
-    # Add default values to the schema
-    default_params = metadata.get("default_parameters", {})
-    for param_name, param_schema in param_definitions.items():
-        if isinstance(param_schema, dict) and param_name in default_params:
-            param_schema["default"] = default_params[param_name]
+    # Extract default values from JSON Schema
+    default_params = extract_defaults_from_json_schema(metadata)
 
     return {
         "workflow": workflow_name,

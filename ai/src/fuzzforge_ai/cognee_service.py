@@ -56,7 +56,7 @@ class CogneeService:
             # Configure LLM with API key BEFORE any other cognee operations
             provider = os.getenv("LLM_PROVIDER", "openai")
             model = os.getenv("LLM_MODEL") or os.getenv("LITELLM_MODEL", "gpt-4o-mini")
-            api_key = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
+            api_key = os.getenv("COGNEE_API_KEY") or os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY")
             endpoint = os.getenv("LLM_ENDPOINT")
             api_version = os.getenv("LLM_API_VERSION")
             max_tokens = os.getenv("LLM_MAX_TOKENS")
@@ -78,48 +78,62 @@ class CogneeService:
                     os.environ.setdefault("OPENAI_API_KEY", api_key)
             if endpoint:
                 os.environ["LLM_ENDPOINT"] = endpoint
+                os.environ.setdefault("LLM_API_BASE", endpoint)
+                os.environ.setdefault("OPENAI_API_BASE", endpoint)
+                os.environ.setdefault("LITELLM_PROXY_API_BASE", endpoint)
+            if api_key:
+                os.environ.setdefault("LITELLM_PROXY_API_KEY", api_key)
             if api_version:
                 os.environ["LLM_API_VERSION"] = api_version
             if max_tokens:
                 os.environ["LLM_MAX_TOKENS"] = str(max_tokens)
 
             # Configure Cognee's runtime using its configuration helpers when available
+            embedding_model = os.getenv("LLM_EMBEDDING_MODEL")
+            embedding_endpoint = os.getenv("LLM_EMBEDDING_ENDPOINT")
+            if embedding_endpoint:
+                os.environ.setdefault("LLM_EMBEDDING_API_BASE", embedding_endpoint)
+
             if hasattr(cognee.config, "set_llm_provider"):
                 cognee.config.set_llm_provider(provider)
-            if hasattr(cognee.config, "set_llm_model"):
-                cognee.config.set_llm_model(model)
-            if api_key and hasattr(cognee.config, "set_llm_api_key"):
-                cognee.config.set_llm_api_key(api_key)
-            if endpoint and hasattr(cognee.config, "set_llm_endpoint"):
-                cognee.config.set_llm_endpoint(endpoint)
+                if hasattr(cognee.config, "set_llm_model"):
+                    cognee.config.set_llm_model(model)
+                if api_key and hasattr(cognee.config, "set_llm_api_key"):
+                    cognee.config.set_llm_api_key(api_key)
+                if endpoint and hasattr(cognee.config, "set_llm_endpoint"):
+                    cognee.config.set_llm_endpoint(endpoint)
+            if embedding_model and hasattr(cognee.config, "set_llm_embedding_model"):
+                cognee.config.set_llm_embedding_model(embedding_model)
+            if embedding_endpoint and hasattr(cognee.config, "set_llm_embedding_endpoint"):
+                cognee.config.set_llm_embedding_endpoint(embedding_endpoint)
             if api_version and hasattr(cognee.config, "set_llm_api_version"):
                 cognee.config.set_llm_api_version(api_version)
             if max_tokens and hasattr(cognee.config, "set_llm_max_tokens"):
                 cognee.config.set_llm_max_tokens(int(max_tokens))
-            
+
             # Configure graph database
             cognee.config.set_graph_db_config({
                 "graph_database_provider": self.cognee_config.get("graph_database_provider", "kuzu"),
             })
-            
+
             # Set data directories
             data_dir = self.cognee_config.get("data_directory")
             system_dir = self.cognee_config.get("system_directory")
-            
+
             if data_dir:
                 logger.debug("Setting cognee data root", extra={"path": data_dir})
                 cognee.config.data_root_directory(data_dir)
             if system_dir:
                 logger.debug("Setting cognee system root", extra={"path": system_dir})
                 cognee.config.system_root_directory(system_dir)
-            
+
             # Setup multi-tenant user context
             await self._setup_user_context()
-            
+
             self._initialized = True
             logger.info(f"Cognee initialized for project {self.project_context['project_name']} "
                        f"with Kuzu at {system_dir}")
-            
+
         except ImportError:
             logger.error("Cognee not installed. Install with: pip install cognee")
             raise

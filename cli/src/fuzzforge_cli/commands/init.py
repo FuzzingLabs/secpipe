@@ -187,18 +187,39 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
 
     console.print("🧠 Configuring AI environment...")
     console.print("   • Default LLM provider: openai")
-    console.print("   • Default LLM model: gpt-5-mini")
+    console.print("   • Default LLM model: litellm_proxy/gpt-5-mini")
     console.print("   • To customise provider/model later, edit .fuzzforge/.env")
 
     llm_provider = "openai"
-    llm_model = "gpt-5-mini"
+    llm_model = "litellm_proxy/gpt-5-mini"
+
+    # Check for global virtual keys from volumes/env/.env
+    global_env_key = None
+    for parent in fuzzforge_dir.parents:
+        global_env = parent / "volumes" / "env" / ".env"
+        if global_env.exists():
+            try:
+                for line in global_env.read_text(encoding="utf-8").splitlines():
+                    if line.strip().startswith("OPENAI_API_KEY=") and "=" in line:
+                        key_value = line.split("=", 1)[1].strip()
+                        if key_value and not key_value.startswith("your-") and key_value.startswith("sk-"):
+                            global_env_key = key_value
+                            console.print(f"   • Found virtual key in {global_env.relative_to(parent)}")
+                            break
+            except Exception:
+                pass
+            break
 
     api_key = Prompt.ask(
-        "OpenAI API key (leave blank to fill manually)",
+        "OpenAI API key (leave blank to use global virtual key)" if global_env_key else "OpenAI API key (leave blank to fill manually)",
         default="",
         show_default=False,
         console=console,
     )
+
+    # Use global key if user didn't provide one
+    if not api_key and global_env_key:
+        api_key = global_env_key
 
     session_db_path = fuzzforge_dir / "fuzzforge_sessions.db"
     session_db_rel = session_db_path.relative_to(fuzzforge_dir.parent)
@@ -210,14 +231,20 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
         f"LLM_PROVIDER={llm_provider}",
         f"LLM_MODEL={llm_model}",
         f"LITELLM_MODEL={llm_model}",
+        "LLM_ENDPOINT=http://localhost:10999",
+        "LLM_API_KEY=",
+        "LLM_EMBEDDING_MODEL=litellm_proxy/text-embedding-3-large",
+        "LLM_EMBEDDING_ENDPOINT=http://localhost:10999",
         f"OPENAI_API_KEY={api_key}",
         "FUZZFORGE_MCP_URL=http://localhost:8010/mcp",
         "",
         "# Cognee configuration mirrors the primary LLM by default",
         f"LLM_COGNEE_PROVIDER={llm_provider}",
         f"LLM_COGNEE_MODEL={llm_model}",
-        f"LLM_COGNEE_API_KEY={api_key}",
-        "LLM_COGNEE_ENDPOINT=",
+        "LLM_COGNEE_ENDPOINT=http://localhost:10999",
+        "LLM_COGNEE_API_KEY=",
+        "LLM_COGNEE_EMBEDDING_MODEL=litellm_proxy/text-embedding-3-large",
+        "LLM_COGNEE_EMBEDDING_ENDPOINT=http://localhost:10999",
         "COGNEE_MCP_URL=",
         "",
         "# Session persistence options: inmemory | sqlite",
@@ -239,6 +266,8 @@ def _ensure_env_file(fuzzforge_dir: Path, force: bool) -> None:
         for line in env_lines:
             if line.startswith("OPENAI_API_KEY="):
                 template_lines.append("OPENAI_API_KEY=")
+            elif line.startswith("LLM_API_KEY="):
+                template_lines.append("LLM_API_KEY=")
             elif line.startswith("LLM_COGNEE_API_KEY="):
                 template_lines.append("LLM_COGNEE_API_KEY=")
             else:
