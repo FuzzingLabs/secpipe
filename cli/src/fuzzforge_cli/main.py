@@ -251,7 +251,7 @@ def workflow_main():
     Execute workflows and manage workflow executions
 
     Examples:
-        fuzzforge workflow security_assessment ./target    # Execute workflow
+        fuzzforge workflow run security_assessment ./target    # Execute workflow
         fuzzforge workflow status                          # Check latest status
         fuzzforge workflow history                         # Show execution history
     """

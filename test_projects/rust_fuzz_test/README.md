@@ -9,7 +9,7 @@ FuzzForge security testing project.
 fuzzforge workflows
 
 # Submit a workflow for analysis
-fuzzforge workflow <workflow-name> /path/to/target
+fuzzforge workflow run <workflow-name> /path/to/target
 
 # View findings
 fuzzforge finding <run-id>

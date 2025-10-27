@@ -438,7 +438,7 @@ def execute_workflow(
 
             # Suggest --live for fuzzing workflows
             if not live and not wait and "fuzzing" in workflow.lower():
-                console.print(f"💡 Next time try: [bold cyan]fuzzforge workflow {workflow} {target_path} --live[/bold cyan] for real-time monitoring", style="dim")
+                console.print(f"💡 Next time try: [bold cyan]fuzzforge workflow run {workflow} {target_path} --live[/bold cyan] for real-time monitoring", style="dim")
 
             # Start live monitoring if requested
             if live:

@@ -78,7 +78,7 @@ fuzzforge workflows list
 fuzzforge workflows info security_assessment
 
 # Submit a workflow for analysis
-fuzzforge workflow security_assessment /path/to/your/code
+fuzzforge workflow run security_assessment /path/to/your/code
 
 
 # View findings when complete
@@ -150,24 +150,24 @@ fuzzforge workflows parameters security_assessment --no-interactive
 
 ### Workflow Execution
 
-#### `fuzzforge workflow <workflow> <target-path>`
+#### `fuzzforge workflow run <workflow> <target-path>`
 Execute a security testing workflow with **automatic file upload**.
 
 ```bash
 # Basic execution - CLI automatically detects local files and uploads them
-fuzzforge workflow security_assessment /path/to/code
+fuzzforge workflow run security_assessment /path/to/code
 
 # With parameters
-fuzzforge workflow security_assessment /path/to/binary \
+fuzzforge workflow run security_assessment /path/to/binary \
   --param timeout=3600 \
   --param iterations=10000
 
 # With parameter file
-fuzzforge workflow security_assessment /path/to/code \
+fuzzforge workflow run security_assessment /path/to/code \
   --param-file my-params.json
 
 # Wait for completion
-fuzzforge workflow security_assessment /path/to/code --wait
+fuzzforge workflow run security_assessment /path/to/code --wait
 ```
 
 **Automatic File Upload Behavior:**
