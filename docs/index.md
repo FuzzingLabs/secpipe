@@ -89,7 +89,7 @@ Technical reference materials and specifications.
 Before starting FuzzForge, you **must** create the environment configuration file:
 
 ```bash
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 ```
 
 Docker Compose will fail without this file. You can leave it with default values if you're only using basic workflows (no AI features).

@@ -33,7 +33,7 @@ The required `volumes/env/.env` file is missing. Docker Compose needs this file 
 **How to fix:**
 ```bash
 # Create the environment file from the template
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 
 # Restart Docker Compose
 docker compose -f docker-compose.yml down
