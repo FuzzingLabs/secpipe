@@ -149,7 +149,7 @@ def write_lines(path: Path, lines: Iterable[str]) -> None:
 def read_env_file() -> list[str]:
     if not ENV_FILE_PATH.exists():
         raise FileNotFoundError(
-            f"Expected env file at {ENV_FILE_PATH}. Copy volumes/env/.env.example first."
+            f"Expected env file at {ENV_FILE_PATH}. Copy volumes/env/.env.template first."
         )
     return read_lines(ENV_FILE_PATH)
 

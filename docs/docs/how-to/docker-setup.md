@@ -171,7 +171,7 @@ FuzzForge requires `volumes/env/.env` to start. This file contains API keys and 
 
 ```bash
 # Copy the example file
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 
 # Edit to add your API keys (if using AI features)
 nano volumes/env/.env

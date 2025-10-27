@@ -115,7 +115,7 @@ For containerized workflows, see the [Docker Installation Guide](https://docs.do
 For AI-powered workflows, configure your LLM API keys:
 
 ```bash
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 # Edit volumes/env/.env and add your API keys (OpenAI, Anthropic, Google, etc.)
 # Add your key to LITELLM_GEMINI_API_KEY 
 ```
@@ -152,7 +152,7 @@ git clone https://github.com/fuzzinglabs/fuzzforge_ai.git
 cd fuzzforge_ai
 
 # 2. Copy the default LLM env config
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 
 # 3. Start FuzzForge with Temporal
 docker compose up -d

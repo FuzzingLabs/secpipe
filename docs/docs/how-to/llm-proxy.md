@@ -16,7 +16,7 @@ container.
 
 ## Before You Start
 
-1. Copy `volumes/env/.env.example` to `volumes/env/.env` and set the basics:
+1. Copy `volumes/env/.env.template` to `volumes/env/.env` and set the basics:
    - `LITELLM_MASTER_KEY` — admin token used to manage the proxy
    - `LITELLM_SALT_KEY` — random string used to encrypt provider credentials
    - Provider secrets under `LITELLM_<PROVIDER>_API_KEY` (for example

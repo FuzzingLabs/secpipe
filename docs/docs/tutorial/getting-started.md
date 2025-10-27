@@ -28,7 +28,7 @@ cd fuzzforge_ai
 Create the environment configuration file:
 
 ```bash
-cp volumes/env/.env.example volumes/env/.env
+cp volumes/env/.env.template volumes/env/.env
 ```
 
 This file is required for FuzzForge to start. You can leave it with default values if you're only using basic workflows.
