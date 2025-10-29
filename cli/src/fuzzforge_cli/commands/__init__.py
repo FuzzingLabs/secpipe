@@ -12,3 +12,6 @@ Command modules for FuzzForge CLI.
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
+from . import worker
+
+__all__ = ["worker"]
