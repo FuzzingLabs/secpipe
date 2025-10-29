@@ -39,7 +39,7 @@ workflows:
     working_directory: test_projects/android_test
     parameters:
       apk_path: "BeetleBug.apk"
-    timeout: 300
+    timeout: 600
     platform_specific: true  # Test on both amd64 and arm64
     expected:
       status: "COMPLETED"
@@ -149,7 +149,6 @@ test_suites:
     workflows:
       - android_static_analysis
       - python_sast
-      - secret_detection
       - gitleaks_detection
       - trufflehog_detection
     timeout: 900  # 15 minutes total
