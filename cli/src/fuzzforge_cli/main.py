@@ -29,6 +29,7 @@ from .commands import (
     config as config_cmd,
     ai,
     ingest,
+    worker,
 )
 from .fuzzy import enhanced_command_not_found_handler
 
@@ -334,6 +335,7 @@ app.add_typer(finding_app, name="finding", help="🔍 View and analyze findings"
 app.add_typer(monitor.app, name="monitor", help="📊 Real-time monitoring")
 app.add_typer(ai.app, name="ai", help="🤖 AI integration features")
 app.add_typer(ingest.app, name="ingest", help="🧠 Ingest knowledge into AI")
+app.add_typer(worker.app, name="worker", help="🔧 Manage Temporal workers")
 
 # Help and utility commands
 @app.command()
@@ -409,7 +411,7 @@ def main():
                     'init', 'status', 'config', 'clean',
                     'workflows', 'workflow',
                     'findings', 'finding',
-                    'monitor', 'ai', 'ingest',
+                    'monitor', 'ai', 'ingest', 'worker',
                     'version'
                 ]
 
