@@ -15,9 +15,12 @@ from fuzzforge_cli.worker_manager import WorkerManager
 
 
 @pytest.fixture
-def worker_manager():
+def worker_manager(tmp_path):
     """Create a WorkerManager instance for testing."""
-    return WorkerManager()
+    # Create a dummy docker-compose.yml for testing
+    dummy_compose = tmp_path / "docker-compose.yml"
+    dummy_compose.write_text("version: '3.8'\nservices: {}")
+    return WorkerManager(compose_file=dummy_compose)
 
 
 @pytest.fixture
