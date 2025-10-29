@@ -237,7 +237,13 @@ jobs:
       - name: Initialize test projects
         run: |
           echo "Initializing test projects..."
-          cd test_projects/android_test && ff init || true
+          mkdir -p test_projects/android_test/.fuzzforge
+          cat > test_projects/android_test/.fuzzforge/config.yaml <<EOF
+          project:
+            name: android_test
+            api_url: http://localhost:8000
+            id: test-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | head -c 16)
+          EOF
 
       - name: Run Android workflow test
         run: |
