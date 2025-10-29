@@ -113,9 +113,16 @@ jobs:
       - name: Initialize test projects
         run: |
           echo "Initializing test projects..."
-          cd test_projects/vulnerable_app && ff init --non-interactive || true
-          cd ../android_test && ff init --non-interactive || true
-          cd ../secret_detection_benchmark && ff init --non-interactive || true
+          # Create minimal .fuzzforge directories for test projects
+          for project in vulnerable_app android_test secret_detection_benchmark rust_test; do
+            mkdir -p test_projects/$project/.fuzzforge
+            cat > test_projects/$project/.fuzzforge/config.yaml <<EOF
+          project:
+            name: $project
+            api_url: http://localhost:8000
+            id: test-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | head -c 16)
+          EOF
+          done
 
       - name: Run fast workflow tests
         run: |
@@ -230,7 +237,7 @@ jobs:
       - name: Initialize test projects
         run: |
           echo "Initializing test projects..."
-          cd test_projects/android_test && ff init --non-interactive || true
+          cd test_projects/android_test && ff init || true
 
       - name: Run Android workflow test
         run: |
@@ -297,10 +304,17 @@ jobs:
       - name: Initialize test projects
         run: |
           echo "Initializing test projects..."
-          cd test_projects/vulnerable_app && ff init --non-interactive || true
-          cd ../android_test && ff init --non-interactive || true
-          cd ../secret_detection_benchmark && ff init --non-interactive || true
-          cd ../rust_test && ff init --non-interactive || true
+          # Create minimal .fuzzforge directories for test projects
+          for project in vulnerable_app android_test secret_detection_benchmark rust_test; do
+            mkdir -p test_projects/$project/.fuzzforge
+            cat > test_projects/$project/.fuzzforge/config.yaml <<EOF
+          project:
+            name: $project
+            api_url: http://localhost:8000
+            id: test-$(uuidgen | tr '[:upper:]' '[:lower:]' | tr -d '-' | head -c 16)
+          EOF
+          done
+          cd ../rust_test && ff init || true
 
       - name: Run full workflow tests
         run: |
