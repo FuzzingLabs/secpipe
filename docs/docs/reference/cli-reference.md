@@ -602,8 +602,8 @@ ff worker stop
 
 - [Docker Setup](../how-to/docker-setup.md) — Worker management and Docker configuration
 - [Getting Started](../tutorial/getting-started.md) — Complete setup guide
-- [Workflow Guide](../how-to/workflows.md) — Detailed workflow documentation
-- [CI/CD Integration](../how-to/ci-cd.md) — CI/CD setup examples
+- [Workflow Guide](../how-to/create-workflow.md) — Detailed workflow documentation
+- [CI/CD Integration](../how-to/cicd-integration.md) — CI/CD setup examples
 
 ---
 
