@@ -9,6 +9,6 @@
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
-from .sarif_reporter import SARIFReporter
+from .native_reporter import SARIFReporter
 
 __all__ = ["SARIFReporter"]
