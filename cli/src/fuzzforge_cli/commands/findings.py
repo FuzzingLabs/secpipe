@@ -600,10 +600,9 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
     results_table = Table(box=box.ROUNDED)
     results_table.add_column("ID", width=10, justify="left", style="dim")
     results_table.add_column("Severity", width=10, justify="left", no_wrap=True)
-    results_table.add_column("Rule", width=18, justify="left", style="bold cyan", no_wrap=True)
-    results_table.add_column("Message", width=35, justify="left", no_wrap=True)
+    results_table.add_column("Message", width=50, justify="left", no_wrap=True)
     results_table.add_column("Found By", width=15, justify="left", style="yellow", no_wrap=True)
-    results_table.add_column("Location", width=18, justify="left", style="dim", no_wrap=True)
+    results_table.add_column("Location", width=20, justify="left", style="dim", no_wrap=True)
 
     for finding in paginated_findings:
         if is_native:
@@ -649,11 +648,8 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
         severity_text = Text(severity.upper(), style=severity_style(severity))
 
         # Truncate long text
-        rule_text = Text(rule_id)
-        rule_text.truncate(18, overflow="ellipsis")
-
         message_text = Text(message)
-        message_text.truncate(35, overflow="ellipsis")
+        message_text.truncate(50, overflow="ellipsis")
 
         found_by_text = Text(found_by)
         found_by_text.truncate(15, overflow="ellipsis")
@@ -664,7 +660,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
         results_table.add_row(
             finding_id,
             severity_text,
-            rule_text,
             message_text,
             found_by_text,
             location_text
