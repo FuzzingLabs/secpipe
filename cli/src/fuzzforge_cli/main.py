@@ -263,13 +263,13 @@ def workflow_main():
 @finding_app.command("show")
 def show_finding_detail(
     run_id: str = typer.Argument(..., help="Run ID to get finding from"),
-    rule_id: str = typer.Option(..., "--rule", "-r", help="Rule ID of the specific finding to show")
+    finding_id: str = typer.Option(..., "--id", "-i", help="Unique ID of the specific finding to show")
 ):
     """
     🔍 Show detailed information about a specific finding
     """
     from .commands.findings import show_finding
-    show_finding(run_id=run_id, rule_id=rule_id)
+    show_finding(run_id=run_id, finding_id=finding_id)
 
 
 @finding_app.callback(invoke_without_command=True)
