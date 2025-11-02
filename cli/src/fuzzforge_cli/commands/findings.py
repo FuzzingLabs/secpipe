@@ -600,7 +600,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
     results_table = Table(box=box.ROUNDED)
     results_table.add_column("ID", width=10, justify="left", style="dim")
     results_table.add_column("Severity", width=10, justify="left", no_wrap=True)
-    results_table.add_column("Conf", width=4, justify="center", no_wrap=True)  # Confidence
     results_table.add_column("Rule", width=18, justify="left", style="bold cyan", no_wrap=True)
     results_table.add_column("Message", width=35, justify="left", no_wrap=True)
     results_table.add_column("Found By", width=15, justify="left", style="yellow", no_wrap=True)
@@ -611,7 +610,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
             # Native format
             finding_id = finding.get("id", "")[:8]  # First 8 chars
             severity = finding.get("severity", "info")
-            confidence = finding.get("confidence", "medium")[0].upper()  # H/M/L
             rule_id = finding.get("rule_id", "unknown")
             message = finding.get("title", "No message")
             found_by_info = finding.get("found_by", {})
@@ -630,7 +628,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
             props = finding.get("properties", {})
             finding_id = props.get("findingId", "")[:8] if props.get("findingId") else "N/A"
             severity = finding.get("level", "note")
-            confidence = "M"  # Not available in SARIF
             rule_id = finding.get("ruleId", "unknown")
             message = finding.get("message", {}).get("text", "No message")
             found_by = "unknown"
@@ -651,10 +648,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
         # Create styled text objects
         severity_text = Text(severity.upper(), style=severity_style(severity))
 
-        # Confidence badge with color
-        conf_color = {"H": "green", "M": "yellow", "L": "red"}.get(confidence, "white")
-        confidence_text = Text(confidence, style=f"bold {conf_color}")
-
         # Truncate long text
         rule_text = Text(rule_id)
         rule_text.truncate(18, overflow="ellipsis")
@@ -671,7 +664,6 @@ def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] =
         results_table.add_row(
             finding_id,
             severity_text,
-            confidence_text,
             rule_text,
             message_text,
             found_by_text,
