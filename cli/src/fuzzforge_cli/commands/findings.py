@@ -66,6 +66,14 @@ def get_findings(
     format: str = typer.Option(
         "table", "--format", "-f",
         help="Output format: table, json, sarif"
+    ),
+    limit: Optional[int] = typer.Option(
+        None, "--limit", "-l",
+        help="Maximum number of findings to display (no limit by default)"
+    ),
+    offset: int = typer.Option(
+        0, "--offset",
+        help="Number of findings to skip (for pagination)"
     )
 ):
     """
@@ -160,12 +168,12 @@ def get_findings(
             console.print(sarif_json)
 
         else:  # table format
-            display_findings_table(findings.sarif)
+            display_findings_table(findings.sarif, limit=limit, offset=offset)
 
             # Suggest export command and show command
-            console.print(f"\n💡 View full details of a finding: [bold cyan]ff finding show {run_id} --rule <rule-id>[/bold cyan]")
-            console.print(f"💡 Export these findings: [bold cyan]ff findings export {run_id} --format sarif[/bold cyan]")
-            console.print("   Supported formats: [cyan]sarif[/cyan] (standard), [cyan]json[/cyan], [cyan]csv[/cyan], [cyan]html[/cyan]")
+            console.print(f"\n💡 View full details of a finding: [bold cyan]ff finding show {run_id} --id <finding-id>[/bold cyan]")
+            console.print(f"💡 Export these findings: [bold cyan]ff findings export {run_id} --format native[/bold cyan]")
+            console.print("   Supported formats: [cyan]native[/cyan] (default), [cyan]sarif[/cyan], [cyan]json[/cyan], [cyan]csv[/cyan], [cyan]html[/cyan]")
 
     except Exception as e:
         console.print(f"❌ Failed to get findings: {e}", style="red")
@@ -237,6 +245,7 @@ def show_finding(
         raise typer.Exit(1)
 
 
+@app.command("by-rule")
 def show_findings_by_rule(
     run_id: str = typer.Argument(..., help="Run ID to get findings from"),
     rule_id: str = typer.Option(..., "--rule", "-r", help="Rule ID to filter findings")
@@ -405,7 +414,15 @@ def display_finding_detail(finding: Dict[str, Any], run_id: str):
     content_lines.append(f"[bold]Finding ID:[/bold] {finding_id}")
     content_lines.append(f"[bold]Rule ID:[/bold] {rule_id}")
     content_lines.append(f"[bold]Title:[/bold] {title}")
-    content_lines.append(f"[bold]Severity:[/bold] [{severity_color}]{severity.upper()}[/{severity_color}] (Confidence: {confidence})")
+
+    # Confidence indicator with emoji
+    confidence_indicators = {
+        "high": "🟢",
+        "medium": "🟡",
+        "low": "🔴"
+    }
+    confidence_emoji = confidence_indicators.get(confidence.lower(), "⚪")
+    content_lines.append(f"[bold]Severity:[/bold] [{severity_color}]{severity.upper()}[/{severity_color}]   [bold]Confidence:[/bold] {confidence_emoji} {confidence.capitalize()}")
 
     if cwe:
         content_lines.append(f"[bold]CWE:[/bold] {cwe}")
@@ -414,11 +431,26 @@ def display_finding_detail(finding: Dict[str, Any], run_id: str):
 
     content_lines.append(f"[bold]Category:[/bold] {category}")
     content_lines.append(f"[bold]Location:[/bold] {location_str}")
-    content_lines.append(f"[bold]Found by:[/bold] {tool_name} v{tool_version} ({module}) [{detection_type}]")
 
+    # Enhanced found_by display with badge
+    type_badges = {
+        "llm": "🤖",
+        "tool": "🔧",
+        "fuzzer": "🎯",
+        "manual": "👤"
+    }
+    type_badge = type_badges.get(detection_type.lower(), "🔍")
+    content_lines.append(f"[bold]Found by:[/bold] {type_badge} {tool_name} v{tool_version} [dim]({module})[/dim] [[yellow]{detection_type}[/yellow]]")
+
+    # LLM context details
     if llm_context:
         model = llm_context.get("model", "unknown")
+        prompt = llm_context.get("prompt", "")
         content_lines.append(f"[bold]LLM Model:[/bold] {model}")
+        if prompt:
+            # Show first 100 chars of prompt
+            prompt_preview = prompt[:100] + "..." if len(prompt) > 100 else prompt
+            content_lines.append(f"[bold]Prompt:[/bold] [dim]{prompt_preview}[/dim]")
 
     content_lines.append(f"[bold]Run ID:[/bold] {run_id}")
     content_lines.append("")
@@ -427,13 +459,8 @@ def display_finding_detail(finding: Dict[str, Any], run_id: str):
 
     if recommendation:
         content_lines.append("")
-        content_lines.append("[bold]Recommendation:[/bold]")
+        content_lines.append("[bold]💡 Recommendation:[/bold]")
         content_lines.append(recommendation)
-
-    if code_snippet:
-        content_lines.append("")
-        content_lines.append("[bold]Code Snippet:[/bold]")
-        content_lines.append(f"[dim]{code_snippet}[/dim]")
 
     content = "\n".join(content_lines)
 
@@ -446,106 +473,217 @@ def display_finding_detail(finding: Dict[str, Any], run_id: str):
         box=box.ROUNDED,
         padding=(1, 2)
     ))
+
+    # Display code snippet with syntax highlighting (separate from panel for better rendering)
+    if code_snippet:
+        # Detect language from file path
+        language = "text"
+        if is_native and location:
+            file_path = location.get("file", "")
+        elif not is_native and locations:
+            file_path = locations[0].get("physicalLocation", {}).get("artifactLocation", {}).get("uri", "")
+        else:
+            file_path = ""
+
+        if file_path:
+            ext = Path(file_path).suffix.lower()
+            language_map = {
+                ".py": "python",
+                ".js": "javascript",
+                ".ts": "typescript",
+                ".java": "java",
+                ".c": "c",
+                ".cpp": "cpp",
+                ".cc": "cpp",
+                ".h": "c",
+                ".hpp": "cpp",
+                ".go": "go",
+                ".rs": "rust",
+                ".rb": "ruby",
+                ".php": "php",
+                ".swift": "swift",
+                ".kt": "kotlin",
+                ".cs": "csharp",
+                ".html": "html",
+                ".xml": "xml",
+                ".json": "json",
+                ".yaml": "yaml",
+                ".yml": "yaml",
+                ".sh": "bash",
+                ".bash": "bash",
+                ".sql": "sql",
+            }
+            language = language_map.get(ext, "text")
+
+        console.print("\n[bold]Code Snippet:[/bold]")
+        syntax = Syntax(
+            code_snippet,
+            language,
+            theme="monokai",
+            line_numbers=True,
+            start_line=line_start if is_native and location.get("line_start") else 1
+        )
+        console.print(syntax)
+
     console.print()
+    console.print(f"💡 View all findings with this rule: [bold cyan]ff findings by-rule {run_id} --rule {rule_id}[/bold cyan]")
     console.print(f"💡 Export this run: [bold cyan]ff findings export {run_id} --format native[/bold cyan]")
 
 
-def display_findings_table(sarif_data: Dict[str, Any]):
-    """Display SARIF findings in a rich table format"""
-    runs = sarif_data.get("runs", [])
-    if not runs:
-        console.print("ℹ️  No findings data available", style="dim")
-        return
+def display_findings_table(findings_data: Dict[str, Any], limit: Optional[int] = None, offset: int = 0):
+    """Display findings in a rich table format (supports both native and SARIF formats)"""
 
-    run_data = runs[0]
-    results = run_data.get("results", [])
-    tool = run_data.get("tool", {})
-    driver = tool.get("driver", {})
+    # Detect format and extract findings
+    is_native = "findings" in findings_data
+
+    if is_native:
+        # Native FuzzForge format
+        findings_list = findings_data.get("findings", [])
+        workflow = findings_data.get("workflow", "Unknown")
+        total_findings = len(findings_list)
+    else:
+        # SARIF format (backward compatibility)
+        runs = findings_data.get("runs", [])
+        if not runs:
+            console.print("ℹ️  No findings data available", style="dim")
+            return
+
+        run_data = runs[0]
+        findings_list = run_data.get("results", [])
+        tool = run_data.get("tool", {}).get("driver", {})
+        workflow = tool.get("name", "Unknown")
+        total_findings = len(findings_list)
 
     # Tool information
     console.print("\n🔍 [bold]Security Analysis Results[/bold]")
-    if driver.get("name"):
-        console.print(f"Tool: {driver.get('name')} v{driver.get('version', 'unknown')}")
+    console.print(f"Workflow: {workflow}")
 
-    if not results:
+    if not findings_list:
         console.print("✅ No security issues found!", style="green")
         return
 
     # Summary statistics
     summary_by_level = {}
-    for result in results:
-        level = result.get("level", "note")
+    for finding in findings_list:
+        if is_native:
+            level = finding.get("severity", "info")
+        else:
+            level = finding.get("level", "note")
         summary_by_level[level] = summary_by_level.get(level, 0) + 1
 
     summary_table = Table(show_header=False, box=box.SIMPLE)
     summary_table.add_column("Severity", width=15, justify="left", style="bold")
     summary_table.add_column("Count", width=8, justify="right", style="bold")
 
-    for level, count in sorted(summary_by_level.items()):
-        # Create Rich Text object with color styling
-        level_text = level.upper()
-        severity_text = Text(level_text, style=severity_style(level))
+    # Sort by severity order (critical > high > medium > low > info)
+    severity_order = {"critical": 0, "high": 1, "error": 1, "medium": 2, "warning": 2, "low": 3, "note": 3, "info": 4}
+    for level in sorted(summary_by_level.keys(), key=lambda x: severity_order.get(x, 99)):
+        count = summary_by_level[level]
+        severity_text = Text(level.upper(), style=severity_style(level))
         count_text = Text(str(count))
-
         summary_table.add_row(severity_text, count_text)
 
     console.print(
         Panel.fit(
             summary_table,
-            title=f"📊 Summary ({len(results)} total issues)",
+            title=f"📊 Summary ({total_findings} total issues)",
             box=box.ROUNDED
         )
     )
 
-    # Detailed results - Rich Text-based table with proper emoji alignment
+    # Apply pagination
+    start_idx = offset
+    end_idx = start_idx + limit if limit else len(findings_list)
+    paginated_findings = findings_list[start_idx:end_idx]
+
+    # Detailed results table with enhanced columns
     results_table = Table(box=box.ROUNDED)
-    results_table.add_column("Severity", width=12, justify="left", no_wrap=True)
-    results_table.add_column("Rule", justify="left", style="bold cyan", no_wrap=True)
-    results_table.add_column("Message", width=45, justify="left", no_wrap=True)
-    results_table.add_column("Location", width=20, justify="left", style="dim", no_wrap=True)
+    results_table.add_column("ID", width=10, justify="left", style="dim")
+    results_table.add_column("Severity", width=10, justify="left", no_wrap=True)
+    results_table.add_column("Conf", width=4, justify="center", no_wrap=True)  # Confidence
+    results_table.add_column("Rule", width=18, justify="left", style="bold cyan", no_wrap=True)
+    results_table.add_column("Message", width=35, justify="left", no_wrap=True)
+    results_table.add_column("Found By", width=15, justify="left", style="yellow", no_wrap=True)
+    results_table.add_column("Location", width=18, justify="left", style="dim", no_wrap=True)
 
-    for result in results[:50]:  # Limit to first 50 results
-        level = result.get("level", "note")
-        rule_id = result.get("ruleId", "unknown")
-        message = result.get("message", {}).get("text", "No message")
+    for finding in paginated_findings:
+        if is_native:
+            # Native format
+            finding_id = finding.get("id", "")[:8]  # First 8 chars
+            severity = finding.get("severity", "info")
+            confidence = finding.get("confidence", "medium")[0].upper()  # H/M/L
+            rule_id = finding.get("rule_id", "unknown")
+            message = finding.get("title", "No message")
+            found_by_info = finding.get("found_by", {})
+            found_by = found_by_info.get("module", "unknown")
 
-        # Extract location information
-        locations = result.get("locations", [])
-        location_str = ""
-        if locations:
-            physical_location = locations[0].get("physicalLocation", {})
-            artifact_location = physical_location.get("artifactLocation", {})
-            region = physical_location.get("region", {})
-
-            file_path = artifact_location.get("uri", "")
+            location = finding.get("location", {})
+            file_path = location.get("file", "")
+            line_start = location.get("line_start")
+            location_str = ""
             if file_path:
                 location_str = Path(file_path).name
-                if region.get("startLine"):
-                    location_str += f":{region['startLine']}"
-                    if region.get("startColumn"):
-                        location_str += f":{region['startColumn']}"
+                if line_start:
+                    location_str += f":{line_start}"
+        else:
+            # SARIF format
+            props = finding.get("properties", {})
+            finding_id = props.get("findingId", "")[:8] if props.get("findingId") else "N/A"
+            severity = finding.get("level", "note")
+            confidence = "M"  # Not available in SARIF
+            rule_id = finding.get("ruleId", "unknown")
+            message = finding.get("message", {}).get("text", "No message")
+            found_by = "unknown"
 
-        # Create Rich Text objects with color styling
-        severity_text = Text(level.upper(), style=severity_style(level))
-        severity_text.truncate(12, overflow="ellipsis")
+            locations = finding.get("locations", [])
+            location_str = ""
+            if locations:
+                physical_location = locations[0].get("physicalLocation", {})
+                artifact_location = physical_location.get("artifactLocation", {})
+                region = physical_location.get("region", {})
 
-        # Show full rule ID without truncation
+                file_path = artifact_location.get("uri", "")
+                if file_path:
+                    location_str = Path(file_path).name
+                    if region.get("startLine"):
+                        location_str += f":{region['startLine']}"
+
+        # Create styled text objects
+        severity_text = Text(severity.upper(), style=severity_style(severity))
+
+        # Confidence badge with color
+        conf_color = {"H": "green", "M": "yellow", "L": "red"}.get(confidence, "white")
+        confidence_text = Text(confidence, style=f"bold {conf_color}")
+
+        # Truncate long text
+        rule_text = Text(rule_id)
+        rule_text.truncate(18, overflow="ellipsis")
+
         message_text = Text(message)
-        message_text.truncate(45, overflow="ellipsis")
+        message_text.truncate(35, overflow="ellipsis")
+
+        found_by_text = Text(found_by)
+        found_by_text.truncate(15, overflow="ellipsis")
 
         location_text = Text(location_str)
-        location_text.truncate(20, overflow="ellipsis")
+        location_text.truncate(18, overflow="ellipsis")
 
         results_table.add_row(
+            finding_id,
             severity_text,
-            rule_id,  # Pass string directly to show full UUID
+            confidence_text,
+            rule_text,
             message_text,
+            found_by_text,
             location_text
         )
 
     console.print("\n📋 [bold]Detailed Results[/bold]")
-    if len(results) > 50:
-        console.print(f"Showing first 50 of {len(results)} results")
+
+    # Pagination info
+    if limit and total_findings > limit:
+        console.print(f"Showing {start_idx + 1}-{min(end_idx, total_findings)} of {total_findings} results")
+
     console.print()
     console.print(results_table)
 
@@ -932,9 +1070,10 @@ def all_findings(
 [cyan]Recent Findings (7 days):[/cyan] {stats['recent_findings']}
 
 [bold]Severity Distribution:[/bold]
-  🔴 Errors: {stats['severity_distribution'].get('error', 0)}
-  🟡 Warnings: {stats['severity_distribution'].get('warning', 0)}
-  🔵 Notes: {stats['severity_distribution'].get('note', 0)}
+  🔴 Critical: {stats['severity_distribution'].get('critical', 0)}
+  🟠 High: {stats['severity_distribution'].get('high', 0) + stats['severity_distribution'].get('error', 0)}
+  🟡 Medium: {stats['severity_distribution'].get('medium', 0) + stats['severity_distribution'].get('warning', 0)}
+  🔵 Low: {stats['severity_distribution'].get('low', 0) + stats['severity_distribution'].get('note', 0)}
   ℹ️  Info: {stats['severity_distribution'].get('info', 0)}
 
 [bold]By Workflow:[/bold]"""
@@ -975,9 +1114,10 @@ def all_findings(
         table.add_column("Workflow", style="dim", width=20)
         table.add_column("Date", justify="center")
         table.add_column("Issues", justify="center", style="bold")
-        table.add_column("Errors", justify="center", style="red")
-        table.add_column("Warnings", justify="center", style="yellow")
-        table.add_column("Notes", justify="center", style="blue")
+        table.add_column("Critical", justify="center", style="red")
+        table.add_column("High", justify="center", style="red")
+        table.add_column("Medium", justify="center", style="yellow")
+        table.add_column("Low", justify="center", style="blue")
 
         # Get run info for each finding
         runs_info = {}
@@ -996,19 +1136,29 @@ def all_findings(
             total_issues = summary.get("total_issues", 0)
             by_severity = summary.get("by_severity", {})
 
-            # Count issues from SARIF data if summary is incomplete
-            if total_issues == 0 and "runs" in finding.sarif_data:
-                for run in finding.sarif_data["runs"]:
-                    total_issues += len(run.get("results", []))
+            # Count issues from findings_data if summary is incomplete
+            if total_issues == 0:
+                if "findings" in finding.findings_data:
+                    total_issues = len(finding.findings_data.get("findings", []))
+                elif "runs" in finding.findings_data:
+                    for run in finding.findings_data["runs"]:
+                        total_issues += len(run.get("results", []))
+
+            # Support both native (critical/high/medium/low) and SARIF (error/warning/note) severities
+            critical = by_severity.get("critical", 0)
+            high = by_severity.get("high", 0) + by_severity.get("error", 0)  # Map error to high
+            medium = by_severity.get("medium", 0) + by_severity.get("warning", 0)  # Map warning to medium
+            low = by_severity.get("low", 0) + by_severity.get("note", 0)  # Map note to low
 
             table.add_row(
                 run_id,  # Show full Run ID
                 workflow_name[:17] + "..." if len(workflow_name) > 20 else workflow_name,
                 finding.created_at.strftime("%Y-%m-%d %H:%M"),
                 str(total_issues),
-                str(by_severity.get("error", 0)),
-                str(by_severity.get("warning", 0)),
-                str(by_severity.get("note", 0))
+                str(critical),
+                str(high),
+                str(medium),
+                str(low)
             )
 
         console.print(table)
