@@ -35,18 +35,48 @@ class ModuleMetadata(BaseModel):
     requires_workspace: bool = Field(True, description="Whether module requires workspace access")
 
 
+class FoundBy(BaseModel):
+    """Information about who/what found the vulnerability"""
+    module: str = Field(..., description="FuzzForge module that detected the finding")
+    tool_name: str = Field(..., description="Name of the underlying tool")
+    tool_version: str = Field(..., description="Version of the tool")
+    type: str = Field(..., description="Type of detection method (llm, tool, fuzzer, manual)")
+
+
+class LLMContext(BaseModel):
+    """Context information for LLM-detected findings"""
+    model: str = Field(..., description="LLM model used")
+    prompt: str = Field(..., description="Prompt or analysis instructions used")
+    temperature: Optional[float] = Field(None, description="Temperature parameter used for generation")
+
+
 class ModuleFinding(BaseModel):
     """Individual finding from a module"""
-    id: str = Field(..., description="Unique finding ID")
+    id: str = Field(..., description="Unique finding ID (UUID)")
+    rule_id: str = Field(..., description="Rule/pattern identifier")
+    found_by: FoundBy = Field(..., description="Detection attribution")
+    llm_context: Optional[LLMContext] = Field(None, description="LLM-specific context")
+
     title: str = Field(..., description="Finding title")
     description: str = Field(..., description="Detailed description")
-    severity: str = Field(..., description="Severity level (info, low, medium, high, critical)")
+
+    severity: str = Field(..., description="Severity level (critical, high, medium, low, info)")
+    confidence: str = Field(default="medium", description="Confidence level (high, medium, low)")
+
     category: str = Field(..., description="Finding category")
+    cwe: Optional[str] = Field(None, description="CWE identifier (e.g., 'CWE-89')")
+    owasp: Optional[str] = Field(None, description="OWASP category")
+
     file_path: Optional[str] = Field(None, description="Affected file path relative to workspace")
     line_start: Optional[int] = Field(None, description="Starting line number")
     line_end: Optional[int] = Field(None, description="Ending line number")
+    column_start: Optional[int] = Field(None, description="Starting column number")
+    column_end: Optional[int] = Field(None, description="Ending column number")
     code_snippet: Optional[str] = Field(None, description="Relevant code snippet")
+
     recommendation: Optional[str] = Field(None, description="Remediation recommendation")
+    references: List[str] = Field(default_factory=list, description="External references")
+
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
@@ -140,20 +170,32 @@ class BaseModule(ABC):
 
     def create_finding(
         self,
+        rule_id: str,
         title: str,
         description: str,
         severity: str,
         category: str,
+        found_by: FoundBy,
+        confidence: str = "medium",
+        llm_context: Optional[LLMContext] = None,
+        cwe: Optional[str] = None,
+        owasp: Optional[str] = None,
         **kwargs
     ) -> ModuleFinding:
         """
         Helper method to create a standardized finding.
 
         Args:
+            rule_id: Rule/pattern identifier
             title: Finding title
             description: Detailed description
-            severity: Severity level
+            severity: Severity level (critical, high, medium, low, info)
             category: Finding category
+            found_by: Detection attribution (FoundBy object)
+            confidence: Confidence level (high, medium, low)
+            llm_context: Optional LLM context information
+            cwe: Optional CWE identifier
+            owasp: Optional OWASP category
             **kwargs: Additional finding fields
 
         Returns:
@@ -164,10 +206,16 @@ class BaseModule(ABC):
 
         return ModuleFinding(
             id=finding_id,
+            rule_id=rule_id,
+            found_by=found_by,
+            llm_context=llm_context,
             title=title,
             description=description,
             severity=severity,
+            confidence=confidence,
             category=category,
+            cwe=cwe,
+            owasp=owasp,
             **kwargs
         )
 
@@ -226,29 +274,62 @@ class BaseModule(ABC):
             Summary dictionary
         """
         severity_counts = {
-            "info": 0,
-            "low": 0,
-            "medium": 0,
+            "critical": 0,
             "high": 0,
-            "critical": 0
+            "medium": 0,
+            "low": 0,
+            "info": 0
+        }
+
+        confidence_counts = {
+            "high": 0,
+            "medium": 0,
+            "low": 0
         }
 
         category_counts = {}
+        source_counts = {}
+        type_counts = {}
+        affected_files = set()
 
         for finding in findings:
             # Count by severity
             if finding.severity in severity_counts:
                 severity_counts[finding.severity] += 1
 
+            # Count by confidence
+            if finding.confidence in confidence_counts:
+                confidence_counts[finding.confidence] += 1
+
             # Count by category
             if finding.category not in category_counts:
                 category_counts[finding.category] = 0
             category_counts[finding.category] += 1
 
+            # Count by source (module)
+            module = finding.found_by.module
+            if module not in source_counts:
+                source_counts[module] = 0
+            source_counts[module] += 1
+
+            # Count by type
+            detection_type = finding.found_by.type
+            if detection_type not in type_counts:
+                type_counts[detection_type] = 0
+            type_counts[detection_type] += 1
+
+            # Track affected files
+            if finding.file_path:
+                affected_files.add(finding.file_path)
+
         return {
             "total_findings": len(findings),
             "severity_counts": severity_counts,
+            "confidence_counts": confidence_counts,
             "category_counts": category_counts,
+            "source_counts": source_counts,
+            "type_counts": type_counts,
+            "affected_files": len(affected_files),
             "highest_severity": self._get_highest_severity(findings)
         }
 
