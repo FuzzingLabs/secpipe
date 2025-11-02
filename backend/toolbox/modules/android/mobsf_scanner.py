@@ -24,12 +24,12 @@ from typing import Dict, Any, List
 import aiohttp
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+        from modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -278,6 +278,14 @@ class MobSFScanner(BaseModule):
         """Parse MobSF JSON results into standardized findings"""
         findings = []
 
+        # Create FoundBy attribution for all MobSF findings
+        found_by = FoundBy(
+            module="mobsf_scanner",
+            tool_name="MobSF",
+            tool_version="3.9.7",
+            type="tool"
+        )
+
         # Parse permissions
         if 'permissions' in scan_data:
             for perm_name, perm_attrs in scan_data['permissions'].items():
@@ -287,10 +295,13 @@ class MobSFScanner(BaseModule):
                     )
 
                     finding = self.create_finding(
+                        rule_id=f"android_permission_{perm_name.replace('.', '_')}",
                         title=f"Android Permission: {perm_name}",
                         description=perm_attrs.get('description', 'No description'),
                         severity=severity,
                         category="android-permission",
+                        found_by=found_by,
+                        confidence="high",
                         metadata={
                             'permission': perm_name,
                             'status': perm_attrs.get('status'),
@@ -307,13 +318,19 @@ class MobSFScanner(BaseModule):
                 if isinstance(item, dict):
                     severity = self.SEVERITY_MAP.get(item.get('severity', '').lower(), 'medium')
 
+                    title = item.get('title') or item.get('name') or "Manifest Issue"
+                    rule = item.get('rule') or "manifest_issue"
+
                     finding = self.create_finding(
-                        title=item.get('title') or item.get('name') or "Manifest Issue",
+                        rule_id=f"android_manifest_{rule.replace(' ', '_').replace('-', '_')}",
+                        title=title,
                         description=item.get('description', 'No description'),
                         severity=severity,
                         category="android-manifest",
+                        found_by=found_by,
+                        confidence="high",
                         metadata={
-                            'rule': item.get('rule'),
+                            'rule': rule,
                             'tool': 'mobsf',
                         }
                     )
@@ -335,16 +352,32 @@ class MobSFScanner(BaseModule):
                     # Create a finding for each affected file
                     if isinstance(files_dict, dict) and files_dict:
                         for file_path, line_numbers in files_dict.items():
+                            # Extract first line number if available
+                            line_start = None
+                            if line_numbers:
+                                try:
+                                    # Can be string like "28" or "65,81"
+                                    line_start = int(str(line_numbers).split(',')[0])
+                                except (ValueError, AttributeError):
+                                    pass
+
+                            # Extract CWE from metadata
+                            cwe_value = metadata_dict.get('cwe')
+                            cwe_id = f"CWE-{cwe_value}" if cwe_value else None
+
                             finding = self.create_finding(
+                                rule_id=finding_name.replace(' ', '_').replace('-', '_'),
                                 title=finding_name,
                                 description=metadata_dict.get('description', 'No description'),
                                 severity=severity,
                                 category="android-code-analysis",
+                                found_by=found_by,
+                                confidence="medium",
+                                cwe=cwe_id,
+                                owasp=metadata_dict.get('owasp'),
                                 file_path=file_path,
-                                line_number=line_numbers,  # Can be string like "28" or "65,81"
+                                line_start=line_start,
                                 metadata={
-                                    'cwe': metadata_dict.get('cwe'),
-                                    'owasp': metadata_dict.get('owasp'),
                                     'masvs': metadata_dict.get('masvs'),
                                     'cvss': metadata_dict.get('cvss'),
                                     'ref': metadata_dict.get('ref'),
@@ -355,14 +388,21 @@ class MobSFScanner(BaseModule):
                             findings.append(finding)
                     else:
                         # Fallback: create one finding without file info
+                        # Extract CWE from metadata
+                        cwe_value = metadata_dict.get('cwe')
+                        cwe_id = f"CWE-{cwe_value}" if cwe_value else None
+
                         finding = self.create_finding(
+                            rule_id=finding_name.replace(' ', '_').replace('-', '_'),
                             title=finding_name,
                             description=metadata_dict.get('description', 'No description'),
                             severity=severity,
                             category="android-code-analysis",
+                            found_by=found_by,
+                            confidence="medium",
+                            cwe=cwe_id,
+                            owasp=metadata_dict.get('owasp'),
                             metadata={
-                                'cwe': metadata_dict.get('cwe'),
-                                'owasp': metadata_dict.get('owasp'),
                                 'masvs': metadata_dict.get('masvs'),
                                 'cvss': metadata_dict.get('cvss'),
                                 'ref': metadata_dict.get('ref'),
@@ -389,13 +429,25 @@ class MobSFScanner(BaseModule):
                     # Create a finding for each affected file
                     if isinstance(files_dict, dict) and files_dict:
                         for file_path, line_numbers in files_dict.items():
+                            # Extract first line number if available
+                            line_start = None
+                            if line_numbers:
+                                try:
+                                    # Can be string like "28" or "65,81"
+                                    line_start = int(str(line_numbers).split(',')[0])
+                                except (ValueError, AttributeError):
+                                    pass
+
                             finding = self.create_finding(
+                                rule_id=f"android_behavior_{key.replace(' ', '_').replace('-', '_')}",
                                 title=f"Behavior: {label}",
                                 description=metadata_dict.get('description', 'No description'),
                                 severity=severity,
                                 category="android-behavior",
+                                found_by=found_by,
+                                confidence="medium",
                                 file_path=file_path,
-                                line_number=line_numbers,
+                                line_start=line_start,
                                 metadata={
                                     'line_numbers': line_numbers,
                                     'behavior_key': key,
@@ -406,10 +458,13 @@ class MobSFScanner(BaseModule):
                     else:
                         # Fallback: create one finding without file info
                         finding = self.create_finding(
+                            rule_id=f"android_behavior_{key.replace(' ', '_').replace('-', '_')}",
                             title=f"Behavior: {label}",
                             description=metadata_dict.get('description', 'No description'),
                             severity=severity,
                             category="android-behavior",
+                            found_by=found_by,
+                            confidence="medium",
                             metadata={
                                 'behavior_key': key,
                                 'tool': 'mobsf',

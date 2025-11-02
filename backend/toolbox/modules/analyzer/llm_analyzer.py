@@ -18,12 +18,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy, LLMContext
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy, LLMContext
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy, LLMContext
 
 logger = logging.getLogger(__name__)
 
@@ -270,10 +270,14 @@ class LLMAnalyzer(BaseModule):
             return []
 
         # Parse LLM response into findings
+        full_prompt = f"{system_prompt}\n\n{user_message}"
         findings = self._parse_llm_response(
             llm_response=llm_response,
             file_path=file_path,
-            workspace=workspace
+            workspace=workspace,
+            llm_model=llm_model,
+            llm_provider=llm_provider,
+            prompt=full_prompt
         )
 
         return findings
@@ -282,7 +286,10 @@ class LLMAnalyzer(BaseModule):
         self,
         llm_response: str,
         file_path: Path,
-        workspace: Path
+        workspace: Path,
+        llm_model: str,
+        llm_provider: str,
+        prompt: str
     ) -> List:
         """Parse LLM response into structured findings"""
 
@@ -302,7 +309,9 @@ class LLMAnalyzer(BaseModule):
             if line.startswith("ISSUE:"):
                 # Save previous issue if exists
                 if current_issue:
-                    findings.append(self._create_module_finding(current_issue, relative_path))
+                    findings.append(self._create_module_finding(
+                        current_issue, relative_path, llm_model, llm_provider, prompt
+                    ))
                 current_issue = {"title": line.replace("ISSUE:", "").strip()}
 
             elif line.startswith("SEVERITY:"):
@@ -320,11 +329,20 @@ class LLMAnalyzer(BaseModule):
 
         # Save last issue
         if current_issue:
-            findings.append(self._create_module_finding(current_issue, relative_path))
+            findings.append(self._create_module_finding(
+                current_issue, relative_path, llm_model, llm_provider, prompt
+            ))
 
         return findings
 
-    def _create_module_finding(self, issue: Dict[str, Any], file_path: str):
+    def _create_module_finding(
+        self,
+        issue: Dict[str, Any],
+        file_path: str,
+        llm_model: str,
+        llm_provider: str,
+        prompt: str
+    ):
         """Create a ModuleFinding from parsed issue"""
 
         severity_map = {
@@ -334,12 +352,39 @@ class LLMAnalyzer(BaseModule):
             "info": "low"
         }
 
+        # Determine confidence based on severity (LLM is more confident on critical issues)
+        confidence_map = {
+            "error": "high",
+            "warning": "medium",
+            "note": "medium",
+            "info": "low"
+        }
+
+        # Create FoundBy attribution
+        found_by = FoundBy(
+            module="llm_analyzer",
+            tool_name=f"{llm_provider}/{llm_model}",
+            tool_version="1.0.0",
+            type="llm"
+        )
+
+        # Create LLM context
+        llm_context = LLMContext(
+            model=llm_model,
+            prompt=prompt,
+            temperature=None  # Not exposed in current config
+        )
+
         # Use base class helper to create proper ModuleFinding
         return self.create_finding(
+            rule_id=f"llm_security_{issue.get('severity', 'warning')}",
             title=issue.get("title", "Security issue detected"),
             description=issue.get("description", ""),
             severity=severity_map.get(issue.get("severity", "warning"), "medium"),
             category="security",
+            found_by=found_by,
+            confidence=confidence_map.get(issue.get("severity", "warning"), "medium"),
+            llm_context=llm_context,
             file_path=file_path,
             line_start=issue.get("line"),
             metadata={

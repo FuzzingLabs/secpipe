@@ -19,12 +19,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -217,11 +217,22 @@ class SecurityAnalyzer(BaseModule):
                 if self._is_false_positive_secret(match.group(0)):
                     continue
 
+                # Create FoundBy attribution
+                found_by = FoundBy(
+                    module="security_analyzer",
+                    tool_name="Security Analyzer",
+                    tool_version="1.0.0",
+                    type="tool"
+                )
+
                 findings.append(self.create_finding(
+                    rule_id=f"hardcoded_{secret_type.lower().replace(' ', '_')}",
                     title=f"Hardcoded {secret_type} detected",
                     description=f"Found potential hardcoded {secret_type} in {file_path}",
                     severity="high" if "key" in secret_type.lower() else "medium",
                     category="hardcoded_secret",
+                    found_by=found_by,
+                    confidence="medium",
                     file_path=str(file_path),
                     line_start=line_num,
                     code_snippet=line_content.strip()[:100],
@@ -261,11 +272,23 @@ class SecurityAnalyzer(BaseModule):
                 line_num = content[:match.start()].count('\n') + 1
                 line_content = lines[line_num - 1] if line_num <= len(lines) else ""
 
+                # Create FoundBy attribution
+                found_by = FoundBy(
+                    module="security_analyzer",
+                    tool_name="Security Analyzer",
+                    tool_version="1.0.0",
+                    type="tool"
+                )
+
                 findings.append(self.create_finding(
+                    rule_id=f"sql_injection_{vuln_type.lower().replace(' ', '_')}",
                     title=f"Potential SQL Injection: {vuln_type}",
                     description=f"Detected potential SQL injection vulnerability via {vuln_type}",
                     severity="high",
                     category="sql_injection",
+                    found_by=found_by,
+                    confidence="medium",
+                    cwe="CWE-89",
                     file_path=str(file_path),
                     line_start=line_num,
                     code_snippet=line_content.strip()[:100],
@@ -323,11 +346,22 @@ class SecurityAnalyzer(BaseModule):
                     line_num = content[:match.start()].count('\n') + 1
                     line_content = lines[line_num - 1] if line_num <= len(lines) else ""
 
+                    # Create FoundBy attribution
+                    found_by = FoundBy(
+                        module="security_analyzer",
+                        tool_name="Security Analyzer",
+                        tool_version="1.0.0",
+                        type="tool"
+                    )
+
                     findings.append(self.create_finding(
+                        rule_id=f"dangerous_function_{func_name.replace('()', '').replace('.', '_')}",
                         title=f"Dangerous function: {func_name}",
                         description=f"Use of potentially dangerous function {func_name}: {risk_type}",
                         severity="medium",
                         category="dangerous_function",
+                        found_by=found_by,
+                        confidence="medium",
                         file_path=str(file_path),
                         line_start=line_num,
                         code_snippet=line_content.strip()[:100],

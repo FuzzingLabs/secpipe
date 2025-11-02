@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Callable
 
-from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -426,14 +426,25 @@ class CargoFuzzer(BaseModule):
             else:
                 severity = "high"
 
+            # Create FoundBy attribution
+            found_by = FoundBy(
+                module="cargo_fuzz",
+                tool_name="cargo-fuzz",
+                tool_version="0.11.2",
+                type="fuzzer"
+            )
+
             # Create finding
             finding = self.create_finding(
+                rule_id=f"fuzzer_crash_{error_type.lower().replace(' ', '_')}",
                 title=f"Crash: {error_type} in {target_name}",
                 description=f"Cargo-fuzz discovered a crash in target '{target_name}'. "
                            f"Error type: {error_type}. "
                            f"Input size: {len(crash_input)} bytes.",
                 severity=severity,
                 category="crash",
+                found_by=found_by,
+                confidence="high",  # Fuzzer-found crashes are highly reliable
                 file_path=f"fuzz/fuzz_targets/{target_name}.rs",
                 code_snippet=stack_trace[:500],
                 recommendation="Review the crash details and fix the underlying bug. "

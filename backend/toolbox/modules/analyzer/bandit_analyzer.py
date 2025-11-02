@@ -21,12 +21,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -237,12 +237,34 @@ class BanditAnalyzer(BaseModule):
             except (ValueError, TypeError):
                 rel_path = Path(filename).name
 
+            # Extract confidence and CWE
+            confidence = issue.get("issue_confidence", "LOW").lower()
+            cwe_info = issue.get("issue_cwe", {})
+            cwe_id = f"CWE-{cwe_info.get('id')}" if cwe_info and cwe_info.get("id") else None
+
+            # Create FoundBy attribution
+            # Try to get Bandit version from metrics, fall back to unknown
+            bandit_version = "unknown"
+            if "metrics" in bandit_result:
+                bandit_version = bandit_result["metrics"].get("_version", "unknown")
+
+            found_by = FoundBy(
+                module="bandit_analyzer",
+                tool_name="Bandit",
+                tool_version=bandit_version,
+                type="tool"
+            )
+
             # Create finding
             finding = self.create_finding(
+                rule_id=test_id,
                 title=f"{test_name} ({test_id})",
                 description=issue_text,
                 severity=severity,
                 category="security-issue",
+                found_by=found_by,
+                confidence=confidence,
+                cwe=cwe_id,
                 file_path=str(rel_path),
                 line_start=line_number,
                 line_end=line_number,
@@ -251,8 +273,6 @@ class BanditAnalyzer(BaseModule):
                 metadata={
                     "test_id": test_id,
                     "test_name": test_name,
-                    "confidence": issue.get("issue_confidence", "LOW").lower(),
-                    "cwe": issue.get("issue_cwe", {}).get("id") if issue.get("issue_cwe") else None,
                     "more_info": issue.get("more_info", "")
                 }
             )

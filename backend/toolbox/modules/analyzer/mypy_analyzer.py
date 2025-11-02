@@ -21,12 +21,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -189,18 +189,29 @@ class MypyAnalyzer(BaseModule):
             title = f"Type error: {error_code or 'type-issue'}"
             description = message
 
+            # Create FoundBy attribution
+            found_by = FoundBy(
+                module="mypy_analyzer",
+                tool_name="Mypy",
+                tool_version="unknown",  # Mypy doesn't include version in output
+                type="tool"
+            )
+
             finding = self.create_finding(
+                rule_id=error_code or "type-issue",
                 title=title,
                 description=description,
                 severity=severity,
                 category="type-error",
+                found_by=found_by,
+                confidence="high",  # Mypy is highly confident in its type checking
                 file_path=str(rel_path),
                 line_start=int(line_num),
                 line_end=int(line_num),
+                column_start=int(column) if column else None,
                 recommendation="Review and fix the type inconsistency or add appropriate type annotations",
                 metadata={
                     "error_code": error_code or "unknown",
-                    "column": int(column) if column else None,
                     "level": level
                 }
             )

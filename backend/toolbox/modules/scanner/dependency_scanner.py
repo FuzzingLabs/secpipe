@@ -21,12 +21,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -201,11 +201,22 @@ class DependencyScanner(BaseModule):
 
                 recommendation = f"Upgrade {package_name} to a fixed version: {', '.join(fix_versions)}" if fix_versions else f"Check for updates to {package_name}"
 
+                # Create FoundBy attribution
+                found_by = FoundBy(
+                    module="dependency_scanner",
+                    tool_name="pip-audit",
+                    tool_version="unknown",
+                    type="tool"
+                )
+
                 finding = self.create_finding(
+                    rule_id=f"vulnerable_dependency_{package_name}",
                     title=f"Vulnerable dependency: {package_name} ({vuln_id})",
                     description=f"{description}\n\nAffected package: {package_name} {package_version}",
                     severity=severity,
                     category="vulnerable-dependency",
+                    found_by=found_by,
+                    confidence="high",  # pip-audit uses official CVE database
                     file_path=str(rel_path),
                     recommendation=recommendation,
                     metadata={

@@ -23,12 +23,12 @@ from pathlib import Path
 from typing import Dict, Any, List
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+        from modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleFinding, ModuleResult, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -302,23 +302,40 @@ class OpenGrepAndroid(BaseModule):
                 # Map severity to our standard levels
                 finding_severity = self._map_severity(severity)
 
+                # Map confidence
+                confidence_map = {"HIGH": "high", "MEDIUM": "medium", "LOW": "low"}
+                finding_confidence = confidence_map.get(confidence, "medium")
+
+                # Format CWE and OWASP
+                cwe_id = f"CWE-{cwe[0]}" if cwe and isinstance(cwe, list) and cwe else None
+                owasp_str = owasp[0] if owasp and isinstance(owasp, list) and owasp else None
+
+                # Create FoundBy attribution
+                found_by = FoundBy(
+                    module="opengrep_android",
+                    tool_name="OpenGrep",
+                    tool_version="1.45.0",
+                    type="tool"
+                )
+
                 # Create finding
                 finding = self.create_finding(
+                    rule_id=rule_id,
                     title=f"Android Security: {rule_id}",
                     description=message or f"OpenGrep rule {rule_id} triggered",
                     severity=finding_severity,
                     category=self._get_category(rule_id, extra),
+                    found_by=found_by,
+                    confidence=finding_confidence,
+                    cwe=cwe_id,
+                    owasp=owasp_str,
                     file_path=path_info if path_info else None,
                     line_start=start_line if start_line > 0 else None,
                     line_end=end_line if end_line > 0 and end_line != start_line else None,
                     code_snippet=lines.strip() if lines else None,
                     recommendation=self._get_recommendation(rule_id, extra),
                     metadata={
-                        "rule_id": rule_id,
                         "opengrep_severity": severity,
-                        "confidence": confidence,
-                        "cwe": cwe,
-                        "owasp": owasp,
                         "fix": extra.get("fix", ""),
                         "impact": extra.get("impact", ""),
                         "likelihood": extra.get("likelihood", ""),

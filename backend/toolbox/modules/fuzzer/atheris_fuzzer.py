@@ -19,7 +19,7 @@ from typing import Dict, Any, List, Optional, Callable
 import uuid
 
 import httpx
-from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding
+from modules.base import BaseModule, ModuleMetadata, ModuleResult, ModuleFinding, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -556,7 +556,16 @@ class AtherisFuzzer(BaseModule):
             # Encode crash input for storage
             crash_input_b64 = base64.b64encode(crash["input"]).decode()
 
+            # Create FoundBy attribution
+            found_by = FoundBy(
+                module="atheris_fuzzer",
+                tool_name="Atheris",
+                tool_version="unknown",
+                type="fuzzer"
+            )
+
             finding = self.create_finding(
+                rule_id=f"fuzzer_crash_{crash['exception_type'].lower().replace(' ', '_')}",
                 title=f"Crash: {crash['exception_type']}",
                 description=(
                     f"Atheris found crash during fuzzing:\n"
@@ -566,6 +575,8 @@ class AtherisFuzzer(BaseModule):
                 ),
                 severity="critical",
                 category="crash",
+                found_by=found_by,
+                confidence="high",  # Fuzzer-found crashes are highly reliable
                 file_path=str(target_path),
                 metadata={
                     "crash_input_base64": crash_input_b64,

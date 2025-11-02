@@ -20,12 +20,12 @@ from typing import Dict, Any
 import hashlib
 
 try:
-    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult
+    from toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy
 except ImportError:
     try:
-        from modules.base import BaseModule, ModuleMetadata, ModuleResult
+        from modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy
     except ImportError:
-        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult
+        from src.toolbox.modules.base import BaseModule, ModuleMetadata, ModuleResult, FoundBy
 
 logger = logging.getLogger(__name__)
 
@@ -122,6 +122,14 @@ class FileScanner(BaseModule):
 
         logger.info(f"Scanning workspace with patterns: {patterns}")
 
+        # Create FoundBy attribution for all findings
+        found_by = FoundBy(
+            module="file_scanner",
+            tool_name="File Scanner",
+            tool_version="1.0.0",
+            type="tool"
+        )
+
         try:
             # Scan for each pattern
             for pattern in patterns:
@@ -152,10 +160,13 @@ class FileScanner(BaseModule):
                         # Check for sensitive files
                         if check_sensitive and self._is_sensitive_file(file_path):
                             findings.append(self.create_finding(
+                                rule_id="sensitive_file",
                                 title=f"Potentially sensitive file: {relative_path.name}",
                                 description=f"Found potentially sensitive file at {relative_path}",
                                 severity="medium",
                                 category="sensitive_file",
+                                found_by=found_by,
+                                confidence="medium",
                                 file_path=str(relative_path),
                                 metadata={
                                     "file_size": file_size,
@@ -170,10 +181,13 @@ class FileScanner(BaseModule):
 
                         # Create informational finding for each file
                         findings.append(self.create_finding(
+                            rule_id="file_enumeration",
                             title=f"File discovered: {relative_path.name}",
                             description=f"File: {relative_path}",
                             severity="info",
                             category="file_enumeration",
+                            found_by=found_by,
+                            confidence="high",
                             file_path=str(relative_path),
                             metadata={
                                 "file_size": file_size,
