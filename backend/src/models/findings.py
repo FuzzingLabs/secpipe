@@ -19,10 +19,10 @@ from datetime import datetime
 
 
 class WorkflowFindings(BaseModel):
-    """Findings from a workflow execution in SARIF format"""
+    """Findings from a workflow execution in native FuzzForge format"""
     workflow: str = Field(..., description="Workflow name")
     run_id: str = Field(..., description="Unique run identifier")
-    sarif: Dict[str, Any] = Field(..., description="SARIF formatted findings")
+    sarif: Dict[str, Any] = Field(..., description="Findings in native FuzzForge format (field name kept for API compatibility)")
     metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
 
 
