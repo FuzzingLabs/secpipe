@@ -757,14 +757,14 @@ def export_findings(
 
     try:
         # Get findings from database first, fallback to API
-        findings_data = db.get_findings(run_id)
-        if not findings_data:
+        findings_record = db.get_findings(run_id)
+        if not findings_record:
             console.print(f"📡 Fetching findings from API for run: {run_id}")
             with get_client() as client:
                 findings = client.get_run_findings(run_id)
-                sarif_data = findings.sarif
+                findings_data = findings.sarif
         else:
-            sarif_data = findings_data.sarif_data
+            findings_data = findings_record.findings_data
 
         # Generate output filename with timestamp for uniqueness
         if not output:
@@ -776,19 +776,19 @@ def export_findings(
         # Export based on format
         if format == "sarif":
             with open(output_path, 'w') as f:
-                json.dump(sarif_data, f, indent=2)
+                json.dump(findings_data, f, indent=2)
 
         elif format == "json":
             # Simplified JSON format
-            simplified_data = extract_simplified_findings(sarif_data)
+            simplified_data = extract_simplified_findings(findings_data)
             with open(output_path, 'w') as f:
                 json.dump(simplified_data, f, indent=2)
 
         elif format == "csv":
-            export_to_csv(sarif_data, output_path)
+            export_to_csv(findings_data, output_path)
 
         elif format == "html":
-            export_to_html(sarif_data, output_path, run_id)
+            export_to_html(findings_data, output_path, run_id)
 
         else:
             console.print(f"❌ Unsupported format: {format}", style="red")
@@ -801,71 +801,81 @@ def export_findings(
         raise typer.Exit(1)
 
 
-def extract_simplified_findings(sarif_data: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract simplified findings structure from SARIF"""
-    runs = sarif_data.get("runs", [])
-    if not runs:
-        return {"findings": [], "summary": {}}
+def extract_simplified_findings(findings_data: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract simplified findings structure from native format or SARIF"""
+    # Detect format
+    is_native = "findings" in findings_data and "version" in findings_data
 
-    run_data = runs[0]
-    results = run_data.get("results", [])
-    tool = run_data.get("tool", {}).get("driver", {})
+    if is_native:
+        # Native FuzzForge format
+        findings_list = findings_data.get("findings", [])
+        workflow = findings_data.get("workflow", "Unknown")
+        summary = findings_data.get("summary", {})
 
-    simplified = {
-        "tool": {
-            "name": tool.get("name", "Unknown"),
-            "version": tool.get("version", "Unknown")
-        },
-        "summary": {
-            "total_issues": len(results),
-            "by_severity": {}
-        },
-        "findings": []
-    }
+        simplified = {
+            "tool": {
+                "name": workflow,
+                "version": findings_data.get("version", "1.0.0")
+            },
+            "summary": summary if summary else {
+                "total_issues": len(findings_list),
+                "by_severity": {}
+            },
+            "findings": []
+        }
 
-    for result in results:
-        level = result.get("level", "note")
-        simplified["summary"]["by_severity"][level] = simplified["summary"]["by_severity"].get(level, 0) + 1
+        # Count by severity if not in summary
+        if not summary:
+            for finding in findings_list:
+                severity = finding.get("severity", "info")
+                simplified["summary"]["by_severity"][severity] = simplified["summary"]["by_severity"].get(severity, 0) + 1
 
-        # Extract location
-        location_info = {}
-        locations = result.get("locations", [])
-        if locations:
-            physical_location = locations[0].get("physicalLocation", {})
-            artifact_location = physical_location.get("artifactLocation", {})
-            region = physical_location.get("region", {})
+        # Extract simplified findings
+        for finding in findings_list:
+            location = finding.get("location", {})
+            simplified["findings"].append({
+                "id": finding.get("id"),
+                "rule_id": finding.get("rule_id", "unknown"),
+                "severity": finding.get("severity", "info"),
+                "confidence": finding.get("confidence", "medium"),
+                "title": finding.get("title", ""),
+                "description": finding.get("description", ""),
+                "category": finding.get("category", "other"),
+                "found_by": finding.get("found_by", {}),
+                "location": {
+                    "file": location.get("file", ""),
+                    "line": location.get("line_start"),
+                    "column": location.get("column_start")
+                }
+            })
+    else:
+        # SARIF format
+        runs = findings_data.get("runs", [])
+        if not runs:
+            return {"findings": [], "summary": {}}
 
-            location_info = {
-                "file": artifact_location.get("uri", ""),
-                "line": region.get("startLine"),
-                "column": region.get("startColumn")
-            }
+        run_data = runs[0]
+        results = run_data.get("results", [])
+        tool = run_data.get("tool", {}).get("driver", {})
 
-        simplified["findings"].append({
-            "rule_id": result.get("ruleId", "unknown"),
-            "severity": level,
-            "message": result.get("message", {}).get("text", ""),
-            "location": location_info
-        })
-
-    return simplified
-
-
-def export_to_csv(sarif_data: Dict[str, Any], output_path: Path):
-    """Export findings to CSV format"""
-    runs = sarif_data.get("runs", [])
-    if not runs:
-        return
-
-    results = runs[0].get("results", [])
-
-    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
-        fieldnames = ['rule_id', 'severity', 'message', 'file', 'line', 'column']
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-        writer.writeheader()
+        simplified = {
+            "tool": {
+                "name": tool.get("name", "Unknown"),
+                "version": tool.get("version", "Unknown")
+            },
+            "summary": {
+                "total_issues": len(results),
+                "by_severity": {}
+            },
+            "findings": []
+        }
 
         for result in results:
-            location_info = {"file": "", "line": "", "column": ""}
+            level = result.get("level", "note")
+            simplified["summary"]["by_severity"][level] = simplified["summary"]["by_severity"].get(level, 0) + 1
+
+            # Extract location
+            location_info = {}
             locations = result.get("locations", [])
             if locations:
                 physical_location = locations[0].get("physicalLocation", {})
@@ -874,109 +884,732 @@ def export_to_csv(sarif_data: Dict[str, Any], output_path: Path):
 
                 location_info = {
                     "file": artifact_location.get("uri", ""),
-                    "line": region.get("startLine", ""),
-                    "column": region.get("startColumn", "")
+                    "line": region.get("startLine"),
+                    "column": region.get("startColumn")
                 }
 
-            writer.writerow({
-                "rule_id": result.get("ruleId", ""),
-                "severity": result.get("level", "note"),
+            simplified["findings"].append({
+                "rule_id": result.get("ruleId", "unknown"),
+                "severity": level,
                 "message": result.get("message", {}).get("text", ""),
-                **location_info
+                "location": location_info
             })
 
+    return simplified
 
-def export_to_html(sarif_data: Dict[str, Any], output_path: Path, run_id: str):
-    """Export findings to HTML format"""
-    runs = sarif_data.get("runs", [])
-    if not runs:
-        return
 
-    run_data = runs[0]
-    results = run_data.get("results", [])
-    tool = run_data.get("tool", {}).get("driver", {})
+def export_to_csv(findings_data: Dict[str, Any], output_path: Path):
+    """Export findings to CSV format (supports both native and SARIF)"""
+    # Detect format
+    is_native = "findings" in findings_data and "version" in findings_data
 
-    # Simple HTML template
+    with open(output_path, 'w', newline='', encoding='utf-8') as csvfile:
+        if is_native:
+            # Native FuzzForge format - include more fields
+            fieldnames = ['id', 'rule_id', 'severity', 'confidence', 'title', 'category', 'module', 'file', 'line', 'column']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            findings_list = findings_data.get("findings", [])
+            for finding in findings_list:
+                location = finding.get("location", {})
+                found_by = finding.get("found_by", {})
+
+                writer.writerow({
+                    "id": finding.get("id", "")[:8],
+                    "rule_id": finding.get("rule_id", ""),
+                    "severity": finding.get("severity", "info"),
+                    "confidence": finding.get("confidence", "medium"),
+                    "title": finding.get("title", ""),
+                    "category": finding.get("category", ""),
+                    "module": found_by.get("module", ""),
+                    "file": location.get("file", ""),
+                    "line": location.get("line_start", ""),
+                    "column": location.get("column_start", "")
+                })
+        else:
+            # SARIF format
+            fieldnames = ['rule_id', 'severity', 'message', 'file', 'line', 'column']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+
+            runs = findings_data.get("runs", [])
+            if not runs:
+                return
+
+            results = runs[0].get("results", [])
+
+            for result in results:
+                location_info = {"file": "", "line": "", "column": ""}
+                locations = result.get("locations", [])
+                if locations:
+                    physical_location = locations[0].get("physicalLocation", {})
+                    artifact_location = physical_location.get("artifactLocation", {})
+                    region = physical_location.get("region", {})
+
+                    location_info = {
+                        "file": artifact_location.get("uri", ""),
+                        "line": region.get("startLine", ""),
+                        "column": region.get("startColumn", "")
+                    }
+
+                writer.writerow({
+                    "rule_id": result.get("ruleId", ""),
+                    "severity": result.get("level", "note"),
+                    "message": result.get("message", {}).get("text", ""),
+                    **location_info
+                })
+
+
+def export_to_html(findings_data: Dict[str, Any], output_path: Path, run_id: str):
+    """Export findings to modern, interactive HTML format with charts"""
+    import html
+    from datetime import datetime
+
+    # Helper function to safely escape strings
+    def safe_escape(value):
+        """Safely escape a value, handling None and non-string types"""
+        if value is None:
+            return ""
+        return html.escape(str(value))
+
+    # Detect format (native or SARIF)
+    is_native = "findings" in findings_data and "version" in findings_data
+
+    if is_native:
+        # Native FuzzForge format
+        findings_list = findings_data.get("findings", [])
+        workflow = findings_data.get("workflow", "Security Assessment")
+        summary = findings_data.get("summary", {})
+        total_findings = len(findings_list)
+    else:
+        # SARIF format (backward compatibility)
+        runs = findings_data.get("runs", [])
+        if not runs:
+            # Empty report
+            findings_list = []
+            workflow = "Security Assessment"
+            summary = {}
+            total_findings = 0
+        else:
+            run_data = runs[0]
+            findings_list = run_data.get("results", [])
+            tool = run_data.get("tool", {}).get("driver", {})
+            workflow = tool.get("name", "Security Assessment")
+            total_findings = len(findings_list)
+            summary = {}
+
+    # Calculate statistics
+    severity_counts = {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 0}
+    confidence_counts = {"high": 0, "medium": 0, "low": 0}
+    category_counts = {}
+    source_counts = {}
+    type_counts = {}
+
+    for finding in findings_list:
+        if is_native:
+            severity = finding.get("severity", "info")
+            confidence = finding.get("confidence", "medium")
+            category = finding.get("category", "other")
+            found_by = finding.get("found_by", {})
+            source = found_by.get("module", "unknown")
+            detection_type = found_by.get("type", "tool")
+        else:
+            # Map SARIF levels to severity
+            level = finding.get("level", "note")
+            severity_map = {"error": "high", "warning": "medium", "note": "low", "none": "info"}
+            severity = severity_map.get(level, "info")
+            confidence = "medium"
+            category = "other"
+            source = "unknown"
+            detection_type = "tool"
+
+        severity_counts[severity] = severity_counts.get(severity, 0) + 1
+        confidence_counts[confidence] = confidence_counts.get(confidence, 0) + 1
+        category_counts[category] = category_counts.get(category, 0) + 1
+        source_counts[source] = source_counts.get(source, 0) + 1
+        type_counts[detection_type] = type_counts.get(detection_type, 0) + 1
+
+    # Prepare chart data
+    severity_data = {k: v for k, v in severity_counts.items() if v > 0}
+    category_data = dict(sorted(category_counts.items(), key=lambda x: x[1], reverse=True)[:10])
+    source_data = dict(sorted(source_counts.items(), key=lambda x: x[1], reverse=True)[:10])
+    type_data = {k: v for k, v in type_counts.items() if v > 0}
+
+    # Generate findings rows
+    findings_rows = ""
+    for idx, finding in enumerate(findings_list):
+        if is_native:
+            finding_id = finding.get("id", "")[:8] if finding.get("id") else ""
+            severity = finding.get("severity", "info")
+            confidence = finding.get("confidence", "medium")
+            title = safe_escape(finding.get("title") or "No title")
+            description = safe_escape(finding.get("description"))
+            rule_id = safe_escape(finding.get("rule_id") or "unknown")
+            category = safe_escape(finding.get("category") or "other")
+
+            found_by = finding.get("found_by") or {}
+            module = safe_escape(found_by.get("module") or "unknown")
+            tool_name = safe_escape(found_by.get("tool_name") or "Unknown")
+            detection_type = found_by.get("type") or "tool"
+
+            location = finding.get("location") or {}
+            file_path = safe_escape(location.get("file"))
+            line_start = location.get("line_start")
+            code_snippet = safe_escape(location.get("snippet"))
+
+            cwe = safe_escape(finding.get("cwe"))
+            owasp = safe_escape(finding.get("owasp"))
+            recommendation = safe_escape(finding.get("recommendation"))
+
+            llm_context = finding.get("llm_context")
+            if llm_context:
+                llm_model = safe_escape(llm_context.get("model"))
+                prompt_text = llm_context.get("prompt", "")
+                if prompt_text:
+                    llm_prompt_preview = safe_escape(prompt_text[:100] + "..." if len(prompt_text) > 100 else prompt_text)
+                else:
+                    llm_prompt_preview = ""
+            else:
+                llm_model = ""
+                llm_prompt_preview = ""
+        else:
+            # SARIF format
+            props = finding.get("properties") or {}
+            finding_id = props.get("findingId", "")[:8] if props.get("findingId") else ""
+            level = finding.get("level", "note")
+            severity_map = {"error": "high", "warning": "medium", "note": "low", "none": "info"}
+            severity = severity_map.get(level, "info")
+            confidence = "medium"
+            rule_id = safe_escape(finding.get("ruleId") or "unknown")
+            message = finding.get("message") or {}
+            title = safe_escape(message.get("text") or "No message")
+            description = title
+            category = "other"
+            module = "unknown"
+            tool_name = "Unknown"
+            detection_type = "tool"
+
+            locations = finding.get("locations", [])
+            if locations:
+                physical_location = locations[0].get("physicalLocation") or {}
+                artifact_location = physical_location.get("artifactLocation") or {}
+                region = physical_location.get("region") or {}
+                file_path = safe_escape(artifact_location.get("uri"))
+                line_start = region.get("startLine")
+                snippet_obj = region.get("snippet") or {}
+                code_snippet = safe_escape(snippet_obj.get("text"))
+            else:
+                file_path = ""
+                line_start = None
+                code_snippet = ""
+
+            cwe = ""
+            owasp = ""
+            recommendation = ""
+            llm_model = ""
+            llm_prompt_preview = ""
+
+        location_str = file_path
+        if line_start:
+            location_str += f":{line_start}"
+
+        severity_badge = {
+            "critical": '<span class="badge bg-danger">CRITICAL</span>',
+            "high": '<span class="badge bg-danger">HIGH</span>',
+            "medium": '<span class="badge bg-warning text-dark">MEDIUM</span>',
+            "low": '<span class="badge bg-info text-dark">LOW</span>',
+            "info": '<span class="badge bg-secondary">INFO</span>'
+        }.get(severity, '<span class="badge bg-secondary">INFO</span>')
+
+        confidence_badge = {
+            "high": '<span class="badge bg-success">High</span>',
+            "medium": '<span class="badge bg-warning text-dark">Medium</span>',
+            "low": '<span class="badge bg-danger">Low</span>'
+        }.get(confidence, '<span class="badge bg-secondary">Medium</span>')
+
+        type_icon = {
+            "llm": "🤖",
+            "tool": "🔧",
+            "fuzzer": "🎯",
+            "manual": "👤"
+        }.get(detection_type, "🔧")
+
+        # Build details HTML
+        details_html = f"""
+        <div class="finding-details" id="details-{idx}" style="display:none;">
+            <div class="card mt-2">
+                <div class="card-body">
+                    <h6>Description</h6>
+                    <p>{description}</p>
+
+                    {f'<h6>Code Snippet</h6><pre><code>{code_snippet}</code></pre>' if code_snippet else ''}
+
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6>Classification</h6>
+                            <p><strong>Category:</strong> {category}</p>
+                            {f'<p><strong>CWE:</strong> {cwe}</p>' if cwe else ''}
+                            {f'<p><strong>OWASP:</strong> {owasp}</p>' if owasp else ''}
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Detection</h6>
+                            <p><strong>Module:</strong> {module}</p>
+                            <p><strong>Tool:</strong> {tool_name}</p>
+                            <p><strong>Type:</strong> {type_icon} {detection_type}</p>
+                            <p><strong>Confidence:</strong> {confidence_badge}</p>
+                        </div>
+                    </div>
+
+                    {f'<div class="mt-3"><h6>LLM Detection Context</h6><p><strong>Model:</strong> {llm_model}</p><p><strong>Prompt:</strong> {llm_prompt_preview}</p></div>' if llm_model else ''}
+
+                    {f'<div class="mt-3"><h6>Recommendation</h6><p>{recommendation}</p></div>' if recommendation else ''}
+                </div>
+            </div>
+        </div>
+        """
+
+        findings_rows += f"""
+        <tr class="finding-row" data-severity="{severity}" data-confidence="{confidence}" data-category="{category}" data-source="{module}" data-type="{detection_type}" onclick="toggleDetails({idx})">
+            <td>{finding_id}</td>
+            <td>{severity_badge}</td>
+            <td>{title}</td>
+            <td>{type_icon} {module}</td>
+            <td>{location_str}</td>
+        </tr>
+        <tr>
+            <td colspan="5" class="p-0">{details_html}</td>
+        </tr>
+        """
+
+    # Generate HTML
     html_content = f"""<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Security Findings - {run_id}</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Security Findings Report - {run_id}</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Prism.js for syntax highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+
     <style>
-        body {{ font-family: Arial, sans-serif; margin: 40px; }}
-        .header {{ background: #f4f4f4; padding: 20px; border-radius: 5px; }}
-        .summary {{ margin: 20px 0; }}
-        .findings {{ margin: 20px 0; }}
-        table {{ width: 100%; border-collapse: collapse; }}
-        th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
-        th {{ background-color: #f2f2f2; }}
-        .error {{ color: #d32f2f; }}
-        .warning {{ color: #f57c00; }}
-        .note {{ color: #1976d2; }}
-        .info {{ color: #388e3c; }}
+        :root {{
+            --critical: #dc3545;
+            --high: #dc3545;
+            --medium: #ffc107;
+            --low: #0dcaf0;
+            --info: #6c757d;
+        }}
+
+        body {{
+            background-color: #f8f9fa;
+            padding-bottom: 50px;
+        }}
+
+        .header-section {{
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }}
+
+        .stat-card {{
+            transition: transform 0.2s;
+        }}
+
+        .stat-card:hover {{
+            transform: translateY(-5px);
+        }}
+
+        .finding-row {{
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }}
+
+        .finding-row:hover {{
+            background-color: #f8f9fa;
+        }}
+
+        .chart-container {{
+            position: relative;
+            height: 300px;
+        }}
+
+        .filters {{
+            position: sticky;
+            top: 20px;
+            z-index: 100;
+        }}
+
+        pre {{
+            background-color: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }}
+
+        code {{
+            color: #f8f8f2;
+        }}
+
+        .dark-mode {{
+            background-color: #1a1a1a;
+            color: #f8f9fa;
+        }}
+
+        .dark-mode .card {{
+            background-color: #2d2d2d;
+            color: #f8f9fa;
+        }}
+
+        @media print {{
+            .filters, .no-print {{
+                display: none !important;
+            }}
+        }}
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Security Findings Report</h1>
-        <p><strong>Run ID:</strong> {run_id}</p>
-        <p><strong>Tool:</strong> {tool.get('name', 'Unknown')} v{tool.get('version', 'Unknown')}</p>
-        <p><strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+    <!-- Header -->
+    <div class="header-section">
+        <div class="container">
+            <h1><i class="bi bi-shield-check"></i> Security Findings Report</h1>
+            <p class="lead mb-1">{workflow}</p>
+            <p class="mb-0"><strong>Run ID:</strong> {run_id} | <strong>Generated:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}</p>
+        </div>
     </div>
 
-    <div class="summary">
-        <h2>Summary</h2>
-        <p><strong>Total Issues:</strong> {len(results)}</p>
+    <div class="container">
+        <!-- Executive Summary -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <h2 class="mb-3">📊 Executive Summary</h2>
+            </div>
+
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="display-4">{total_findings}</h3>
+                        <p class="text-muted mb-0">Total Findings</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="display-4 text-danger">{severity_counts['critical'] + severity_counts['high']}</h3>
+                        <p class="text-muted mb-0">Critical + High</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="display-4 text-warning">{severity_counts['medium']}</h3>
+                        <p class="text-muted mb-0">Medium</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card stat-card text-center border-0 shadow-sm">
+                    <div class="card-body">
+                        <h3 class="display-4 text-info">{severity_counts['low'] + severity_counts['info']}</h3>
+                        <p class="text-muted mb-0">Low + Info</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Severity Distribution</h5>
+                        <div class="chart-container">
+                            <canvas id="severityChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Detection Type</h5>
+                        <div class="chart-container">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Top Categories</h5>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 mb-3">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title">Findings by Source</h5>
+                        <div class="chart-container">
+                            <canvas id="sourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters & Findings Table -->
+        <div class="row">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        <h5 class="card-title mb-3">🔍 Detailed Findings</h5>
+
+                        <!-- Filters -->
+                        <div class="row mb-3 no-print">
+                            <div class="col-md-3 mb-2">
+                                <select class="form-select" id="severityFilter" onchange="applyFilters()">
+                                    <option value="">All Severities</option>
+                                    <option value="critical">Critical</option>
+                                    <option value="high">High</option>
+                                    <option value="medium">Medium</option>
+                                    <option value="low">Low</option>
+                                    <option value="info">Info</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 mb-2">
+                                <select class="form-select" id="typeFilter" onchange="applyFilters()">
+                                    <option value="">All Types</option>
+                                    <option value="llm">🤖 LLM</option>
+                                    <option value="tool">🔧 Tool</option>
+                                    <option value="fuzzer">🎯 Fuzzer</option>
+                                    <option value="manual">👤 Manual</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4 mb-2">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Search findings..." onkeyup="applyFilters()">
+                            </div>
+                            <div class="col-md-2 mb-2">
+                                <button class="btn btn-outline-secondary w-100" onclick="resetFilters()">Reset</button>
+                            </div>
+                        </div>
+
+                        <!-- Table -->
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th onclick="sortTable(0)" style="cursor: pointer;">ID</th>
+                                        <th onclick="sortTable(1)" style="cursor: pointer;">Severity</th>
+                                        <th onclick="sortTable(2)" style="cursor: pointer;">Finding</th>
+                                        <th onclick="sortTable(3)" style="cursor: pointer;">Source</th>
+                                        <th onclick="sortTable(4)" style="cursor: pointer;">Location</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="findingsTable">
+                                    {findings_rows}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <p class="text-muted mt-3">
+                            <span id="visibleCount">{total_findings}</span> of {total_findings} findings shown.
+                            Click on a row to view details.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div class="findings">
-        <h2>Detailed Findings</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Rule ID</th>
-                    <th>Severity</th>
-                    <th>Message</th>
-                    <th>Location</th>
-                </tr>
-            </thead>
-            <tbody>
-"""
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    for result in results:
-        level = result.get("level", "note")
-        rule_id = result.get("ruleId", "unknown")
-        message = result.get("message", {}).get("text", "")
+    <script>
+        // Chart.js setup
+        const chartColors = {{
+            critical: '#dc3545',
+            high: '#dc3545',
+            medium: '#ffc107',
+            low: '#0dcaf0',
+            info: '#6c757d'
+        }};
 
-        # Extract location
-        location_str = ""
-        locations = result.get("locations", [])
-        if locations:
-            physical_location = locations[0].get("physicalLocation", {})
-            artifact_location = physical_location.get("artifactLocation", {})
-            region = physical_location.get("region", {})
+        // Severity Chart
+        new Chart(document.getElementById('severityChart'), {{
+            type: 'doughnut',
+            data: {{
+                labels: {list(severity_data.keys())},
+                datasets: [{{
+                    data: {list(severity_data.values())},
+                    backgroundColor: {[f"chartColors['{k}']" for k in severity_data.keys()]},
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ position: 'bottom' }}
+                }}
+            }}
+        }});
 
-            file_path = artifact_location.get("uri", "")
-            if file_path:
-                location_str = file_path
-                if region.get("startLine"):
-                    location_str += f":{region['startLine']}"
+        // Type Chart
+        new Chart(document.getElementById('typeChart'), {{
+            type: 'pie',
+            data: {{
+                labels: {list(type_data.keys())},
+                datasets: [{{
+                    data: {list(type_data.values())},
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#4facfe']
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ position: 'bottom' }}
+                }}
+            }}
+        }});
 
-        html_content += f"""
-                <tr>
-                    <td>{rule_id}</td>
-                    <td class="{level}">{level}</td>
-                    <td>{message}</td>
-                    <td>{location_str}</td>
-                </tr>
-        """
+        // Category Chart
+        new Chart(document.getElementById('categoryChart'), {{
+            type: 'bar',
+            data: {{
+                labels: {list(category_data.keys())},
+                datasets: [{{
+                    label: 'Findings',
+                    data: {list(category_data.values())},
+                    backgroundColor: '#667eea'
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {{
+                    legend: {{ display: false }}
+                }},
+                scales: {{
+                    y: {{ beginAtZero: true }}
+                }}
+            }}
+        }});
 
-    html_content += """
-            </tbody>
-        </table>
-    </div>
+        // Source Chart
+        new Chart(document.getElementById('sourceChart'), {{
+            type: 'bar',
+            data: {{
+                labels: {list(source_data.keys())},
+                datasets: [{{
+                    label: 'Findings',
+                    data: {list(source_data.values())},
+                    backgroundColor: '#764ba2'
+                }}]
+            }},
+            options: {{
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y',
+                plugins: {{
+                    legend: {{ display: false }}
+                }},
+                scales: {{
+                    x: {{ beginAtZero: true }}
+                }}
+            }}
+        }});
+
+        // Toggle finding details
+        function toggleDetails(idx) {{
+            const details = document.getElementById('details-' + idx);
+            details.style.display = details.style.display === 'none' ? 'block' : 'none';
+        }}
+
+        // Apply filters
+        function applyFilters() {{
+            const severityFilter = document.getElementById('severityFilter').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value.toLowerCase();
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+
+            const rows = document.querySelectorAll('.finding-row');
+            let visibleCount = 0;
+
+            rows.forEach(row => {{
+                const severity = row.dataset.severity;
+                const type = row.dataset.type;
+                const text = row.textContent.toLowerCase();
+
+                const severityMatch = !severityFilter || severity === severityFilter;
+                const typeMatch = !typeFilter || type === typeFilter;
+                const searchMatch = !searchText || text.includes(searchText);
+
+                const nextRow = row.nextElementSibling; // Details row
+                if (severityMatch && typeMatch && searchMatch) {{
+                    row.style.display = '';
+                    if (nextRow) nextRow.style.display = '';
+                    visibleCount++;
+                }} else {{
+                    row.style.display = 'none';
+                    if (nextRow) nextRow.style.display = 'none';
+                }}
+            }});
+
+            document.getElementById('visibleCount').textContent = visibleCount;
+        }}
+
+        // Reset filters
+        function resetFilters() {{
+            document.getElementById('severityFilter').value = '';
+            document.getElementById('typeFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            applyFilters();
+        }}
+
+        // Sort table
+        function sortTable(column) {{
+            const table = document.getElementById('findingsTable');
+            const rows = Array.from(table.querySelectorAll('.finding-row'));
+
+            rows.sort((a, b) => {{
+                const aVal = a.cells[column].textContent.trim();
+                const bVal = b.cells[column].textContent.trim();
+                return aVal.localeCompare(bVal);
+            }});
+
+            rows.forEach(row => {{
+                const detailsRow = row.nextElementSibling;
+                table.appendChild(row);
+                table.appendChild(detailsRow);
+            }});
+        }}
+    </script>
 </body>
 </html>
-    """
+"""
 
     with open(output_path, 'w', encoding='utf-8') as f:
         f.write(html_content)
