@@ -16,4 +16,4 @@ with local project management and persistent storage.
 # Additional attribution and requirements are provided in the NOTICE file.
 
 
-__version__ = "0.6.0"
+__version__ = "0.7.3"

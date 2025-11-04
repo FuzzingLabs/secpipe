@@ -42,7 +42,7 @@ from .testing import (
     DEFAULT_TEST_CONFIG,
 )
 
-__version__ = "0.6.0"
+__version__ = "0.7.3"
 __all__ = [
     "FuzzForgeClient",
     "WorkflowSubmission",
