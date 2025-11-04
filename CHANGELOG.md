@@ -5,6 +5,16 @@ All notable changes to FuzzForge will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 📝 Documentation
+- Added comprehensive worker startup documentation across all guides
+- Added workflow-to-worker mapping tables in README, troubleshooting guide, getting started guide, and docker setup guide
+- Fixed broken documentation links in CLI reference
+- Added WEEK_SUMMARY*.md pattern to .gitignore
+
+---
+
 ## [0.7.3] - 2025-10-30
 
 ### 🎯 Major Features
@@ -91,6 +101,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.7.2] - 2025-10-22
+
+### 🐛 Bug Fixes
+- Fixed worker naming inconsistencies across codebase
+- Improved monitor command consolidation and usability
+- Enhanced findings CLI with better formatting and display
+- Added missing secrets worker to repository
+
+### 📝 Documentation
+- Added benchmark results files to git for secret detection workflows
+
+**Note:** v0.7.1 was re-tagged as v0.7.2 (both point to the same commit)
+
+---
+
 ## [0.7.0] - 2025-10-16
 
 ### 🎯 Major Features
@@ -157,7 +182,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [0.6.0] - 2024-12-XX
+## [0.6.0] - Undocumented
 
 ### Features
 - Initial Temporal migration
@@ -165,7 +190,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Security assessment workflow
 - Basic CLI commands
 
+**Note:** No git tag exists for v0.6.0. Release date undocumented.
+
 ---
 
-[0.7.0]: https://github.com/FuzzingLabs/fuzzforge_ai/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/FuzzingLabs/fuzzforge_ai/releases/tag/v0.6.0
+[0.7.3]: https://github.com/FuzzingLabs/fuzzforge_ai/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/FuzzingLabs/fuzzforge_ai/compare/v0.7.0...v0.7.2
+[0.7.0]: https://github.com/FuzzingLabs/fuzzforge_ai/releases/tag/v0.7.0
+[0.6.0]: https://github.com/FuzzingLabs/fuzzforge_ai/tree/v0.6.0
