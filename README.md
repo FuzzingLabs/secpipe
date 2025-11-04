@@ -165,6 +165,16 @@ docker compose up -d worker-python
 >
 > Workers don't auto-start by default (saves RAM). Start the worker you need before running workflows.
 
+**Workflow-to-Worker Quick Reference:**
+
+| Workflow | Worker Required | Startup Command |
+|----------|----------------|-----------------|
+| `security_assessment`, `python_sast`, `llm_analysis`, `atheris_fuzzing` | worker-python | `docker compose up -d worker-python` |
+| `android_static_analysis` | worker-android | `docker compose up -d worker-android` |
+| `cargo_fuzzing` | worker-rust | `docker compose up -d worker-rust` |
+| `ossfuzz_campaign` | worker-ossfuzz | `docker compose up -d worker-ossfuzz` |
+| `llm_secret_detection`, `trufflehog_detection`, `gitleaks_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+
 ```bash
 # 5. Run your first workflow (files are automatically uploaded)
 cd test_projects/vulnerable_app/

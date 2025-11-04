@@ -106,6 +106,46 @@ File upload to MinIO failed or worker can't download target.
   ```
 - Reduce the number of concurrent workflows if your system is resource-constrained.
 
+### Workflow requires worker not running
+
+**What's happening?**
+You see a warning message like:
+```
+⚠️  Could not check worker requirements: Cannot find docker-compose.yml.
+   Ensure backend is running, run from FuzzForge directory, or set
+   FUZZFORGE_ROOT environment variable.
+   Continuing without worker management...
+```
+
+Or the workflow fails to start because the required worker isn't running.
+
+**How to fix:**
+Start the worker required for your workflow before running it:
+
+| Workflow | Worker Required | Startup Command |
+|----------|----------------|-----------------|
+| `android_static_analysis` | worker-android | `docker compose up -d worker-android` |
+| `security_assessment` | worker-python | `docker compose up -d worker-python` |
+| `python_sast` | worker-python | `docker compose up -d worker-python` |
+| `llm_analysis` | worker-python | `docker compose up -d worker-python` |
+| `atheris_fuzzing` | worker-python | `docker compose up -d worker-python` |
+| `ossfuzz_campaign` | worker-ossfuzz | `docker compose up -d worker-ossfuzz` |
+| `cargo_fuzzing` | worker-rust | `docker compose up -d worker-rust` |
+| `llm_secret_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+| `trufflehog_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+| `gitleaks_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+
+**Check worker status:**
+```bash
+# Check if a specific worker is running
+docker compose ps worker-android
+
+# Check all workers
+docker compose ps | grep worker
+```
+
+**Note:** Workers don't auto-start by default to save system resources. For more details on worker management, see the [Docker Setup guide](docker-setup.md#worker-management).
+
 ---
 
 ## Service Connectivity Issues

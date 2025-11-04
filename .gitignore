@@ -309,3 +309,7 @@ test_projects/*/.git-credentials
 test_projects/*/credentials.*
 test_projects/*/api_keys.*
 test_projects/*/ci-*.sh
+
+# -------------------- Internal Documentation --------------------
+# Weekly summaries and temporary project documentation
+WEEK_SUMMARY*.md

@@ -89,9 +89,26 @@ curl http://localhost:8000/health
 # Should return: {"status":"healthy"}
 ```
 
-### Start the Python Worker
+### Start Workers for Your Workflows
 
-Workers don't auto-start by default (saves RAM). Start the Python worker for your first workflow:
+Workers don't auto-start by default (saves RAM). You need to start the worker required for the workflow you want to run.
+
+**Workflow-to-Worker Mapping:**
+
+| Workflow | Worker Required | Startup Command |
+|----------|----------------|-----------------|
+| `security_assessment` | worker-python | `docker compose up -d worker-python` |
+| `python_sast` | worker-python | `docker compose up -d worker-python` |
+| `llm_analysis` | worker-python | `docker compose up -d worker-python` |
+| `atheris_fuzzing` | worker-python | `docker compose up -d worker-python` |
+| `android_static_analysis` | worker-android | `docker compose up -d worker-android` |
+| `cargo_fuzzing` | worker-rust | `docker compose up -d worker-rust` |
+| `ossfuzz_campaign` | worker-ossfuzz | `docker compose up -d worker-ossfuzz` |
+| `llm_secret_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+| `trufflehog_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+| `gitleaks_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+
+**For your first workflow (security_assessment), start the Python worker:**
 
 ```bash
 # Start the Python worker
@@ -102,7 +119,20 @@ docker compose ps worker-python
 # Should show: Up (healthy)
 ```
 
-**Note:** Workers use Docker Compose profiles and only start when needed. For your first workflow run, it's safer to start the worker manually. Later, the CLI can auto-start workers on demand.
+**For other workflows, start the appropriate worker:**
+
+```bash
+# Example: For Android analysis
+docker compose up -d worker-android
+
+# Example: For Rust fuzzing
+docker compose up -d worker-rust
+
+# Check all running workers
+docker compose ps | grep worker
+```
+
+**Note:** Workers use Docker Compose profiles and only start when needed. For your first workflow run, it's safer to start the worker manually. Later, the CLI can auto-start workers on demand. If you see a warning about worker requirements, ensure you've started the correct worker for your workflow.
 
 ## Step 4: Install the CLI (Optional but Recommended)
 
