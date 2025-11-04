@@ -1,6 +1,6 @@
 [project]
 name = "backend"
-version = "0.7.0"
+version = "0.7.3"
 description = "FuzzForge OSS backend"
 authors = []
 readme = "README.md"
