@@ -26,27 +26,50 @@ class RemoteAgentConnection:
         """Initialize connection to a remote agent"""
         self.url = url.rstrip('/')
         self.agent_card = None
-        self.client = httpx.AsyncClient(timeout=120.0)
+        self.client = httpx.AsyncClient(timeout=120.0, follow_redirects=True)
         self.context_id = None
         
     async def get_agent_card(self) -> Optional[Dict[str, Any]]:
         """Get the agent card from the remote agent"""
-        try:
-            # Try new path first (A2A 0.3.0+)
-            response = await self.client.get(f"{self.url}/.well-known/agent-card.json")
-            response.raise_for_status()
-            self.agent_card = response.json()
-            return self.agent_card
-        except Exception:
-            # Try old path for compatibility
+        # If URL already points to a .json file, fetch it directly
+        if self.url.endswith('.json'):
             try:
-                response = await self.client.get(f"{self.url}/.well-known/agent.json")
+                response = await self.client.get(self.url)
                 response.raise_for_status()
                 self.agent_card = response.json()
+
+                # Use canonical URL from agent card if provided
+                if isinstance(self.agent_card, dict) and "url" in self.agent_card:
+                    self.url = self.agent_card["url"].rstrip('/')
+
                 return self.agent_card
             except Exception as e:
                 print(f"Failed to get agent card from {self.url}: {e}")
                 return None
+
+        # Try both agent-card.json (A2A 0.3.0+) and agent.json (legacy)
+        well_known_paths = [
+            "/.well-known/agent-card.json",
+            "/.well-known/agent.json",
+        ]
+
+        for path in well_known_paths:
+            try:
+                response = await self.client.get(f"{self.url}{path}")
+                response.raise_for_status()
+                self.agent_card = response.json()
+
+                # Use canonical URL from agent card if provided
+                if isinstance(self.agent_card, dict) and "url" in self.agent_card:
+                    self.url = self.agent_card["url"].rstrip('/')
+
+                return self.agent_card
+            except Exception:
+                continue
+
+        print(f"Failed to get agent card from {self.url}")
+        print("Tip: If agent is at /a2a/something, use full URL: /register http://host:port/a2a/something")
+        return None
                 
     async def send_message(self, message: str | Dict[str, Any] | List[Dict[str, Any]]) -> str:
         """Send a message to the remote agent using A2A protocol"""
@@ -93,7 +116,7 @@ class RemoteAgentConnection:
                 payload["params"]["contextId"] = self.context_id
             
             # Send to root endpoint per A2A protocol
-            response = await self.client.post(f"{self.url}/", json=payload)
+            response = await self.client.post(self.url, json=payload)
             response.raise_for_status()
             result = response.json()
             
