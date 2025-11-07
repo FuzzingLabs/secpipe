@@ -10,9 +10,9 @@ fuzzforge ai server
 
 Run the command from a project directory that already contains `.fuzzforge/`. The server reads the project configuration and reuses the same environment variables as the CLI shell.
 
-**Default directories**
+**Default directories / services**
 - Logs: `.fuzzforge/logs/cognee.log`
-- Cognee datasets: `.fuzzforge/cognee/project_<id>/{data,system}`
+- Cognee datasets: hosted by the shared Cognee service (`COGNEE_SERVICE_URL`) inside the configured MinIO/S3 bucket. Local mode falls back to `.fuzzforge/cognee/project_<id>/{data,system}`. Uploads dropped into `s3://cognee/projects/<project-id>/...` are ingested automatically via RabbitMQ + the dispatcher.
 - Artifact cache: `.fuzzforge/artifacts`
 
 ## HTTP Endpoints

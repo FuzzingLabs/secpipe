@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### ✨ Enhancements
+- Added Ladybug-backed Cognee integration with optional MinIO/S3 storage. Projects can now set `COGNEE_STORAGE_BACKEND=s3` (plus the `COGNEE_S3_*` settings) to keep knowledge graphs in the shared MinIO bucket seeded by `docker-compose`, enabling multi-tenant ingestion across workers and containers.
+- Introduced a dedicated Cognee service (`docker/docker-compose.cognee.yml`) and HTTP client so `fuzzforge ingest` streams data to the shared backend (`COGNEE_SERVICE_URL`) instead of importing Cognee locally. Each project now auto-provisions its own Cognee account/tenant and authenticates via the REST API, keeping datasets isolated even though the service is shared.
+- Added an event-driven ingestion pipeline: MinIO publishes `PUT` events from `s3://cognee/projects/<project-id>/...` to RabbitMQ, and the new `ingestion-dispatcher` container downloads the file, logs into Cognee as that project’s tenant, and invokes `/api/v1/add` + `/api/v1/cognify`. Uploading files (rsync, CI, etc.) now keeps datasets fresh without touching the CLI.
+
 ### 📝 Documentation
 - Added comprehensive worker startup documentation across all guides
 - Added workflow-to-worker mapping tables in README, troubleshooting guide, getting started guide, and docker setup guide

@@ -60,6 +60,8 @@ _Setting up and running security workflows through the interface_
 
 - 🤖 **AI Agents for Security** – Specialized agents for AppSec, reversing, and fuzzing
 - 🛠 **Workflow Automation** – Define & execute AppSec workflows as code
+- 🧠 **Knowledge Graphs backed by Cognee** – Multi-tenant Ladybug graphs stored in MinIO/S3 and reachable as a shared service for every project
+- ⚡ **Event-Driven Ingestion** – Upload files to MinIO and let RabbitMQ + the dispatcher stream them into Cognee datasets automatically
 - 📈 **Vulnerability Research at Scale** – Rediscover 1-days & find 0-days with automation
 - 🔗 **Fuzzer Integration** – Atheris (Python), cargo-fuzz (Rust), OSS-Fuzz campaigns
 - 🌐 **Community Marketplace** – Share workflows, corpora, PoCs, and modules
@@ -157,6 +159,9 @@ cp volumes/env/.env.template volumes/env/.env
 # 3. Start FuzzForge with Temporal
 docker compose up -d
 
+# 3b. Start the shared Cognee service (Ladybug + MinIO)
+docker compose -f docker/docker-compose.cognee.yml up -d
+
 # 4. Start the Python worker (needed for security_assessment workflow)
 docker compose up -d worker-python
 ```
@@ -186,6 +191,19 @@ ff workflow run security_assessment .    # Start workflow - CLI uploads files au
 # - Create a compressed tarball
 # - Upload to backend (via MinIO)
 # - Start the workflow on vertical worker
+
+### Automated Cognee Ingestion
+
+Uploading files into MinIO automatically streams them into Cognee:
+
+```
+s3://cognee/projects/<project-id>/
+  files/...        # → <project-id>_codebase dataset
+  findings/...     # → <project-id>_findings dataset
+  docs/...         # → <project-id>_docs dataset
+```
+
+MinIO emits the object-created event to RabbitMQ, the `ingestion-dispatcher` downloads the file, and it calls the Cognee REST API on behalf of that project’s tenant. Use any upload mechanism you like (`aws s3 cp`, rsync to MinIO, etc.); once the object lands in the bucket it is ingested and cognified automatically.
 ```
 
 **What's running:**

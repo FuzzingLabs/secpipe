@@ -21,7 +21,7 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Literal
 
 try:  # Optional dependency; fall back if not installed
     from dotenv import load_dotenv
@@ -131,7 +131,19 @@ class CogneeConfig(BaseModel):
     """Cognee integration metadata."""
 
     enabled: bool = True
-    graph_database_provider: str = "kuzu"
+    graph_database_provider: str = "ladybug"
+    service_url: str = "http://localhost:18000"
+    api_key: Optional[str] = None
+    service_email: Optional[str] = None
+    service_password: Optional[str] = None
+    storage_backend: Literal["local", "s3"] = "s3"
+    s3_bucket: Optional[str] = None
+    s3_prefix: Optional[str] = "projects"
+    s3_endpoint_url: Optional[str] = None
+    s3_region: Optional[str] = None
+    s3_access_key: Optional[str] = None
+    s3_secret_key: Optional[str] = None
+    s3_allow_http: bool = False
     data_directory: Optional[str] = None
     system_directory: Optional[str] = None
     backend_access_control: bool = True
@@ -201,25 +213,55 @@ class FuzzForgeConfig(BaseModel):
             cognee.tenant_id = self.project.tenant_id
             changed = True
 
-        base_dir = project_dir / ".fuzzforge" / "cognee" / f"project_{self.project.id}"
-        data_dir = base_dir / "data"
-        system_dir = base_dir / "system"
-
-        for path in (
-            base_dir,
-            data_dir,
-            system_dir,
-            system_dir / "kuzu_db",
-            system_dir / "lancedb",
-        ):
-            if not path.exists():
-                path.mkdir(parents=True, exist_ok=True)
-
-        if cognee.data_directory != str(data_dir):
-            cognee.data_directory = str(data_dir)
+        if not cognee.service_url:
+            cognee.service_url = "http://localhost:18000"
             changed = True
-        if cognee.system_directory != str(system_dir):
-            cognee.system_directory = str(system_dir)
+
+        if not cognee.s3_prefix:
+            cognee.s3_prefix = "projects"
+            changed = True
+
+        default_email = f"project_{self.project.id}@fuzzforge.dev"
+        if not cognee.service_email or cognee.service_email.endswith(
+            ("@cognee.local", "@cognee.localhost")
+        ):
+            cognee.service_email = default_email
+            changed = True
+
+        derived_password = hashlib.sha256(self.project.id.encode()).hexdigest()[:20]
+        if not cognee.service_password or len(cognee.service_password) < 12:
+            cognee.service_password = derived_password
+            changed = True
+
+        if cognee.storage_backend.lower() == "s3":
+            bucket = cognee.s3_bucket or "cognee"
+            prefix = (cognee.s3_prefix or "projects").strip("/")
+            base_uri = f"s3://{bucket}/{prefix}/{self.project.id}"
+            data_dir = f"{base_uri}/files"
+            system_dir = f"{base_uri}/graph"
+        else:
+            base_dir = project_dir / ".fuzzforge" / "cognee" / f"project_{self.project.id}"
+            data_path = base_dir / "data"
+            system_path = base_dir / "system"
+
+            for path in (
+                base_dir,
+                data_path,
+                system_path,
+                system_path / "ladybug",
+                system_path / "lancedb",
+            ):
+                if not path.exists():
+                    path.mkdir(parents=True, exist_ok=True)
+
+            data_dir = str(data_path)
+            system_dir = str(system_path)
+
+        if cognee.data_directory != data_dir:
+            cognee.data_directory = data_dir
+            changed = True
+        if cognee.system_directory != system_dir:
+            cognee.system_directory = system_dir
             changed = True
 
         return changed
@@ -368,16 +410,67 @@ class ProjectConfigManager:
 
         backend_access = "true" if cognee.get("backend_access_control", True) else "false"
         os.environ["ENABLE_BACKEND_ACCESS_CONTROL"] = backend_access
-        os.environ["GRAPH_DATABASE_PROVIDER"] = cognee.get("graph_database_provider", "kuzu")
+        graph_provider = cognee.get("graph_database_provider", "ladybug")
+        os.environ["GRAPH_DATABASE_PROVIDER"] = graph_provider
+
+        service_url = cognee.get("service_url") or os.getenv("COGNEE_SERVICE_URL") or "http://localhost:18000"
+        os.environ["COGNEE_SERVICE_URL"] = service_url
+        api_key = os.getenv("COGNEE_API_KEY") or cognee.get("api_key")
+        if api_key:
+            os.environ["COGNEE_API_KEY"] = api_key
+        service_email = os.getenv("COGNEE_SERVICE_EMAIL") or cognee.get("service_email")
+        if service_email:
+            os.environ["COGNEE_SERVICE_EMAIL"] = service_email
+        service_password = os.getenv("COGNEE_SERVICE_PASSWORD") or cognee.get("service_password")
+        if service_password:
+            os.environ["COGNEE_SERVICE_PASSWORD"] = service_password
 
         data_dir = cognee.get("data_directory")
         system_dir = cognee.get("system_directory")
         tenant_id = cognee.get("tenant_id", "fuzzforge_tenant")
+        storage_backend = cognee.get("storage_backend", "local").lower()
+        os.environ["COGNEE_STORAGE_BACKEND"] = storage_backend
+
+        if storage_backend == "s3":
+            os.environ["STORAGE_BACKEND"] = "s3"
+
+            bucket = os.getenv("COGNEE_S3_BUCKET") or cognee.get("s3_bucket") or "cognee"
+            os.environ["STORAGE_BUCKET_NAME"] = bucket
+            os.environ["COGNEE_S3_BUCKET"] = bucket
+
+            prefix_override = os.getenv("COGNEE_S3_PREFIX") or cognee.get("s3_prefix")
+            if prefix_override:
+                os.environ["COGNEE_S3_PREFIX"] = prefix_override
+
+            endpoint = os.getenv("COGNEE_S3_ENDPOINT") or cognee.get("s3_endpoint_url") or "http://localhost:9000"
+            os.environ["AWS_ENDPOINT_URL"] = endpoint
+            os.environ["COGNEE_S3_ENDPOINT"] = endpoint
+
+            region = os.getenv("COGNEE_S3_REGION") or cognee.get("s3_region") or "us-east-1"
+            os.environ["AWS_REGION"] = region
+            os.environ["COGNEE_S3_REGION"] = region
+
+            access_key = os.getenv("COGNEE_S3_ACCESS_KEY") or cognee.get("s3_access_key")
+            secret_key = os.getenv("COGNEE_S3_SECRET_KEY") or cognee.get("s3_secret_key")
+            if access_key:
+                os.environ.setdefault("AWS_ACCESS_KEY_ID", access_key)
+                os.environ["COGNEE_S3_ACCESS_KEY"] = access_key
+            if secret_key:
+                os.environ.setdefault("AWS_SECRET_ACCESS_KEY", secret_key)
+                os.environ["COGNEE_S3_SECRET_KEY"] = secret_key
+
+            allow_http_env = os.getenv("COGNEE_S3_ALLOW_HTTP")
+            allow_http_flag = allow_http_env if allow_http_env is not None else ("true" if cognee.get("s3_allow_http") else "false")
+            if allow_http_flag.lower() in {"1", "true", "yes"}:
+                os.environ["AWS_ALLOW_HTTP"] = "true"
+                os.environ["COGNEE_S3_ALLOW_HTTP"] = "1"
 
         if data_dir:
             os.environ["COGNEE_DATA_ROOT"] = data_dir
+            os.environ.setdefault("DATA_ROOT_DIRECTORY", data_dir)
         if system_dir:
             os.environ["COGNEE_SYSTEM_ROOT"] = system_dir
+            os.environ.setdefault("SYSTEM_ROOT_DIRECTORY", system_dir)
         os.environ["COGNEE_USER_ID"] = tenant_id
         os.environ["COGNEE_TENANT_ID"] = tenant_id
 

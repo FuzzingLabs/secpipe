@@ -23,6 +23,7 @@ from rich.console import Console
 from rich.prompt import Confirm
 
 from ..config import ProjectConfigManager
+from ..cognee_api import CogneeApiClient, CogneeApiError
 from ..ingest_utils import collect_ingest_files
 
 console = Console()
@@ -92,23 +93,18 @@ def ingest_callback(
 
     config.setup_cognee_environment()
     if os.getenv("FUZZFORGE_DEBUG", "0") == "1":
+        storage_backend = os.getenv("COGNEE_STORAGE_BACKEND", "local")
         console.print(
             "[dim]Cognee directories:\n"
             f"  DATA: {os.getenv('COGNEE_DATA_ROOT', 'unset')}\n"
             f"  SYSTEM: {os.getenv('COGNEE_SYSTEM_ROOT', 'unset')}\n"
-            f"  USER: {os.getenv('COGNEE_USER_ID', 'unset')}\n",
+            f"  USER: {os.getenv('COGNEE_USER_ID', 'unset')}\n"
+            f"  STORAGE: {storage_backend}\n",
         )
     project_context = config.get_project_context()
 
     target_path = path or Path.cwd()
-    dataset_name = dataset or f"{project_context['project_name']}_codebase"
-
-    try:
-        import cognee  # noqa: F401  # Just to validate installation
-    except ImportError as exc:
-        console.print("[red]Cognee is not installed.[/red]")
-        console.print("Install with: pip install 'cognee[all]' litellm")
-        raise typer.Exit(1) from exc
+    dataset_name = dataset or f"{project_context['project_id']}_codebase"
 
     console.print(f"[bold]🔍 Ingesting {target_path} into Cognee knowledge graph[/bold]")
     console.print(
@@ -155,10 +151,21 @@ async def _run_ingestion(
     force: bool,
 ) -> None:
     """Perform the actual ingestion work."""
-    from fuzzforge_ai.cognee_service import CogneeService
+    cognee_cfg = config.get_cognee_config()
+    service_url = (
+        cognee_cfg.get("service_url")
+        or os.getenv("COGNEE_SERVICE_URL")
+        or "http://localhost:18000"
+    )
+    service_email = os.getenv("COGNEE_SERVICE_EMAIL") or cognee_cfg.get("service_email")
+    service_password = os.getenv("COGNEE_SERVICE_PASSWORD") or cognee_cfg.get("service_password")
 
-    cognee_service = CogneeService(config)
-    await cognee_service.initialize()
+    if not service_email or not service_password:
+        console.print(
+            "[red]Missing Cognee service credentials.[/red] Run `ff init` again or set "
+            "COGNEE_SERVICE_EMAIL / COGNEE_SERVICE_PASSWORD in .fuzzforge/.env."
+        )
+        return
 
     # Always skip internal bookkeeping directories
     exclude_patterns = list(exclude or [])
@@ -192,11 +199,9 @@ async def _run_ingestion(
     console.print(f"Found [green]{len(files_to_ingest)}[/green] files to ingest")
 
     if force:
-        console.print("Cleaning existing data for this project...")
-        try:
-            await cognee_service.clear_data(confirm=True)
-        except Exception as exc:
-            console.print(f"[yellow]Warning:[/yellow] Could not clean existing data: {exc}")
+        console.print(
+            "[yellow]Warning:[/yellow] Force re-ingest is not yet supported for the remote Cognee service."
+        )
 
     console.print("Adding files to Cognee...")
     valid_file_paths = []
@@ -213,39 +218,62 @@ async def _run_ingestion(
         console.print("[yellow]No readable files found to ingest[/yellow]")
         return
 
-    results = await cognee_service.ingest_files(valid_file_paths, dataset)
+    async with CogneeApiClient(
+        service_url,
+        email=service_email,
+        password=service_password,
+    ) as client:
+        try:
+            await client.ensure_authenticated()
+        except CogneeApiError as exc:
+            console.print(f"[red]Cognee authentication failed:[/red] {exc}")
+            return
+        except Exception as exc:
+            console.print(f"[red]Cognee authentication error:[/red] {exc}")
+            return
 
-    console.print(
-        f"[green]✅ Successfully ingested {results['success']} files into knowledge graph[/green]"
-    )
-    if results["failed"]:
+        try:
+            await client.add_files(valid_file_paths, dataset)
+            await client.cognify([dataset])
+        except CogneeApiError as exc:
+            console.print(f"[red]Cognee API error:[/red] {exc}")
+            return
+        except Exception as exc:
+            console.print(f"[red]Unexpected Cognee error:[/red] {exc}")
+            return
+
         console.print(
-            f"[yellow]⚠️  Skipped {results['failed']} files due to errors[/yellow]"
+            f"[green]✅ Successfully ingested {len(valid_file_paths)} files into knowledge graph[/green]"
         )
 
-    try:
-        insights = await cognee_service.search_insights(
-            query=f"What insights can you provide about the {dataset} dataset?",
-            dataset=dataset,
-        )
-        if insights:
-            console.print(f"\n[bold]📊 Generated {len(insights)} insights:[/bold]")
-            for index, insight in enumerate(insights[:3], 1):
-                console.print(f"  {index}. {insight}")
-            if len(insights) > 3:
-                console.print(f"  ... and {len(insights) - 3} more")
-
-        chunks = await cognee_service.search_chunks(
-            query=f"functions classes methods in {dataset}",
-            dataset=dataset,
-        )
-        if chunks:
-            console.print(
-                f"\n[bold]🔍 Sample searchable content ({len(chunks)} chunks found):[/bold]"
+        try:
+            insights = await client.search(
+                query=f"What insights can you provide about the {dataset} dataset?",
+                search_type="INSIGHTS",
+                datasets=[dataset],
             )
-            for index, chunk in enumerate(chunks[:2], 1):
-                preview = chunk[:100] + "..." if len(chunk) > 100 else chunk
-                console.print(f"  {index}. {preview}")
-    except Exception:
-        # Best-effort stats — ignore failures here
-        pass
+            insight_list = insights if isinstance(insights, list) else insights.get("results", [])
+            if insight_list:
+                console.print(f"\n[bold]📊 Generated {len(insight_list)} insights:[/bold]")
+                for index, insight in enumerate(insight_list[:3], 1):
+                    console.print(f"  {index}. {insight}")
+                if len(insight_list) > 3:
+                    console.print(f"  ... and {len(insight_list) - 3} more")
+
+            chunks = await client.search(
+                query=f"functions classes methods in {dataset}",
+                search_type="CHUNKS",
+                datasets=[dataset],
+                top_k=5,
+            )
+            chunk_list = chunks if isinstance(chunks, list) else chunks.get("results", [])
+            if chunk_list:
+                console.print(
+                    f"\n[bold]🔍 Sample searchable content ({len(chunk_list)} chunks found):[/bold]"
+                )
+                for index, chunk in enumerate(chunk_list[:2], 1):
+                    text = str(chunk)
+                    preview = text[:100] + "..." if len(text) > 100 else text
+                    console.print(f"  {index}. {preview}")
+        except Exception:
+            pass

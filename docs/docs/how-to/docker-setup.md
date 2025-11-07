@@ -231,6 +231,20 @@ nano volumes/env/.env
 
 See [Getting Started](../tutorial/getting-started.md) for detailed environment setup.
 
+### Cognee Service Stack
+
+Cognee now runs as its own container so every project shares the same multi-tenant backend (Ladybug + LanceDB sitting on MinIO). After the core stack is running, bring the service online with:
+
+```bash
+docker compose -f docker/docker-compose.cognee.yml up -d
+```
+
+This spins up the Cognee API on `http://localhost:18000`, publishes it to the host, and stores knowledge graphs in the `cognee` bucket that the main compose file seeds. Point the CLI at it by setting `COGNEE_SERVICE_URL=http://localhost:18000` (already included in `.env.template`).
+
+### RabbitMQ + Dispatcher
+
+`docker-compose.yml` also launches RabbitMQ (`http://localhost:15672`, ingest/ingest) and the `ingestion-dispatcher` container. MinIO publishes `PUT` events from `s3://cognee/projects/<project-id>/...` to the `cognee-ingest` exchange, and the dispatcher downloads the object and calls Cognee’s REST API. That means any rsync/upload into the projects bucket automatically becomes a dataset.
+
 ---
 
 ## Troubleshooting

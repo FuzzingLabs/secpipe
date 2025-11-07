@@ -81,6 +81,33 @@ LLM_COGNEE_API_KEY=sk-your-key
 
 If the Cognee variables are omitted, graph-specific tools remain available but return a friendly "not configured" response.
 
+### Cognee Storage Backend
+
+Cognee defaults to local storage under `.fuzzforge/cognee/`, but you can mirror datasets to MinIO/S3 for multi-tenant or containerised deployments:
+
+```env
+COGNEE_STORAGE_BACKEND=s3
+COGNEE_S3_BUCKET=cognee
+COGNEE_S3_PREFIX=project_${PROJECT_ID}
+COGNEE_S3_ENDPOINT=http://localhost:9000
+COGNEE_S3_REGION=us-east-1
+COGNEE_S3_ACCESS_KEY=fuzzforge
+COGNEE_S3_SECRET_KEY=fuzzforge123
+COGNEE_S3_ALLOW_HTTP=1
+```
+
+Set the values to match your MinIO/S3 endpoint; the docker compose stack seeds a `cognee` bucket automatically. When S3 mode is active, ingestion and search work exactly the same but Cognee writes metadata to `s3://<bucket>/<prefix>/project_<id>/{data,system}`.
+
+### Cognee Service URL
+
+The CLI and workers talk to Cognee over HTTP. Point `COGNEE_SERVICE_URL` at the service (defaults to `http://localhost:18000` when you run `docker/docker-compose.cognee.yml`) and provide `COGNEE_API_KEY` if you protect the API behind LiteLLM.
+
+Every project gets its own Cognee login so datasets stay isolated. The CLI auto-derives an email/password pair (e.g., `project_<id>@fuzzforge.dev`) and registers it the first time you run `fuzzforge ingest`. Override those defaults by setting `COGNEE_SERVICE_EMAIL` / `COGNEE_SERVICE_PASSWORD` in `.fuzzforge/.env` before running ingestion if you need to reuse an existing account.
+
+### MinIO Event Mapping
+
+The ingestion dispatcher converts S3 prefixes to datasets using `DATASET_CATEGORY_MAP` (default `files:codebase,findings:findings,docs:docs`). Adjust it in `docker-compose.yml` if you want to add more categories or rename datasets.
+
 ## MCP / Backend Integration
 
 ```env

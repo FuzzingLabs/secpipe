@@ -73,7 +73,8 @@ sequenceDiagram
 - **Remote agent registry** (`ai/src/fuzzforge_ai/remote_agent.py`) holds metadata for downstream agents and handles capability discovery over HTTP. Auto-registration is configured by `ConfigManager` so known agents attach on startup.
 - **Memory services**:
   - `FuzzForgeMemoryService` and `HybridMemoryManager` (`ai/src/fuzzforge_ai/memory_service.py`) provide conversation recall and bridge to Cognee datasets when configured.
-  - Cognee bootstrap (`ai/src/fuzzforge_ai/cognee_service.py`) ensures ingestion and knowledge queries stay scoped to the current project.
+- Cognee bootstrap (`ai/src/fuzzforge_ai/cognee_service.py`) ensures ingestion and knowledge queries stay scoped to the current project and forwards them to the shared Cognee service (`COGNEE_SERVICE_URL`). Datasets live inside the configured MinIO/S3 bucket, with `.fuzzforge/cognee/` available only when `COGNEE_STORAGE_BACKEND=local`.
+- MinIO bucket notifications push object-created events into RabbitMQ. The `ingestion-dispatcher` container listens on `cognee-ingest`, downloads the object, and invokes Cognee’s REST API on behalf of the project’s tenant so uploads become datasets without a manual CLI hop.
 
 ## Workflow Automation
 
@@ -91,7 +92,7 @@ The CLI surface mirrors these helpers as natural-language prompts (`You> run fuz
 
 ## Knowledge & Ingestion
 
-- The `fuzzforge ingest` and `fuzzforge rag ingest` commands call into `ai/src/fuzzforge_ai/ingest_utils.py`, which filters file types, ignores caches, and populates Cognee datasets under `.fuzzforge/cognee/project_<id>/`.
+- The `fuzzforge ingest` and `fuzzforge rag ingest` commands call into `ai/src/fuzzforge_ai/ingest_utils.py`, which filters file types, ignores caches, and streams files to the Cognee service where they are stored under `s3://<bucket>/<prefix>/project_<id>/`. When files land directly in `s3://cognee/projects/<project-id>/<category>/...`, the dispatcher performs the same workflow automatically via RabbitMQ events.
 - Runtime queries hit `query_project_knowledge_api` on the executor, which defers to `cognee_service` for dataset lookup and semantic search. When Cognee credentials are absent the tools return a friendly "not configured" response.
 
 ## Artifact Pipeline
@@ -140,7 +141,7 @@ graph LR
 - **Session persistence** is controlled by `SESSION_PERSISTENCE`. When set to `sqlite`, ADK’s `DatabaseSessionService` writes transcripts to the path configured by `SESSION_DB_PATH` (defaults to `./fuzzforge_sessions.db`). With `inmemory`, the context is scoped to the current process.
 - **Semantic recall** stores vector embeddings so `/recall` queries can surface earlier prompts, even after restarts when using SQLite.
 - **Hybrid memory manager** (`HybridMemoryManager`) stitches Cognee results into the ADK session. When a knowledge query hits Cognee, the relevant nodes are appended back into the session context so follow-up prompts can reference them naturally.
-- **Cognee datasets** are unique per project. Ingestion runs populate `<project>_codebase` while custom calls to `ingest_to_dataset` let you maintain dedicated buckets (e.g., `insights`). Data is persisted inside `.fuzzforge/cognee/project_<id>/` and shared across CLI and A2A modes.
+- **Cognee datasets** are unique per project. Ingestion runs populate `<project>_codebase` while custom calls to `ingest_to_dataset` let you maintain dedicated buckets (e.g., `insights`). Data is persisted inside the Cognee service’s bucket/prefix and is shared across CLI, HTTP server, and MCP integrations.
 - **Task metadata** (workflow runs, artifact descriptors) lives in the executor’s in-memory caches but is also mirrored through A2A task events so remote agents can resubscribe if the CLI restarts.
 - **Operational check**: Run `/recall <keyword>` or `You> search project knowledge for "topic" using INSIGHTS` after ingestion to confirm both ADK session recall and Cognee graph access are active.
 - **CLI quick check**: `/memory status` summarises the current memory type, session persistence, and Cognee dataset directories from inside the agent shell.
