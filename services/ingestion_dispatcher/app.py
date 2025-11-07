@@ -158,6 +158,10 @@ class Dispatcher:
                 LOGGER.debug("Skipping key without project/category: %s", key)
                 continue
             project_id, category = key_parts[0], key_parts[1]
+            filename = key_parts[-1]
+            if filename.startswith("tmp") and "." not in filename:
+                LOGGER.debug("Skipping temporary upload key: %s", key)
+                continue
             dataset_suffix = self.category_map.get(category)
             if not dataset_suffix:
                 LOGGER.debug("Ignoring category %s for %s", category, key)
