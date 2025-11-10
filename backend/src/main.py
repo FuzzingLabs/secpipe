@@ -13,20 +13,19 @@ import asyncio
 import logging
 import os
 from contextlib import AsyncExitStack, asynccontextmanager, suppress
-from typing import Any, Dict, Optional, List
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI
+from fastmcp import FastMCP
+from fastmcp.server.http import create_sse_app
 from starlette.applications import Starlette
 from starlette.routing import Mount
 
-from fastmcp.server.http import create_sse_app
-
-from src.temporal.manager import TemporalManager
+from src.api import fuzzing, runs, system, workflows
 from src.core.setup import setup_result_storage, validate_infrastructure
-from src.api import workflows, runs, fuzzing, system
-
-from fastmcp import FastMCP
+from src.temporal.discovery import WorkflowDiscovery
+from src.temporal.manager import TemporalManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -38,12 +37,14 @@ class TemporalBootstrapState:
     """Tracks Temporal initialization progress for API and MCP consumers."""
 
     def __init__(self) -> None:
+        """Initialize an instance of the class."""
         self.ready: bool = False
         self.status: str = "not_started"
-        self.last_error: Optional[str] = None
+        self.last_error: str | None = None
         self.task_running: bool = False
 
-    def as_dict(self) -> Dict[str, Any]:
+    def as_dict(self) -> dict[str, Any]:
+        """Return the current state as a Python dictionnary."""
         return {
             "ready": self.ready,
             "status": self.status,
@@ -61,7 +62,7 @@ STARTUP_RETRY_MAX_SECONDS = max(
     int(os.getenv("FUZZFORGE_STARTUP_RETRY_MAX_SECONDS", "60")),
 )
 
-temporal_bootstrap_task: Optional[asyncio.Task] = None
+temporal_bootstrap_task: asyncio.Task | None = None
 
 # ---------------------------------------------------------------------------
 # FastAPI application (REST API)
@@ -79,17 +80,15 @@ app.include_router(fuzzing.router)
 app.include_router(system.router)
 
 
-def get_temporal_status() -> Dict[str, Any]:
+def get_temporal_status() -> dict[str, Any]:
     """Return a snapshot of Temporal bootstrap state for diagnostics."""
     status = temporal_bootstrap_state.as_dict()
     status["workflows_loaded"] = len(temporal_mgr.workflows)
-    status["bootstrap_task_running"] = (
-        temporal_bootstrap_task is not None and not temporal_bootstrap_task.done()
-    )
+    status["bootstrap_task_running"] = temporal_bootstrap_task is not None and not temporal_bootstrap_task.done()
     return status
 
 
-def _temporal_not_ready_status() -> Optional[Dict[str, Any]]:
+def _temporal_not_ready_status() -> dict[str, Any] | None:
     """Return status details if Temporal is not ready yet."""
     status = get_temporal_status()
     if status.get("ready"):
@@ -98,7 +97,7 @@ def _temporal_not_ready_status() -> Optional[Dict[str, Any]]:
 
 
 @app.get("/")
-async def root() -> Dict[str, Any]:
+async def root() -> dict[str, Any]:
     status = get_temporal_status()
     return {
         "name": "FuzzForge API",
@@ -110,14 +109,14 @@ async def root() -> Dict[str, Any]:
 
 
 @app.get("/health")
-async def health() -> Dict[str, str]:
+async def health() -> dict[str, str]:
     status = get_temporal_status()
     health_status = "healthy" if status.get("ready") else "initializing"
     return {"status": health_status}
 
 
 # Map FastAPI OpenAPI operationIds to readable MCP tool names
-FASTAPI_MCP_NAME_OVERRIDES: Dict[str, str] = {
+FASTAPI_MCP_NAME_OVERRIDES: dict[str, str] = {
     "list_workflows_workflows__get": "api_list_workflows",
     "get_metadata_schema_workflows_metadata_schema_get": "api_get_metadata_schema",
     "get_workflow_metadata_workflows__workflow_name__metadata_get": "api_get_workflow_metadata",
@@ -155,7 +154,6 @@ mcp = FastMCP(name="FuzzForge MCP")
 
 async def _bootstrap_temporal_with_retries() -> None:
     """Initialize Temporal infrastructure with exponential backoff retries."""
-
     attempt = 0
 
     while True:
@@ -175,7 +173,6 @@ async def _bootstrap_temporal_with_retries() -> None:
             temporal_bootstrap_state.status = "ready"
             temporal_bootstrap_state.task_running = False
             logger.info("Temporal infrastructure ready")
-            return
 
         except asyncio.CancelledError:
             temporal_bootstrap_state.status = "cancelled"
@@ -204,9 +201,11 @@ async def _bootstrap_temporal_with_retries() -> None:
                 temporal_bootstrap_state.status = "cancelled"
                 temporal_bootstrap_state.task_running = False
                 raise
+        else:
+            return
 
 
-def _lookup_workflow(workflow_name: str):
+def _lookup_workflow(workflow_name: str) -> dict[str, Any]:
     info = temporal_mgr.workflows.get(workflow_name)
     if not info:
         return None
@@ -222,12 +221,12 @@ def _lookup_workflow(workflow_name: str):
         "parameters": metadata.get("parameters", {}),
         "default_parameters": metadata.get("default_parameters", {}),
         "required_modules": metadata.get("required_modules", []),
-        "default_target_path": default_target_path
+        "default_target_path": default_target_path,
     }
 
 
 @mcp.tool
-async def list_workflows_mcp() -> Dict[str, Any]:
+async def list_workflows_mcp() -> dict[str, Any]:
     """List all discovered workflows and their metadata summary."""
     not_ready = _temporal_not_ready_status()
     if not_ready:
@@ -241,20 +240,21 @@ async def list_workflows_mcp() -> Dict[str, Any]:
     for name, info in temporal_mgr.workflows.items():
         metadata = info.metadata
         defaults = metadata.get("default_parameters", {})
-        workflows_summary.append({
-            "name": name,
-            "version": metadata.get("version", "0.6.0"),
-            "description": metadata.get("description", ""),
-            "author": metadata.get("author"),
-            "tags": metadata.get("tags", []),
-            "default_target_path": metadata.get("default_target_path")
-            or defaults.get("target_path")
-        })
+        workflows_summary.append(
+            {
+                "name": name,
+                "version": metadata.get("version", "0.6.0"),
+                "description": metadata.get("description", ""),
+                "author": metadata.get("author"),
+                "tags": metadata.get("tags", []),
+                "default_target_path": metadata.get("default_target_path") or defaults.get("target_path"),
+            },
+        )
     return {"workflows": workflows_summary, "temporal": get_temporal_status()}
 
 
 @mcp.tool
-async def get_workflow_metadata_mcp(workflow_name: str) -> Dict[str, Any]:
+async def get_workflow_metadata_mcp(workflow_name: str) -> dict[str, Any]:
     """Fetch detailed metadata for a workflow."""
     not_ready = _temporal_not_ready_status()
     if not_ready:
@@ -270,7 +270,7 @@ async def get_workflow_metadata_mcp(workflow_name: str) -> Dict[str, Any]:
 
 
 @mcp.tool
-async def get_workflow_parameters_mcp(workflow_name: str) -> Dict[str, Any]:
+async def get_workflow_parameters_mcp(workflow_name: str) -> dict[str, Any]:
     """Return the parameter schema and defaults for a workflow."""
     not_ready = _temporal_not_ready_status()
     if not_ready:
@@ -289,9 +289,8 @@ async def get_workflow_parameters_mcp(workflow_name: str) -> Dict[str, Any]:
 
 
 @mcp.tool
-async def get_workflow_metadata_schema_mcp() -> Dict[str, Any]:
+async def get_workflow_metadata_schema_mcp() -> dict[str, Any]:
     """Return the JSON schema describing workflow metadata files."""
-    from src.temporal.discovery import WorkflowDiscovery
     return WorkflowDiscovery.get_metadata_schema()
 
 
@@ -299,8 +298,8 @@ async def get_workflow_metadata_schema_mcp() -> Dict[str, Any]:
 async def submit_security_scan_mcp(
     workflow_name: str,
     target_id: str,
-    parameters: Dict[str, Any] | None = None,
-) -> Dict[str, Any] | Dict[str, str]:
+    parameters: dict[str, Any] | None = None,
+) -> dict[str, Any] | dict[str, str]:
     """Submit a Temporal workflow via MCP."""
     try:
         not_ready = _temporal_not_ready_status()
@@ -318,7 +317,7 @@ async def submit_security_scan_mcp(
         defaults = metadata.get("default_parameters", {})
 
         parameters = parameters or {}
-        cleaned_parameters: Dict[str, Any] = {**defaults, **parameters}
+        cleaned_parameters: dict[str, Any] = {**defaults, **parameters}
 
         # Ensure *_config structures default to dicts
         for key, value in list(cleaned_parameters.items()):
@@ -327,9 +326,7 @@ async def submit_security_scan_mcp(
 
         # Some workflows expect configuration dictionaries even when omitted
         parameter_definitions = (
-            metadata.get("parameters", {}).get("properties", {})
-            if isinstance(metadata.get("parameters"), dict)
-            else {}
+            metadata.get("parameters", {}).get("properties", {}) if isinstance(metadata.get("parameters"), dict) else {}
         )
         for key, definition in parameter_definitions.items():
             if not isinstance(key, str) or not key.endswith("_config"):
@@ -347,6 +344,10 @@ async def submit_security_scan_mcp(
             workflow_params=cleaned_parameters,
         )
 
+    except Exception as exc:  # pragma: no cover - defensive logging
+        logger.exception("MCP submit failed")
+        return {"error": f"Failed to submit workflow: {exc}"}
+    else:
         return {
             "run_id": handle.id,
             "status": "RUNNING",
@@ -356,13 +357,10 @@ async def submit_security_scan_mcp(
             "parameters": cleaned_parameters,
             "mcp_enabled": True,
         }
-    except Exception as exc:  # pragma: no cover - defensive logging
-        logger.exception("MCP submit failed")
-        return {"error": f"Failed to submit workflow: {exc}"}
 
 
 @mcp.tool
-async def get_comprehensive_scan_summary(run_id: str) -> Dict[str, Any] | Dict[str, str]:
+async def get_comprehensive_scan_summary(run_id: str) -> dict[str, Any] | dict[str, str]:
     """Return a summary for the given workflow run via MCP."""
     try:
         not_ready = _temporal_not_ready_status()
@@ -385,7 +383,7 @@ async def get_comprehensive_scan_summary(run_id: str) -> Dict[str, Any] | Dict[s
                     summary = result.get("summary", {})
                     total_findings = summary.get("total_findings", 0)
             except Exception as e:
-                logger.debug(f"Could not retrieve result for {run_id}: {e}")
+                logger.debug("Could not retrieve result for %s: %s", run_id, e)
 
         return {
             "run_id": run_id,
@@ -412,7 +410,7 @@ async def get_comprehensive_scan_summary(run_id: str) -> Dict[str, Any] | Dict[s
 
 
 @mcp.tool
-async def get_run_status_mcp(run_id: str) -> Dict[str, Any]:
+async def get_run_status_mcp(run_id: str) -> dict[str, Any]:
     """Return current status information for a Temporal run."""
     try:
         not_ready = _temporal_not_ready_status()
@@ -440,7 +438,7 @@ async def get_run_status_mcp(run_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool
-async def get_run_findings_mcp(run_id: str) -> Dict[str, Any]:
+async def get_run_findings_mcp(run_id: str) -> dict[str, Any]:
     """Return SARIF findings for a completed run."""
     try:
         not_ready = _temporal_not_ready_status()
@@ -463,24 +461,24 @@ async def get_run_findings_mcp(run_id: str) -> Dict[str, Any]:
 
         sarif = result.get("sarif", {}) if isinstance(result, dict) else {}
 
+    except Exception as exc:
+        logger.exception("MCP findings failed")
+        return {"error": f"Failed to retrieve findings: {exc}"}
+    else:
         return {
             "workflow": "unknown",
             "run_id": run_id,
             "sarif": sarif,
             "metadata": metadata,
         }
-    except Exception as exc:
-        logger.exception("MCP findings failed")
-        return {"error": f"Failed to retrieve findings: {exc}"}
 
 
 @mcp.tool
 async def list_recent_runs_mcp(
     limit: int = 10,
     workflow_name: str | None = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """List recent Temporal runs with optional workflow filter."""
-
     not_ready = _temporal_not_ready_status()
     if not_ready:
         return {
@@ -505,19 +503,21 @@ async def list_recent_runs_mcp(
 
         workflows = await temporal_mgr.list_workflows(filter_query, limit_value)
 
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
         for wf in workflows:
-            results.append({
-                "run_id": wf["workflow_id"],
-                "workflow": workflow_name or "unknown",
-                "state": wf["status"],
-                "state_type": wf["status"],
-                "is_completed": wf["status"] in ["COMPLETED", "FAILED", "CANCELLED"],
-                "is_running": wf["status"] == "RUNNING",
-                "is_failed": wf["status"] == "FAILED",
-                "created_at": wf.get("start_time"),
-                "updated_at": wf.get("close_time"),
-            })
+            results.append(
+                {
+                    "run_id": wf["workflow_id"],
+                    "workflow": workflow_name or "unknown",
+                    "state": wf["status"],
+                    "state_type": wf["status"],
+                    "is_completed": wf["status"] in ["COMPLETED", "FAILED", "CANCELLED"],
+                    "is_running": wf["status"] == "RUNNING",
+                    "is_failed": wf["status"] == "FAILED",
+                    "created_at": wf.get("start_time"),
+                    "updated_at": wf.get("close_time"),
+                },
+            )
 
         return {"runs": results, "temporal": get_temporal_status()}
 
@@ -526,12 +526,12 @@ async def list_recent_runs_mcp(
         return {
             "runs": [],
             "temporal": get_temporal_status(),
-            "error": str(exc)
+            "error": str(exc),
         }
 
 
 @mcp.tool
-async def get_fuzzing_stats_mcp(run_id: str) -> Dict[str, Any]:
+async def get_fuzzing_stats_mcp(run_id: str) -> dict[str, Any]:
     """Return fuzzing statistics for a run if available."""
     not_ready = _temporal_not_ready_status()
     if not_ready:
@@ -555,7 +555,7 @@ async def get_fuzzing_stats_mcp(run_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool
-async def get_fuzzing_crash_reports_mcp(run_id: str) -> Dict[str, Any]:
+async def get_fuzzing_crash_reports_mcp(run_id: str) -> dict[str, Any]:
     """Return crash reports collected for a fuzzing run."""
     not_ready = _temporal_not_ready_status()
     if not_ready:
@@ -571,11 +571,10 @@ async def get_fuzzing_crash_reports_mcp(run_id: str) -> Dict[str, Any]:
 
 
 @mcp.tool
-async def get_backend_status_mcp() -> Dict[str, Any]:
+async def get_backend_status_mcp() -> dict[str, Any]:
     """Expose backend readiness, workflows, and registered MCP tools."""
-
     status = get_temporal_status()
-    response: Dict[str, Any] = {"temporal": status}
+    response: dict[str, Any] = {"temporal": status}
 
     if status.get("ready"):
         response["workflows"] = list(temporal_mgr.workflows.keys())
@@ -591,7 +590,6 @@ async def get_backend_status_mcp() -> Dict[str, Any]:
 
 def create_mcp_transport_app() -> Starlette:
     """Build a Starlette app serving HTTP + SSE transports on one port."""
-
     http_app = mcp.http_app(path="/", transport="streamable-http")
     sse_app = create_sse_app(
         server=mcp,
@@ -609,10 +607,10 @@ def create_mcp_transport_app() -> Starlette:
     async def lifespan(app: Starlette):  # pragma: no cover - integration wiring
         async with AsyncExitStack() as stack:
             await stack.enter_async_context(
-                http_app.router.lifespan_context(http_app)
+                http_app.router.lifespan_context(http_app),
             )
             await stack.enter_async_context(
-                sse_app.router.lifespan_context(sse_app)
+                sse_app.router.lifespan_context(sse_app),
             )
             yield
 
@@ -626,6 +624,7 @@ def create_mcp_transport_app() -> Starlette:
 # ---------------------------------------------------------------------------
 # Combined lifespan: Temporal init + dedicated MCP transports
 # ---------------------------------------------------------------------------
+
 
 @asynccontextmanager
 async def combined_lifespan(app: FastAPI):
@@ -675,13 +674,14 @@ async def combined_lifespan(app: FastAPI):
             if getattr(mcp_server, "started", False):
                 return
             await asyncio.sleep(poll_interval)
-        raise asyncio.TimeoutError
+        raise TimeoutError
 
     try:
         await _wait_for_uvicorn_startup()
-    except asyncio.TimeoutError:  # pragma: no cover - defensive logging
+    except TimeoutError:  # pragma: no cover - defensive logging
         if mcp_task.done():
-            raise RuntimeError("MCP server failed to start") from mcp_task.exception()
+            msg = "MCP server failed to start"
+            raise RuntimeError(msg) from mcp_task.exception()
         logger.warning("Timed out waiting for MCP server startup; continuing anyway")
 
     logger.info("MCP HTTP available at http://0.0.0.0:8010/mcp")

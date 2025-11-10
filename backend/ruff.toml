@@ -1,0 +1,11 @@
+line-length = 120
+
+[lint]
+select = [ "ALL" ]
+ignore = []
+
+[lint.per-file-ignores]
+"tests/*" = [
+    "PLR2004",  # allowing comparisons using unamed numerical constants in tests
+    "S101",     # allowing 'assert' statements in tests
+]

@@ -1,17 +1,26 @@
-"""
-Unit tests for AtherisFuzzer module
-"""
+"""Unit tests for AtherisFuzzer module."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+from unittest.mock import AsyncMock, patch
 
 import pytest
-from unittest.mock import AsyncMock, patch
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+    from typing import Any
+
+    from modules.fuzzer.atheris_fuzzer import AtherisFuzzer
 
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerMetadata:
-    """Test AtherisFuzzer metadata"""
+    """Test AtherisFuzzer metadata."""
 
-    async def test_metadata_structure(self, atheris_fuzzer):
-        """Test that module metadata is properly defined"""
+    async def test_metadata_structure(self, atheris_fuzzer: AtherisFuzzer) -> None:
+        """Test that module metadata is properly defined."""
         metadata = atheris_fuzzer.get_metadata()
 
         assert metadata.name == "atheris_fuzzer"
@@ -22,28 +31,28 @@ class TestAtherisFuzzerMetadata:
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerConfigValidation:
-    """Test configuration validation"""
+    """Test configuration validation."""
 
-    async def test_valid_config(self, atheris_fuzzer, atheris_config):
-        """Test validation of valid configuration"""
+    async def test_valid_config(self, atheris_fuzzer: AtherisFuzzer, atheris_config: dict[str, Any]) -> None:
+        """Test validation of valid configuration."""
         assert atheris_fuzzer.validate_config(atheris_config) is True
 
-    async def test_invalid_max_iterations(self, atheris_fuzzer):
-        """Test validation fails with invalid max_iterations"""
+    async def test_invalid_max_iterations(self, atheris_fuzzer: AtherisFuzzer) -> None:
+        """Test validation fails with invalid max_iterations."""
         config = {
             "target_file": "fuzz_target.py",
             "max_iterations": -1,
-            "timeout_seconds": 10
+            "timeout_seconds": 10,
         }
         with pytest.raises(ValueError, match="max_iterations"):
             atheris_fuzzer.validate_config(config)
 
-    async def test_invalid_timeout(self, atheris_fuzzer):
-        """Test validation fails with invalid timeout"""
+    async def test_invalid_timeout(self, atheris_fuzzer: AtherisFuzzer) -> None:
+        """Test validation fails with invalid timeout."""
         config = {
             "target_file": "fuzz_target.py",
             "max_iterations": 1000,
-            "timeout_seconds": 0
+            "timeout_seconds": 0,
         }
         with pytest.raises(ValueError, match="timeout_seconds"):
             atheris_fuzzer.validate_config(config)
@@ -51,10 +60,10 @@ class TestAtherisFuzzerConfigValidation:
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerDiscovery:
-    """Test fuzz target discovery"""
+    """Test fuzz target discovery."""
 
-    async def test_auto_discover(self, atheris_fuzzer, python_test_workspace):
-        """Test auto-discovery of Python fuzz targets"""
+    async def test_auto_discover(self, atheris_fuzzer: AtherisFuzzer, python_test_workspace: Path) -> None:
+        """Test auto-discovery of Python fuzz targets."""
         # Create a fuzz target file
         (python_test_workspace / "fuzz_target.py").write_text("""
 import atheris
@@ -69,7 +78,7 @@ if __name__ == "__main__":
 """)
 
         # Pass None for auto-discovery
-        target = atheris_fuzzer._discover_target(python_test_workspace, None)
+        target = atheris_fuzzer._discover_target(python_test_workspace, None)  # noqa: SLF001
 
         assert target is not None
         assert "fuzz_target.py" in str(target)
@@ -77,10 +86,14 @@ if __name__ == "__main__":
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerExecution:
-    """Test fuzzer execution logic"""
+    """Test fuzzer execution logic."""
 
-    async def test_execution_creates_result(self, atheris_fuzzer, python_test_workspace, atheris_config):
-        """Test that execution returns a ModuleResult"""
+    async def test_execution_creates_result(
+        self,
+        atheris_fuzzer: AtherisFuzzer,
+        python_test_workspace: Path,
+    ) -> None:
+        """Test that execution returns a ModuleResult."""
         # Create a simple fuzz target
         (python_test_workspace / "fuzz_target.py").write_text("""
 import atheris
@@ -99,11 +112,16 @@ if __name__ == "__main__":
         test_config = {
             "target_file": "fuzz_target.py",
             "max_iterations": 10,
-            "timeout_seconds": 1
+            "timeout_seconds": 1,
         }
 
         # Mock the fuzzing subprocess to avoid actual execution
-        with patch.object(atheris_fuzzer, '_run_fuzzing', new_callable=AsyncMock, return_value=([], {"total_executions": 10})):
+        with patch.object(
+            atheris_fuzzer,
+            "_run_fuzzing",
+            new_callable=AsyncMock,
+            return_value=([], {"total_executions": 10}),
+        ):
             result = await atheris_fuzzer.execute(test_config, python_test_workspace)
 
             assert result.module == "atheris_fuzzer"
@@ -113,10 +131,16 @@ if __name__ == "__main__":
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerStatsCallback:
-    """Test stats callback functionality"""
+    """Test stats callback functionality."""
 
-    async def test_stats_callback_invoked(self, atheris_fuzzer, python_test_workspace, atheris_config, mock_stats_callback):
-        """Test that stats callback is invoked during fuzzing"""
+    async def test_stats_callback_invoked(
+        self,
+        atheris_fuzzer: AtherisFuzzer,
+        python_test_workspace: Path,
+        atheris_config: dict[str, Any],
+        mock_stats_callback: Callable | None,
+    ) -> None:
+        """Test that stats callback is invoked during fuzzing."""
         (python_test_workspace / "fuzz_target.py").write_text("""
 import atheris
 import sys
@@ -130,35 +154,45 @@ if __name__ == "__main__":
 """)
 
         # Mock fuzzing to simulate stats
-        async def mock_run_fuzzing(test_one_input, target_path, workspace, max_iterations, timeout_seconds, stats_callback):
+        async def mock_run_fuzzing(
+            test_one_input: Callable,  # noqa: ARG001
+            target_path: Path,  # noqa: ARG001
+            workspace: Path,  # noqa: ARG001
+            max_iterations: int,  # noqa: ARG001
+            timeout_seconds: int,  # noqa: ARG001
+            stats_callback: Callable | None,
+        ) -> None:
             if stats_callback:
-                await stats_callback({
-                    "total_execs": 100,
-                    "execs_per_sec": 10.0,
-                    "crashes": 0,
-                    "coverage": 5,
-                    "corpus_size": 2,
-                    "elapsed_time": 10
-                })
-            return
+                await stats_callback(
+                    {
+                        "total_execs": 100,
+                        "execs_per_sec": 10.0,
+                        "crashes": 0,
+                        "coverage": 5,
+                        "corpus_size": 2,
+                        "elapsed_time": 10,
+                    },
+                )
 
-        with patch.object(atheris_fuzzer, '_run_fuzzing', side_effect=mock_run_fuzzing):
-            with patch.object(atheris_fuzzer, '_load_target_module', return_value=lambda x: None):
-                # Put stats_callback in config dict, not as kwarg
-                atheris_config["target_file"] = "fuzz_target.py"
-                atheris_config["stats_callback"] = mock_stats_callback
-                await atheris_fuzzer.execute(atheris_config, python_test_workspace)
+        with (
+            patch.object(atheris_fuzzer, "_run_fuzzing", side_effect=mock_run_fuzzing),
+            patch.object(atheris_fuzzer, "_load_target_module", return_value=lambda _x: None),
+        ):
+            # Put stats_callback in config dict, not as kwarg
+            atheris_config["target_file"] = "fuzz_target.py"
+            atheris_config["stats_callback"] = mock_stats_callback
+            await atheris_fuzzer.execute(atheris_config, python_test_workspace)
 
-                # Verify callback was invoked
-                assert len(mock_stats_callback.stats_received) > 0
+            # Verify callback was invoked
+            assert len(mock_stats_callback.stats_received) > 0
 
 
 @pytest.mark.asyncio
 class TestAtherisFuzzerFindingGeneration:
-    """Test finding generation from crashes"""
+    """Test finding generation from crashes."""
 
-    async def test_create_crash_finding(self, atheris_fuzzer):
-        """Test crash finding creation"""
+    async def test_create_crash_finding(self, atheris_fuzzer: AtherisFuzzer) -> None:
+        """Test crash finding creation."""
         finding = atheris_fuzzer.create_finding(
             title="Crash: Exception in TestOneInput",
             description="IndexError: list index out of range",
@@ -167,8 +201,8 @@ class TestAtherisFuzzerFindingGeneration:
             file_path="fuzz_target.py",
             metadata={
                 "crash_type": "IndexError",
-                "stack_trace": "Traceback..."
-            }
+                "stack_trace": "Traceback...",
+            },
         )
 
         assert finding.title == "Crash: Exception in TestOneInput"

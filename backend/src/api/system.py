@@ -9,14 +9,12 @@
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
-"""
-System information endpoints for FuzzForge API.
+"""System information endpoints for FuzzForge API.
 
 Provides system configuration and filesystem paths to CLI for worker management.
 """
 
 import os
-from typing import Dict
 
 from fastapi import APIRouter
 
@@ -24,9 +22,8 @@ router = APIRouter(prefix="/system", tags=["system"])
 
 
 @router.get("/info")
-async def get_system_info() -> Dict[str, str]:
-    """
-    Get system information including host filesystem paths.
+async def get_system_info() -> dict[str, str]:
+    """Get system information including host filesystem paths.
 
     This endpoint exposes paths needed by the CLI to manage workers via docker-compose.
     The FUZZFORGE_HOST_ROOT environment variable is set by docker-compose and points
@@ -37,6 +34,7 @@ async def get_system_info() -> Dict[str, str]:
         - host_root: Absolute path to FuzzForge root on host
         - docker_compose_path: Path to docker-compose.yml on host
         - workers_dir: Path to workers directory on host
+
     """
     host_root = os.getenv("FUZZFORGE_HOST_ROOT", "")
 

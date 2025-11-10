@@ -1,5 +1,4 @@
-"""
-Temporal Manager - Workflow execution and management
+"""Temporal Manager - Workflow execution and management.
 
 Handles:
 - Workflow discovery from toolbox
@@ -8,25 +7,26 @@ Handles:
 - Results retrieval
 """
 
+import asyncio
 import logging
 import os
+from datetime import timedelta
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any
 from uuid import uuid4
 
 from temporalio.client import Client, WorkflowHandle
 from temporalio.common import RetryPolicy
-from datetime import timedelta
+
+from src.storage import S3CachedStorage
 
 from .discovery import WorkflowDiscovery, WorkflowInfo
-from src.storage import S3CachedStorage
 
 logger = logging.getLogger(__name__)
 
 
 class TemporalManager:
-    """
-    Manages Temporal workflow execution for FuzzForge.
+    """Manages Temporal workflow execution for FuzzForge.
 
     This class:
     - Discovers available workflows from toolbox
@@ -37,41 +37,42 @@ class TemporalManager:
 
     def __init__(
         self,
-        workflows_dir: Optional[Path] = None,
-        temporal_address: Optional[str] = None,
+        workflows_dir: Path | None = None,
+        temporal_address: str | None = None,
         temporal_namespace: str = "default",
-        storage: Optional[S3CachedStorage] = None
-    ):
-        """
-        Initialize Temporal manager.
+        storage: S3CachedStorage | None = None,
+    ) -> None:
+        """Initialize Temporal manager.
 
         Args:
             workflows_dir: Path to workflows directory (default: toolbox/workflows)
             temporal_address: Temporal server address (default: from env or localhost:7233)
             temporal_namespace: Temporal namespace
             storage: Storage backend for file uploads (default: S3CachedStorage)
+
         """
         if workflows_dir is None:
             workflows_dir = Path("toolbox/workflows")
 
         self.temporal_address = temporal_address or os.getenv(
-            'TEMPORAL_ADDRESS',
-            'localhost:7233'
+            "TEMPORAL_ADDRESS",
+            "localhost:7233",
         )
         self.temporal_namespace = temporal_namespace
         self.discovery = WorkflowDiscovery(workflows_dir)
-        self.workflows: Dict[str, WorkflowInfo] = {}
-        self.client: Optional[Client] = None
+        self.workflows: dict[str, WorkflowInfo] = {}
+        self.client: Client | None = None
 
         # Initialize storage backend
         self.storage = storage or S3CachedStorage()
 
         logger.info(
-            f"TemporalManager initialized: {self.temporal_address} "
-            f"(namespace: {self.temporal_namespace})"
+            "TemporalManager initialized: %s (namespace: %s)",
+            self.temporal_address,
+            self.temporal_namespace,
         )
 
-    async def initialize(self):
+    async def initialize(self) -> None:
         """Initialize the manager by discovering workflows and connecting to Temporal."""
         try:
             # Discover workflows
@@ -81,45 +82,46 @@ class TemporalManager:
                 logger.warning("No workflows discovered")
             else:
                 logger.info(
-                    f"Discovered {len(self.workflows)} workflows: "
-                    f"{list(self.workflows.keys())}"
+                    "Discovered %s workflows: %s",
+                    len(self.workflows),
+                    list(self.workflows.keys()),
                 )
 
             # Connect to Temporal
             self.client = await Client.connect(
                 self.temporal_address,
-                namespace=self.temporal_namespace
+                namespace=self.temporal_namespace,
             )
-            logger.info(f"✓ Connected to Temporal: {self.temporal_address}")
+            logger.info("✓ Connected to Temporal: %s", self.temporal_address)
 
-        except Exception as e:
-            logger.error(f"Failed to initialize Temporal manager: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to initialize Temporal manager")
             raise
 
-    async def close(self):
+    async def close(self) -> None:
         """Close Temporal client connection."""
         if self.client:
             # Temporal client doesn't need explicit close in Python SDK
             pass
 
-    async def get_workflows(self) -> Dict[str, WorkflowInfo]:
-        """
-        Get all discovered workflows.
+    async def get_workflows(self) -> dict[str, WorkflowInfo]:
+        """Get all discovered workflows.
 
         Returns:
             Dictionary mapping workflow names to their info
+
         """
         return self.workflows
 
-    async def get_workflow(self, name: str) -> Optional[WorkflowInfo]:
-        """
-        Get workflow info by name.
+    async def get_workflow(self, name: str) -> WorkflowInfo | None:
+        """Get workflow info by name.
 
         Args:
             name: Workflow name
 
         Returns:
             WorkflowInfo or None if not found
+
         """
         return self.workflows.get(name)
 
@@ -127,10 +129,9 @@ class TemporalManager:
         self,
         file_path: Path,
         user_id: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None,
     ) -> str:
-        """
-        Upload target file to storage.
+        """Upload target file to storage.
 
         Args:
             file_path: Local path to file
@@ -139,20 +140,20 @@ class TemporalManager:
 
         Returns:
             Target ID for use in workflow execution
+
         """
         target_id = await self.storage.upload_target(file_path, user_id, metadata)
-        logger.info(f"Uploaded target: {target_id}")
+        logger.info("Uploaded target: %s", target_id)
         return target_id
 
     async def run_workflow(
         self,
         workflow_name: str,
         target_id: str,
-        workflow_params: Optional[Dict[str, Any]] = None,
-        workflow_id: Optional[str] = None
+        workflow_params: dict[str, Any] | None = None,
+        workflow_id: str | None = None,
     ) -> WorkflowHandle:
-        """
-        Execute a workflow.
+        """Execute a workflow.
 
         Args:
             workflow_name: Name of workflow to execute
@@ -165,14 +166,17 @@ class TemporalManager:
 
         Raises:
             ValueError: If workflow not found or client not initialized
+
         """
         if not self.client:
-            raise ValueError("Temporal client not initialized. Call initialize() first.")
+            msg = "Temporal client not initialized. Call initialize() first."
+            raise ValueError(msg)
 
         # Get workflow info
         workflow_info = self.workflows.get(workflow_name)
         if not workflow_info:
-            raise ValueError(f"Workflow not found: {workflow_name}")
+            msg = f"Workflow not found: {workflow_name}"
+            raise ValueError(msg)
 
         # Generate workflow ID if not provided
         if not workflow_id:
@@ -188,23 +192,23 @@ class TemporalManager:
         # Add parameters in order based on metadata schema
         # This ensures parameters match the workflow signature order
         # Apply defaults from metadata.yaml if parameter not provided
-        if 'parameters' in workflow_info.metadata:
-            param_schema = workflow_info.metadata['parameters'].get('properties', {})
-            logger.debug(f"Found {len(param_schema)} parameters in schema")
+        if "parameters" in workflow_info.metadata:
+            param_schema = workflow_info.metadata["parameters"].get("properties", {})
+            logger.debug("Found %s parameters in schema", len(param_schema))
             # Iterate parameters in schema order and add values
-            for param_name in param_schema.keys():
+            for param_name in param_schema:
                 param_spec = param_schema[param_name]
 
                 # Use provided param, or fall back to default from metadata
                 if workflow_params and param_name in workflow_params:
                     param_value = workflow_params[param_name]
-                    logger.debug(f"Using provided value for {param_name}: {param_value}")
-                elif 'default' in param_spec:
-                    param_value = param_spec['default']
-                    logger.debug(f"Using default for {param_name}: {param_value}")
+                    logger.debug("Using provided value for %s: %s", param_name, param_value)
+                elif "default" in param_spec:
+                    param_value = param_spec["default"]
+                    logger.debug("Using default for %s: %s", param_name, param_value)
                 else:
                     param_value = None
-                    logger.debug(f"No value or default for {param_name}, using None")
+                    logger.debug("No value or default for {param_name}, using None")
 
                 workflow_args.append(param_value)
         else:
@@ -215,11 +219,14 @@ class TemporalManager:
         task_queue = f"{vertical}-queue"
 
         logger.info(
-            f"Starting workflow: {workflow_name} "
-            f"(id={workflow_id}, queue={task_queue}, target={target_id})"
+            "Starting workflow: %s (id=%s, queue=%s, target=%s)",
+            workflow_name,
+            workflow_id,
+            task_queue,
+            target_id,
         )
-        logger.info(f"DEBUG: workflow_args = {workflow_args}")
-        logger.info(f"DEBUG: workflow_params received = {workflow_params}")
+        logger.info("DEBUG: workflow_args = %s", workflow_args)
+        logger.infof("DEBUG: workflow_params received = %s", workflow_params)
 
         try:
             # Start workflow execution with positional arguments
@@ -231,20 +238,20 @@ class TemporalManager:
                 retry_policy=RetryPolicy(
                     initial_interval=timedelta(seconds=1),
                     maximum_interval=timedelta(minutes=1),
-                    maximum_attempts=3
-                )
+                    maximum_attempts=3,
+                ),
             )
 
-            logger.info(f"✓ Workflow started: {workflow_id}")
+            logger.info("✓ Workflow started: %s", workflow_id)
+
+        except Exception:
+            logger.exception("Failed to start workflow %s", workflow_name)
+            raise
+        else:
             return handle
 
-        except Exception as e:
-            logger.error(f"Failed to start workflow {workflow_name}: {e}", exc_info=True)
-            raise
-
-    async def get_workflow_status(self, workflow_id: str) -> Dict[str, Any]:
-        """
-        Get workflow execution status.
+    async def get_workflow_status(self, workflow_id: str) -> dict[str, Any]:
+        """Get workflow execution status.
 
         Args:
             workflow_id: Workflow execution ID
@@ -254,9 +261,11 @@ class TemporalManager:
 
         Raises:
             ValueError: If client not initialized or workflow not found
+
         """
         if not self.client:
-            raise ValueError("Temporal client not initialized")
+            msg = "Temporal client not initialized"
+            raise ValueError(msg)
 
         try:
             # Get workflow handle
@@ -274,20 +283,20 @@ class TemporalManager:
                 "task_queue": description.task_queue,
             }
 
-            logger.info(f"Workflow {workflow_id} status: {status['status']}")
-            return status
+            logger.info("Workflow %s status: %s", workflow_id, status["status"])
 
-        except Exception as e:
-            logger.error(f"Failed to get workflow status: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to get workflow status")
             raise
+        else:
+            return status
 
     async def get_workflow_result(
         self,
         workflow_id: str,
-        timeout: Optional[timedelta] = None
+        timeout: timedelta | None = None,
     ) -> Any:
-        """
-        Get workflow execution result (blocking).
+        """Get workflow execution result (blocking).
 
         Args:
             workflow_id: Workflow execution ID
@@ -299,60 +308,62 @@ class TemporalManager:
         Raises:
             ValueError: If client not initialized
             TimeoutError: If timeout exceeded
+
         """
         if not self.client:
-            raise ValueError("Temporal client not initialized")
+            msg = "Temporal client not initialized"
+            raise ValueError(msg)
 
         try:
             handle = self.client.get_workflow_handle(workflow_id)
 
-            logger.info(f"Waiting for workflow result: {workflow_id}")
+            logger.info("Waiting for workflow result: %s", workflow_id)
 
             # Wait for workflow to complete and get result
             if timeout:
                 # Use asyncio timeout if provided
-                import asyncio
                 result = await asyncio.wait_for(handle.result(), timeout=timeout.total_seconds())
             else:
                 result = await handle.result()
 
-            logger.info(f"✓ Workflow {workflow_id} completed")
+            logger.info("✓ Workflow %s completed", workflow_id)
+
+        except Exception:
+            logger.exception("Failed to get workflow result")
+            raise
+        else:
             return result
 
-        except Exception as e:
-            logger.error(f"Failed to get workflow result: {e}", exc_info=True)
-            raise
-
     async def cancel_workflow(self, workflow_id: str) -> None:
-        """
-        Cancel a running workflow.
+        """Cancel a running workflow.
 
         Args:
             workflow_id: Workflow execution ID
 
         Raises:
             ValueError: If client not initialized
+
         """
         if not self.client:
-            raise ValueError("Temporal client not initialized")
+            msg = "Temporal client not initialized"
+            raise ValueError(msg)
 
         try:
             handle = self.client.get_workflow_handle(workflow_id)
             await handle.cancel()
 
-            logger.info(f"✓ Workflow cancelled: {workflow_id}")
+            logger.info("✓ Workflow cancelled: %s", workflow_id)
 
-        except Exception as e:
-            logger.error(f"Failed to cancel workflow: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to cancel workflow: %s")
             raise
 
     async def list_workflows(
         self,
-        filter_query: Optional[str] = None,
-        limit: int = 100
-    ) -> list[Dict[str, Any]]:
-        """
-        List workflow executions.
+        filter_query: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
+        """List workflow executions.
 
         Args:
             filter_query: Optional Temporal list filter query
@@ -363,30 +374,36 @@ class TemporalManager:
 
         Raises:
             ValueError: If client not initialized
+
         """
         if not self.client:
-            raise ValueError("Temporal client not initialized")
+            msg = "Temporal client not initialized"
+            raise ValueError(msg)
 
         try:
             workflows = []
 
             # Use Temporal's list API
             async for workflow in self.client.list_workflows(filter_query):
-                workflows.append({
-                    "workflow_id": workflow.id,
-                    "workflow_type": workflow.workflow_type,
-                    "status": workflow.status.name,
-                    "start_time": workflow.start_time.isoformat() if workflow.start_time else None,
-                    "close_time": workflow.close_time.isoformat() if workflow.close_time else None,
-                    "task_queue": workflow.task_queue,
-                })
+                workflows.append(
+                    {
+                        "workflow_id": workflow.id,
+                        "workflow_type": workflow.workflow_type,
+                        "status": workflow.status.name,
+                        "start_time": workflow.start_time.isoformat() if workflow.start_time else None,
+                        "close_time": workflow.close_time.isoformat() if workflow.close_time else None,
+                        "task_queue": workflow.task_queue,
+                    },
+                )
 
                 if len(workflows) >= limit:
                     break
 
-            logger.info(f"Listed {len(workflows)} workflows")
+            logger.info("Listed %s workflows", len(workflows))
             return workflows
 
-        except Exception as e:
-            logger.error(f"Failed to list workflows: {e}", exc_info=True)
+        except Exception:
+            logger.exception("Failed to list workflows")
             raise
+        else:
+            return workflows

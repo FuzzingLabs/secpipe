@@ -1,5 +1,4 @@
-"""
-S3-compatible storage backend with local caching.
+"""S3-compatible storage backend with local caching.
 
 Works with MinIO (dev/prod) or AWS S3 (cloud).
 """
@@ -10,7 +9,7 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any
 from uuid import uuid4
 
 import boto3
@@ -22,8 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class S3CachedStorage(StorageBackend):
-    """
-    S3-compatible storage with local caching.
+    """S3-compatible storage with local caching.
 
     Features:
     - Upload targets to S3/MinIO
@@ -34,17 +32,16 @@ class S3CachedStorage(StorageBackend):
 
     def __init__(
         self,
-        endpoint_url: Optional[str] = None,
-        access_key: Optional[str] = None,
-        secret_key: Optional[str] = None,
+        endpoint_url: str | None = None,
+        access_key: str | None = None,
+        secret_key: str | None = None,
         bucket: str = "targets",
         region: str = "us-east-1",
         use_ssl: bool = False,
-        cache_dir: Optional[Path] = None,
-        cache_max_size_gb: int = 10
-    ):
-        """
-        Initialize S3 storage backend.
+        cache_dir: Path | None = None,
+        cache_max_size_gb: int = 10,
+    ) -> None:
+        """Initialize S3 storage backend.
 
         Args:
             endpoint_url: S3 endpoint (None = AWS S3, or MinIO URL)
@@ -55,18 +52,19 @@ class S3CachedStorage(StorageBackend):
             use_ssl: Use HTTPS
             cache_dir: Local cache directory
             cache_max_size_gb: Maximum cache size in GB
+
         """
         # Use environment variables as defaults
-        self.endpoint_url = endpoint_url or os.getenv('S3_ENDPOINT', 'http://minio:9000')
-        self.access_key = access_key or os.getenv('S3_ACCESS_KEY', 'fuzzforge')
-        self.secret_key = secret_key or os.getenv('S3_SECRET_KEY', 'fuzzforge123')
-        self.bucket = bucket or os.getenv('S3_BUCKET', 'targets')
-        self.region = region or os.getenv('S3_REGION', 'us-east-1')
-        self.use_ssl = use_ssl or os.getenv('S3_USE_SSL', 'false').lower() == 'true'
+        self.endpoint_url = endpoint_url or os.getenv("S3_ENDPOINT", "http://minio:9000")
+        self.access_key = access_key or os.getenv("S3_ACCESS_KEY", "fuzzforge")
+        self.secret_key = secret_key or os.getenv("S3_SECRET_KEY", "fuzzforge123")
+        self.bucket = bucket or os.getenv("S3_BUCKET", "targets")
+        self.region = region or os.getenv("S3_REGION", "us-east-1")
+        self.use_ssl = use_ssl or os.getenv("S3_USE_SSL", "false").lower() == "true"
 
         # Cache configuration
-        self.cache_dir = cache_dir or Path(os.getenv('CACHE_DIR', '/tmp/fuzzforge-cache'))
-        self.cache_max_size = cache_max_size_gb * (1024 ** 3)  # Convert to bytes
+        self.cache_dir = cache_dir or Path(os.getenv("CACHE_DIR", "/tmp/fuzzforge-cache"))
+        self.cache_max_size = cache_max_size_gb * (1024**3)  # Convert to bytes
 
         # Ensure cache directory exists
         self.cache_dir.mkdir(parents=True, exist_ok=True)
@@ -74,69 +72,75 @@ class S3CachedStorage(StorageBackend):
         # Initialize S3 client
         try:
             self.s3_client = boto3.client(
-                's3',
+                "s3",
                 endpoint_url=self.endpoint_url,
                 aws_access_key_id=self.access_key,
                 aws_secret_access_key=self.secret_key,
                 region_name=self.region,
-                use_ssl=self.use_ssl
+                use_ssl=self.use_ssl,
             )
-            logger.info(f"Initialized S3 storage: {self.endpoint_url}/{self.bucket}")
+            logger.info("Initialized S3 storage: %s/%s", self.endpoint_url, self.bucket)
         except Exception as e:
-            logger.error(f"Failed to initialize S3 client: {e}")
-            raise StorageError(f"S3 initialization failed: {e}")
+            logger.exception("Failed to initialize S3 client")
+            msg = f"S3 initialization failed: {e}"
+            raise StorageError(msg) from e
 
     async def upload_target(
         self,
         file_path: Path,
         user_id: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None,
     ) -> str:
         """Upload target file to S3/MinIO."""
         if not file_path.exists():
-            raise FileNotFoundError(f"File not found: {file_path}")
+            msg = f"File not found: {file_path}"
+            raise FileNotFoundError(msg)
 
         # Generate unique target ID
         target_id = str(uuid4())
 
         # Prepare metadata
         upload_metadata = {
-            'user_id': user_id,
-            'uploaded_at': datetime.now().isoformat(),
-            'filename': file_path.name,
-            'size': str(file_path.stat().st_size)
+            "user_id": user_id,
+            "uploaded_at": datetime.now().isoformat(),
+            "filename": file_path.name,
+            "size": str(file_path.stat().st_size),
         }
         if metadata:
             upload_metadata.update(metadata)
 
         # Upload to S3
-        s3_key = f'{target_id}/target'
+        s3_key = f"{target_id}/target"
         try:
-            logger.info(f"Uploading target to s3://{self.bucket}/{s3_key}")
+            logger.info("Uploading target to s3://%s/%s", self.bucket, s3_key)
 
             self.s3_client.upload_file(
                 str(file_path),
                 self.bucket,
                 s3_key,
                 ExtraArgs={
-                    'Metadata': upload_metadata
-                }
+                    "Metadata": upload_metadata,
+                },
             )
 
             file_size_mb = file_path.stat().st_size / (1024 * 1024)
             logger.info(
-                f"✓ Uploaded target {target_id} "
-                f"({file_path.name}, {file_size_mb:.2f} MB)"
+                "✓ Uploaded target %s (%s, %s MB)",
+                target_id,
+                file_path.name,
+                f"{file_size_mb:.2f}",
             )
 
-            return target_id
-
         except ClientError as e:
-            logger.error(f"S3 upload failed: {e}", exc_info=True)
-            raise StorageError(f"Failed to upload target: {e}")
+            logger.exception("S3 upload failed")
+            msg = f"Failed to upload target: {e}"
+            raise StorageError(msg) from e
         except Exception as e:
-            logger.error(f"Upload failed: {e}", exc_info=True)
-            raise StorageError(f"Upload error: {e}")
+            logger.exception("Upload failed")
+            msg = f"Upload error: {e}"
+            raise StorageError(msg) from e
+        else:
+            return target_id
 
     async def get_target(self, target_id: str) -> Path:
         """Get target from cache or download from S3/MinIO."""
@@ -147,105 +151,110 @@ class S3CachedStorage(StorageBackend):
         if cached_file.exists():
             # Update access time for LRU
             cached_file.touch()
-            logger.info(f"Cache HIT: {target_id}")
+            logger.info("Cache HIT: %s", target_id)
             return cached_file
 
         # Cache miss - download from S3
-        logger.info(f"Cache MISS: {target_id}, downloading from S3...")
+        logger.info("Cache MISS: %s, downloading from S3...", target_id)
 
         try:
             # Create cache directory
             cache_path.mkdir(parents=True, exist_ok=True)
 
             # Download from S3
-            s3_key = f'{target_id}/target'
-            logger.info(f"Downloading s3://{self.bucket}/{s3_key}")
+            s3_key = f"{target_id}/target"
+            logger.info("Downloading s3://%s/%s", self.bucket, s3_key)
 
             self.s3_client.download_file(
                 self.bucket,
                 s3_key,
-                str(cached_file)
+                str(cached_file),
             )
 
             # Verify download
             if not cached_file.exists():
-                raise StorageError(f"Downloaded file not found: {cached_file}")
+                msg = f"Downloaded file not found: {cached_file}"
+                raise StorageError(msg)
 
             file_size_mb = cached_file.stat().st_size / (1024 * 1024)
-            logger.info(f"✓ Downloaded target {target_id} ({file_size_mb:.2f} MB)")
-
-            return cached_file
+            logger.info("✓ Downloaded target %s (%s MB)", target_id, f"{file_size_mb:.2f}")
 
         except ClientError as e:
-            error_code = e.response.get('Error', {}).get('Code')
-            if error_code in ['404', 'NoSuchKey']:
-                logger.error(f"Target not found: {target_id}")
-                raise FileNotFoundError(f"Target {target_id} not found in storage")
-            else:
-                logger.error(f"S3 download failed: {e}", exc_info=True)
-                raise StorageError(f"Download failed: {e}")
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code in ["404", "NoSuchKey"]:
+                logger.exception("Target not found: %s", target_id)
+                msg = f"Target {target_id} not found in storage"
+                raise FileNotFoundError(msg) from e
+            logger.exception("S3 download failed")
+            msg = f"Download failed: {e}"
+            raise StorageError(msg) from e
         except Exception as e:
-            logger.error(f"Download error: {e}", exc_info=True)
+            logger.exception("Download error")
             # Cleanup partial download
             if cache_path.exists():
                 shutil.rmtree(cache_path, ignore_errors=True)
-            raise StorageError(f"Download error: {e}")
+            msg = f"Download error: {e}"
+            raise StorageError(msg) from e
+        else:
+            return cached_file
 
     async def delete_target(self, target_id: str) -> None:
         """Delete target from S3/MinIO."""
         try:
-            s3_key = f'{target_id}/target'
-            logger.info(f"Deleting s3://{self.bucket}/{s3_key}")
+            s3_key = f"{target_id}/target"
+            logger.info("Deleting s3://%s/%s", self.bucket, s3_key)
 
             self.s3_client.delete_object(
                 Bucket=self.bucket,
-                Key=s3_key
+                Key=s3_key,
             )
 
             # Also delete from cache if present
             cache_path = self.cache_dir / target_id
             if cache_path.exists():
                 shutil.rmtree(cache_path, ignore_errors=True)
-                logger.info(f"✓ Deleted target {target_id} from S3 and cache")
+                logger.info("✓ Deleted target %s from S3 and cache", target_id)
             else:
-                logger.info(f"✓ Deleted target {target_id} from S3")
+                logger.info("✓ Deleted target %s from S3", target_id)
 
         except ClientError as e:
-            logger.error(f"S3 delete failed: {e}", exc_info=True)
+            logger.exception("S3 delete failed")
             # Don't raise error if object doesn't exist
-            if e.response.get('Error', {}).get('Code') not in ['404', 'NoSuchKey']:
-                raise StorageError(f"Delete failed: {e}")
+            if e.response.get("Error", {}).get("Code") not in ["404", "NoSuchKey"]:
+                msg = f"Delete failed: {e}"
+                raise StorageError(msg) from e
         except Exception as e:
-            logger.error(f"Delete error: {e}", exc_info=True)
-            raise StorageError(f"Delete error: {e}")
+            logger.exception("Delete error")
+            msg = f"Delete error: {e}"
+            raise StorageError(msg) from e
 
     async def upload_results(
         self,
         workflow_id: str,
-        results: Dict[str, Any],
-        results_format: str = "json"
+        results: dict[str, Any],
+        results_format: str = "json",
     ) -> str:
         """Upload workflow results to S3/MinIO."""
         try:
             # Prepare results content
             if results_format == "json":
-                content = json.dumps(results, indent=2).encode('utf-8')
-                content_type = 'application/json'
-                file_ext = 'json'
+                content = json.dumps(results, indent=2).encode("utf-8")
+                content_type = "application/json"
+                file_ext = "json"
             elif results_format == "sarif":
-                content = json.dumps(results, indent=2).encode('utf-8')
-                content_type = 'application/sarif+json'
-                file_ext = 'sarif'
+                content = json.dumps(results, indent=2).encode("utf-8")
+                content_type = "application/sarif+json"
+                file_ext = "sarif"
             else:
-                content = json.dumps(results, indent=2).encode('utf-8')
-                content_type = 'application/json'
-                file_ext = 'json'
+                content = json.dumps(results, indent=2).encode("utf-8")
+                content_type = "application/json"
+                file_ext = "json"
 
             # Upload to results bucket
-            results_bucket = 'results'
-            s3_key = f'{workflow_id}/results.{file_ext}'
+            results_bucket = "results"
+            s3_key = f"{workflow_id}/results.{file_ext}"
 
-            logger.info(f"Uploading results to s3://{results_bucket}/{s3_key}")
+            logger.info("Uploading results to s3://%s/%s", results_bucket, s3_key)
 
             self.s3_client.put_object(
                 Bucket=results_bucket,
@@ -253,95 +262,103 @@ class S3CachedStorage(StorageBackend):
                 Body=content,
                 ContentType=content_type,
                 Metadata={
-                    'workflow_id': workflow_id,
-                    'format': results_format,
-                    'uploaded_at': datetime.now().isoformat()
-                }
+                    "workflow_id": workflow_id,
+                    "format": results_format,
+                    "uploaded_at": datetime.now().isoformat(),
+                },
             )
 
             # Construct URL
             results_url = f"{self.endpoint_url}/{results_bucket}/{s3_key}"
-            logger.info(f"✓ Uploaded results: {results_url}")
-
-            return results_url
+            logger.info("✓ Uploaded results: %s", results_url)
 
         except Exception as e:
-            logger.error(f"Results upload failed: {e}", exc_info=True)
-            raise StorageError(f"Results upload failed: {e}")
+            logger.exception("Results upload failed")
+            msg = f"Results upload failed: {e}"
+            raise StorageError(msg) from e
+        else:
+            return results_url
 
-    async def get_results(self, workflow_id: str) -> Dict[str, Any]:
+    async def get_results(self, workflow_id: str) -> dict[str, Any]:
         """Get workflow results from S3/MinIO."""
         try:
-            results_bucket = 'results'
-            s3_key = f'{workflow_id}/results.json'
+            results_bucket = "results"
+            s3_key = f"{workflow_id}/results.json"
 
-            logger.info(f"Downloading results from s3://{results_bucket}/{s3_key}")
+            logger.info("Downloading results from s3://%s/%s", results_bucket, s3_key)
 
             response = self.s3_client.get_object(
                 Bucket=results_bucket,
-                Key=s3_key
+                Key=s3_key,
             )
 
-            content = response['Body'].read().decode('utf-8')
+            content = response["Body"].read().decode("utf-8")
             results = json.loads(content)
 
-            logger.info(f"✓ Downloaded results for workflow {workflow_id}")
-            return results
+            logger.info("✓ Downloaded results for workflow %s", workflow_id)
 
         except ClientError as e:
-            error_code = e.response.get('Error', {}).get('Code')
-            if error_code in ['404', 'NoSuchKey']:
-                logger.error(f"Results not found: {workflow_id}")
-                raise FileNotFoundError(f"Results for workflow {workflow_id} not found")
-            else:
-                logger.error(f"Results download failed: {e}", exc_info=True)
-                raise StorageError(f"Results download failed: {e}")
+            error_code = e.response.get("Error", {}).get("Code")
+            if error_code in ["404", "NoSuchKey"]:
+                logger.exception("Results not found: %s", workflow_id)
+                msg = f"Results for workflow {workflow_id} not found"
+                raise FileNotFoundError(msg) from e
+            logger.exception("Results download failed")
+            msg = f"Results download failed: {e}"
+            raise StorageError(msg) from e
         except Exception as e:
-            logger.error(f"Results download error: {e}", exc_info=True)
-            raise StorageError(f"Results download error: {e}")
+            logger.exception("Results download error")
+            msg = f"Results download error: {e}"
+            raise StorageError(msg) from e
+        else:
+            return results
 
     async def list_targets(
         self,
-        user_id: Optional[str] = None,
-        limit: int = 100
-    ) -> list[Dict[str, Any]]:
+        user_id: str | None = None,
+        limit: int = 100,
+    ) -> list[dict[str, Any]]:
         """List uploaded targets."""
         try:
             targets = []
-            paginator = self.s3_client.get_paginator('list_objects_v2')
+            paginator = self.s3_client.get_paginator("list_objects_v2")
 
-            for page in paginator.paginate(Bucket=self.bucket, PaginationConfig={'MaxItems': limit}):
-                for obj in page.get('Contents', []):
+            for page in paginator.paginate(Bucket=self.bucket, PaginationConfig={"MaxItems": limit}):
+                for obj in page.get("Contents", []):
                     # Get object metadata
                     try:
                         metadata_response = self.s3_client.head_object(
                             Bucket=self.bucket,
-                            Key=obj['Key']
+                            Key=obj["Key"],
                         )
-                        metadata = metadata_response.get('Metadata', {})
+                        metadata = metadata_response.get("Metadata", {})
 
                         # Filter by user_id if specified
-                        if user_id and metadata.get('user_id') != user_id:
+                        if user_id and metadata.get("user_id") != user_id:
                             continue
 
-                        targets.append({
-                            'target_id': obj['Key'].split('/')[0],
-                            'key': obj['Key'],
-                            'size': obj['Size'],
-                            'last_modified': obj['LastModified'].isoformat(),
-                            'metadata': metadata
-                        })
+                        targets.append(
+                            {
+                                "target_id": obj["Key"].split("/")[0],
+                                "key": obj["Key"],
+                                "size": obj["Size"],
+                                "last_modified": obj["LastModified"].isoformat(),
+                                "metadata": metadata,
+                            },
+                        )
 
                     except Exception as e:
-                        logger.warning(f"Failed to get metadata for {obj['Key']}: {e}")
+                        logger.warning("Failed to get metadata for %s: %s", obj["Key"], e)
                         continue
 
-            logger.info(f"Listed {len(targets)} targets (user_id={user_id})")
-            return targets
+            logger.info("Listed %s targets (user_id=%s)", len(targets), user_id)
 
         except Exception as e:
-            logger.error(f"List targets failed: {e}", exc_info=True)
-            raise StorageError(f"List targets failed: {e}")
+            logger.exception("List targets failed")
+            msg = f"List targets failed: {e}"
+            raise StorageError(msg) from e
+        else:
+            return targets
 
     async def cleanup_cache(self) -> int:
         """Clean up local cache using LRU eviction."""
@@ -350,30 +367,33 @@ class S3CachedStorage(StorageBackend):
             total_size = 0
 
             # Gather all cached files with metadata
-            for cache_file in self.cache_dir.rglob('*'):
+            for cache_file in self.cache_dir.rglob("*"):
                 if cache_file.is_file():
                     try:
                         stat = cache_file.stat()
-                        cache_files.append({
-                            'path': cache_file,
-                            'size': stat.st_size,
-                            'atime': stat.st_atime  # Last access time
-                        })
+                        cache_files.append(
+                            {
+                                "path": cache_file,
+                                "size": stat.st_size,
+                                "atime": stat.st_atime,  # Last access time
+                            },
+                        )
                         total_size += stat.st_size
                     except Exception as e:
-                        logger.warning(f"Failed to stat {cache_file}: {e}")
+                        logger.warning("Failed to stat %s: %s", cache_file, e)
                         continue
 
             # Check if cleanup is needed
             if total_size <= self.cache_max_size:
                 logger.info(
-                    f"Cache size OK: {total_size / (1024**3):.2f} GB / "
-                    f"{self.cache_max_size / (1024**3):.2f} GB"
+                    "Cache size OK: %s GB / %s GB",
+                    f"{total_size / (1024**3):.2f}",
+                    f"{self.cache_max_size / (1024**3):.2f}",
                 )
                 return 0
 
             # Sort by access time (oldest first)
-            cache_files.sort(key=lambda x: x['atime'])
+            cache_files.sort(key=lambda x: x["atime"])
 
             # Remove files until under limit
             removed_count = 0
@@ -382,42 +402,46 @@ class S3CachedStorage(StorageBackend):
                     break
 
                 try:
-                    file_info['path'].unlink()
-                    total_size -= file_info['size']
+                    file_info["path"].unlink()
+                    total_size -= file_info["size"]
                     removed_count += 1
-                    logger.debug(f"Evicted from cache: {file_info['path']}")
+                    logger.debug("Evicted from cache: %s", file_info["path"])
                 except Exception as e:
-                    logger.warning(f"Failed to delete {file_info['path']}: {e}")
+                    logger.warning("Failed to delete %s: %s", file_info["path"], e)
                     continue
 
             logger.info(
-                f"✓ Cache cleanup: removed {removed_count} files, "
-                f"new size: {total_size / (1024**3):.2f} GB"
+                "✓ Cache cleanup: removed %s files, new size: %s GB",
+                removed_count,
+                f"{total_size / (1024**3):.2f}",
             )
-            return removed_count
 
         except Exception as e:
-            logger.error(f"Cache cleanup failed: {e}", exc_info=True)
-            raise StorageError(f"Cache cleanup failed: {e}")
+            logger.exception("Cache cleanup failed")
+            msg = f"Cache cleanup failed: {e}"
+            raise StorageError(msg) from e
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+        else:
+            return removed_count
+
+    def get_cache_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         try:
             total_size = 0
             file_count = 0
 
-            for cache_file in self.cache_dir.rglob('*'):
+            for cache_file in self.cache_dir.rglob("*"):
                 if cache_file.is_file():
                     total_size += cache_file.stat().st_size
                     file_count += 1
 
             return {
-                'total_size_bytes': total_size,
-                'total_size_gb': total_size / (1024 ** 3),
-                'file_count': file_count,
-                'max_size_gb': self.cache_max_size / (1024 ** 3),
-                'usage_percent': (total_size / self.cache_max_size) * 100
+                "total_size_bytes": total_size,
+                "total_size_gb": total_size / (1024**3),
+                "file_count": file_count,
+                "max_size_gb": self.cache_max_size / (1024**3),
+                "usage_percent": (total_size / self.cache_max_size) * 100,
             }
         except Exception as e:
-            logger.error(f"Failed to get cache stats: {e}")
-            return {'error': str(e)}
+            logger.exception("Failed to get cache stats")
+            return {"error": str(e)}

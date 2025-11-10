@@ -1,6 +1,4 @@
-"""
-API endpoints for fuzzing workflow management and real-time monitoring
-"""
+"""API endpoints for fuzzing workflow management and real-time monitoring."""
 
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -13,32 +11,29 @@ API endpoints for fuzzing workflow management and real-time monitoring
 #
 # Additional attribution and requirements are provided in the NOTICE file.
 
-import logging
-from typing import List, Dict
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
-from fastapi.responses import StreamingResponse
 import asyncio
+import contextlib
 import json
+import logging
 from datetime import datetime
 
-from src.models.findings import (
-    FuzzingStats,
-    CrashReport
-)
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
+
+from src.models.findings import CrashReport, FuzzingStats
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/fuzzing", tags=["fuzzing"])
 
 # In-memory storage for real-time stats (in production, use Redis or similar)
-fuzzing_stats: Dict[str, FuzzingStats] = {}
-crash_reports: Dict[str, List[CrashReport]] = {}
-active_connections: Dict[str, List[WebSocket]] = {}
+fuzzing_stats: dict[str, FuzzingStats] = {}
+crash_reports: dict[str, list[CrashReport]] = {}
+active_connections: dict[str, list[WebSocket]] = {}
 
 
-def initialize_fuzzing_tracking(run_id: str, workflow_name: str):
-    """
-    Initialize fuzzing tracking for a new run.
+def initialize_fuzzing_tracking(run_id: str, workflow_name: str) -> None:
+    """Initialize fuzzing tracking for a new run.
 
     This function should be called when a workflow is submitted to enable
     real-time monitoring and stats collection.
@@ -46,19 +41,19 @@ def initialize_fuzzing_tracking(run_id: str, workflow_name: str):
     Args:
         run_id: The run identifier
         workflow_name: Name of the workflow
+
     """
     fuzzing_stats[run_id] = FuzzingStats(
         run_id=run_id,
-        workflow=workflow_name
+        workflow=workflow_name,
     )
     crash_reports[run_id] = []
     active_connections[run_id] = []
 
 
-@router.get("/{run_id}/stats", response_model=FuzzingStats)
+@router.get("/{run_id}/stats")
 async def get_fuzzing_stats(run_id: str) -> FuzzingStats:
-    """
-    Get current fuzzing statistics for a run.
+    """Get current fuzzing statistics for a run.
 
     Args:
         run_id: The fuzzing run ID
@@ -68,20 +63,20 @@ async def get_fuzzing_stats(run_id: str) -> FuzzingStats:
 
     Raises:
         HTTPException: 404 if run not found
+
     """
     if run_id not in fuzzing_stats:
         raise HTTPException(
             status_code=404,
-            detail=f"Fuzzing run not found: {run_id}"
+            detail=f"Fuzzing run not found: {run_id}",
         )
 
     return fuzzing_stats[run_id]
 
 
-@router.get("/{run_id}/crashes", response_model=List[CrashReport])
-async def get_crash_reports(run_id: str) -> List[CrashReport]:
-    """
-    Get crash reports for a fuzzing run.
+@router.get("/{run_id}/crashes")
+async def get_crash_reports(run_id: str) -> list[CrashReport]:
+    """Get crash reports for a fuzzing run.
 
     Args:
         run_id: The fuzzing run ID
@@ -91,11 +86,12 @@ async def get_crash_reports(run_id: str) -> List[CrashReport]:
 
     Raises:
         HTTPException: 404 if run not found
+
     """
     if run_id not in crash_reports:
         raise HTTPException(
             status_code=404,
-            detail=f"Fuzzing run not found: {run_id}"
+            detail=f"Fuzzing run not found: {run_id}",
         )
 
     return crash_reports[run_id]
@@ -103,8 +99,7 @@ async def get_crash_reports(run_id: str) -> List[CrashReport]:
 
 @router.post("/{run_id}/stats")
 async def update_fuzzing_stats(run_id: str, stats: FuzzingStats):
-    """
-    Update fuzzing statistics (called by fuzzing workflows).
+    """Update fuzzing statistics (called by fuzzing workflows).
 
     Args:
         run_id: The fuzzing run ID
@@ -112,18 +107,19 @@ async def update_fuzzing_stats(run_id: str, stats: FuzzingStats):
 
     Raises:
         HTTPException: 404 if run not found
+
     """
     if run_id not in fuzzing_stats:
         raise HTTPException(
             status_code=404,
-            detail=f"Fuzzing run not found: {run_id}"
+            detail=f"Fuzzing run not found: {run_id}",
         )
 
     # Update stats
     fuzzing_stats[run_id] = stats
 
     # Debug: log reception for live instrumentation
-    try:
+    with contextlib.suppress(Exception):
         logger.info(
             "Received fuzzing stats update: run_id=%s exec=%s eps=%.2f crashes=%s corpus=%s coverage=%s elapsed=%ss",
             run_id,
@@ -134,14 +130,12 @@ async def update_fuzzing_stats(run_id: str, stats: FuzzingStats):
             stats.coverage,
             stats.elapsed_time,
         )
-    except Exception:
-        pass
 
     # Notify connected WebSocket clients
     if run_id in active_connections:
         message = {
             "type": "stats_update",
-            "data": stats.model_dump()
+            "data": stats.model_dump(),
         }
         for websocket in active_connections[run_id][:]:  # Copy to avoid modification during iteration
             try:
@@ -153,12 +147,12 @@ async def update_fuzzing_stats(run_id: str, stats: FuzzingStats):
 
 @router.post("/{run_id}/crash")
 async def report_crash(run_id: str, crash: CrashReport):
-    """
-    Report a new crash (called by fuzzing workflows).
+    """Report a new crash (called by fuzzing workflows).
 
     Args:
         run_id: The fuzzing run ID
         crash: Crash report details
+
     """
     if run_id not in crash_reports:
         crash_reports[run_id] = []
@@ -175,7 +169,7 @@ async def report_crash(run_id: str, crash: CrashReport):
     if run_id in active_connections:
         message = {
             "type": "crash_report",
-            "data": crash.model_dump()
+            "data": crash.model_dump(),
         }
         for websocket in active_connections[run_id][:]:
             try:
@@ -186,12 +180,12 @@ async def report_crash(run_id: str, crash: CrashReport):
 
 @router.websocket("/{run_id}/live")
 async def websocket_endpoint(websocket: WebSocket, run_id: str):
-    """
-    WebSocket endpoint for real-time fuzzing updates.
+    """WebSocket endpoint for real-time fuzzing updates.
 
     Args:
         websocket: WebSocket connection
         run_id: The fuzzing run ID to monitor
+
     """
     await websocket.accept()
 
@@ -223,7 +217,7 @@ async def websocket_endpoint(websocket: WebSocket, run_id: str):
                 # Echo back for ping-pong
                 if data == "ping":
                     await websocket.send_text("pong")
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # Send periodic heartbeat
                 await websocket.send_text(json.dumps({"type": "heartbeat"}))
 
@@ -231,31 +225,31 @@ async def websocket_endpoint(websocket: WebSocket, run_id: str):
         # Clean up connection
         if run_id in active_connections and websocket in active_connections[run_id]:
             active_connections[run_id].remove(websocket)
-    except Exception as e:
-        logger.error(f"WebSocket error for run {run_id}: {e}")
+    except Exception:
+        logger.exception("WebSocket error for run %s", run_id)
         if run_id in active_connections and websocket in active_connections[run_id]:
             active_connections[run_id].remove(websocket)
 
 
 @router.get("/{run_id}/stream")
 async def stream_fuzzing_updates(run_id: str):
-    """
-    Server-Sent Events endpoint for real-time fuzzing updates.
+    """Server-Sent Events endpoint for real-time fuzzing updates.
 
     Args:
         run_id: The fuzzing run ID to monitor
 
     Returns:
         Streaming response with real-time updates
+
     """
     if run_id not in fuzzing_stats:
         raise HTTPException(
             status_code=404,
-            detail=f"Fuzzing run not found: {run_id}"
+            detail=f"Fuzzing run not found: {run_id}",
         )
 
     async def event_stream():
-        """Generate server-sent events for fuzzing updates"""
+        """Generate server-sent events for fuzzing updates."""
         last_stats_time = datetime.utcnow()
 
         while True:
@@ -276,10 +270,7 @@ async def stream_fuzzing_updates(run_id: str):
 
                 # Send recent crashes
                 if run_id in crash_reports:
-                    recent_crashes = [
-                        crash for crash in crash_reports[run_id]
-                        if crash.timestamp > last_stats_time
-                    ]
+                    recent_crashes = [crash for crash in crash_reports[run_id] if crash.timestamp > last_stats_time]
                     for crash in recent_crashes:
                         event_data = f"data: {json.dumps({'type': 'crash', 'data': crash.model_dump()})}\n\n"
                         yield event_data
@@ -287,8 +278,8 @@ async def stream_fuzzing_updates(run_id: str):
                 last_stats_time = datetime.utcnow()
                 await asyncio.sleep(5)  # Update every 5 seconds
 
-            except Exception as e:
-                logger.error(f"Error in event stream for run {run_id}: {e}")
+            except Exception:
+                logger.exception("Error in event stream for run %s", run_id)
                 break
 
     return StreamingResponse(
@@ -297,17 +288,17 @@ async def stream_fuzzing_updates(run_id: str):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-        }
+        },
     )
 
 
 @router.delete("/{run_id}")
-async def cleanup_fuzzing_run(run_id: str):
-    """
-    Clean up fuzzing run data.
+async def cleanup_fuzzing_run(run_id: str) -> dict[str, str]:
+    """Clean up fuzzing run data.
 
     Args:
         run_id: The fuzzing run ID to clean up
+
     """
     # Clean up tracking data
     fuzzing_stats.pop(run_id, None)

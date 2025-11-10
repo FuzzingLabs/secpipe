@@ -1,6 +1,4 @@
-"""
-Setup utilities for FuzzForge infrastructure
-"""
+"""Setup utilities for FuzzForge infrastructure."""
 
 # Copyright (c) 2025 FuzzingLabs
 #
@@ -18,9 +16,8 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-async def setup_result_storage():
-    """
-    Setup result storage (MinIO).
+async def setup_result_storage() -> bool:
+    """Set up result storage (MinIO).
 
     MinIO is used for both target upload and result storage.
     This is a placeholder for any MinIO-specific setup if needed.
@@ -31,9 +28,8 @@ async def setup_result_storage():
     return True
 
 
-async def validate_infrastructure():
-    """
-    Validate all required infrastructure components.
+async def validate_infrastructure() -> None:
+    """Validate all required infrastructure components.
 
     This should be called during startup to ensure everything is ready.
     """

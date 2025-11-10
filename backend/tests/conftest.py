@@ -8,11 +8,19 @@
 # See the LICENSE-APACHE file or http://www.apache.org/licenses/LICENSE-2.0
 #
 # Additional attribution and requirements are provided in the NOTICE file.
+"""Fixtures used across tests."""
 
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Dict, Any
+from types import CoroutineType
+from typing import Any
+
 import pytest
+from modules.analyzer.security_analyzer import SecurityAnalyzer
+from modules.fuzzer.atheris_fuzzer import AtherisFuzzer
+from modules.fuzzer.cargo_fuzzer import CargoFuzzer
+from modules.scanner.file_scanner import FileScanner
 
 # Ensure project root is on sys.path so `src` is importable
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,17 +37,18 @@ if str(TOOLBOX) not in sys.path:
 # Workspace Fixtures
 # ============================================================================
 
+
 @pytest.fixture
-def temp_workspace(tmp_path):
-    """Create a temporary workspace directory for testing"""
+def temp_workspace(tmp_path: Path) -> Path:
+    """Create a temporary workspace directory for testing."""
     workspace = tmp_path / "workspace"
     workspace.mkdir()
     return workspace
 
 
 @pytest.fixture
-def python_test_workspace(temp_workspace):
-    """Create a Python test workspace with sample files"""
+def python_test_workspace(temp_workspace: Path) -> Path:
+    """Create a Python test workspace with sample files."""
     # Create a simple Python project structure
     (temp_workspace / "main.py").write_text("""
 def process_data(data):
@@ -62,8 +71,8 @@ AWS_SECRET = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
 
 
 @pytest.fixture
-def rust_test_workspace(temp_workspace):
-    """Create a Rust test workspace with fuzz targets"""
+def rust_test_workspace(temp_workspace: Path) -> Path:
+    """Create a Rust test workspace with fuzz targets."""
     # Create Cargo.toml
     (temp_workspace / "Cargo.toml").write_text("""[package]
 name = "test_project"
@@ -131,44 +140,45 @@ fuzz_target!(|data: &[u8]| {
 # Module Configuration Fixtures
 # ============================================================================
 
+
 @pytest.fixture
-def atheris_config():
-    """Default Atheris fuzzer configuration"""
+def atheris_config() -> dict[str, Any]:
+    """Return default Atheris fuzzer configuration."""
     return {
         "target_file": "auto-discover",
         "max_iterations": 1000,
         "timeout_seconds": 10,
-        "corpus_dir": None
+        "corpus_dir": None,
     }
 
 
 @pytest.fixture
-def cargo_fuzz_config():
-    """Default cargo-fuzz configuration"""
+def cargo_fuzz_config() -> dict[str, Any]:
+    """Return default cargo-fuzz configuration."""
     return {
         "target_name": None,
         "max_iterations": 1000,
         "timeout_seconds": 10,
-        "sanitizer": "address"
+        "sanitizer": "address",
     }
 
 
 @pytest.fixture
-def gitleaks_config():
-    """Default Gitleaks configuration"""
+def gitleaks_config() -> dict[str, Any]:
+    """Return default Gitleaks configuration."""
     return {
         "config_path": None,
-        "scan_uncommitted": True
+        "scan_uncommitted": True,
     }
 
 
 @pytest.fixture
-def file_scanner_config():
-    """Default file scanner configuration"""
+def file_scanner_config() -> dict[str, Any]:
+    """Return default file scanner configuration."""
     return {
         "scan_patterns": ["*.py", "*.rs", "*.js"],
         "exclude_patterns": ["*.test.*", "*.spec.*"],
-        "max_file_size": 1048576  # 1MB
+        "max_file_size": 1048576,  # 1MB
     }
 
 
@@ -176,55 +186,67 @@ def file_scanner_config():
 # Module Instance Fixtures
 # ============================================================================
 
+
 @pytest.fixture
-def atheris_fuzzer():
-    """Create an AtherisFuzzer instance"""
-    from modules.fuzzer.atheris_fuzzer import AtherisFuzzer
+def atheris_fuzzer() -> AtherisFuzzer:
+    """Create an AtherisFuzzer instance."""
     return AtherisFuzzer()
 
 
 @pytest.fixture
-def cargo_fuzzer():
-    """Create a CargoFuzzer instance"""
-    from modules.fuzzer.cargo_fuzzer import CargoFuzzer
+def cargo_fuzzer() -> CargoFuzzer:
+    """Create a CargoFuzzer instance."""
     return CargoFuzzer()
 
 
 @pytest.fixture
-def file_scanner():
-    """Create a FileScanner instance"""
-    from modules.scanner.file_scanner import FileScanner
+def file_scanner() -> FileScanner:
+    """Create a FileScanner instance."""
     return FileScanner()
+
+
+@pytest.fixture
+def security_analyzer() -> SecurityAnalyzer:
+    """Create SecurityAnalyzer instance."""
+    return SecurityAnalyzer()
 
 
 # ============================================================================
 # Mock Fixtures
 # ============================================================================
 
+
 @pytest.fixture
-def mock_stats_callback():
-    """Mock stats callback for fuzzing"""
+def mock_stats_callback() -> Callable[[], CoroutineType]:
+    """Mock stats callback for fuzzing."""
     stats_received = []
 
-    async def callback(stats: Dict[str, Any]):
+    async def callback(stats: dict[str, Any]) -> None:
         stats_received.append(stats)
 
     callback.stats_received = stats_received
     return callback
 
 
+class MockActivityInfo:
+    """Mock activity info."""
+
+    def __init__(self) -> None:
+        """Initialize an instance of the class."""
+        self.workflow_id = "test-workflow-123"
+        self.activity_id = "test-activity-1"
+        self.attempt = 1
+
+
+class MockContext:
+    """Mock context."""
+
+    def __init__(self) -> None:
+        """Initialize an instance of the class."""
+        self.info = MockActivityInfo()
+
+
 @pytest.fixture
-def mock_temporal_context():
-    """Mock Temporal activity context"""
-    class MockActivityInfo:
-        def __init__(self):
-            self.workflow_id = "test-workflow-123"
-            self.activity_id = "test-activity-1"
-            self.attempt = 1
-
-    class MockContext:
-        def __init__(self):
-            self.info = MockActivityInfo()
-
+def mock_temporal_context() -> MockContext:
+    """Mock Temporal activity context."""
     return MockContext()
-
