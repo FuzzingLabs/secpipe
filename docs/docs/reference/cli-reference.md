@@ -304,15 +304,15 @@ View and analyze individual findings.
 
 **Usage:**
 ```bash
-ff finding [id]                         # Show latest or specific finding
-ff finding show <run_id> --rule <rule>  # Show specific finding detail
+ff finding [id]                       # Show latest or specific finding
+ff finding show <run_id> --id <id>    # Show specific finding detail
 ```
 
 **Examples:**
 ```bash
-ff finding                                # Show latest finding
-ff finding python_sast-abc123             # Show specific run findings
-ff finding show python_sast-abc123 --rule f2cf5e3e  # Show specific finding
+ff finding                              # Show latest finding
+ff finding python_sast-abc123           # Show specific run findings
+ff finding show python_sast-abc123 --id f2cf5e3e  # Show specific finding
 ```
 
 ---
@@ -445,15 +445,20 @@ ff ai [COMMAND]
 ```
 
 **Subcommands:**
+- `agent` — Start interactive AI agent
+- `status` — Check AI agent status
+- `server [--port]` — Start AI agent server
+
+**Planned Features (Coming Soon):**
 - `analyze <run_id>` — Analyze findings with AI
 - `explain <finding_id>` — Get AI explanation of a finding
 - `remediate <finding_id>` — Get remediation suggestions
 
 **Examples:**
 ```bash
-ff ai analyze python_sast-abc123           # Analyze all findings
-ff ai explain python_sast-abc123:finding1  # Explain specific finding
-ff ai remediate python_sast-abc123:finding1  # Get fix suggestions
+ff ai agent                  # Start interactive AI agent
+ff ai status                 # Check agent status
+ff ai server --port 8080     # Start server on custom port
 ```
 
 ---
@@ -466,19 +471,22 @@ Ingest knowledge into the AI knowledge base.
 
 **Usage:**
 ```bash
-ff ingest [COMMAND]
+ff ingest [path] [OPTIONS]
 ```
 
-**Subcommands:**
-- `file <path>` — Ingest a file
-- `directory <path>` — Ingest directory contents
-- `workflow <workflow_name>` — Ingest workflow documentation
+**Options:**
+- `--recursive, -r` — Recursively ingest directory contents
+- `--file-types, -t` — Comma-separated file types to ingest (e.g., "md,txt,py")
+- `--exclude, -e` — Patterns to exclude
+- `--dataset, -d` — Target dataset name
+- `--force, -f` — Force reingest even if already processed
 
 **Examples:**
 ```bash
-ff ingest file ./docs/security.md           # Ingest single file
-ff ingest directory ./docs                  # Ingest directory
-ff ingest workflow python_sast              # Ingest workflow docs
+ff ingest ./docs/security.md                    # Ingest single file
+ff ingest ./docs --recursive                    # Ingest directory recursively
+ff ingest ./src -t "py,js" --exclude "test_*"  # Ingest with filters
+ff ingest ./docs -d security_docs               # Ingest to specific dataset
 ```
 
 ---

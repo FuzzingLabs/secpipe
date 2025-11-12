@@ -301,7 +301,7 @@ def execute_workflow(
     ),
     fail_on: Optional[str] = typer.Option(
         None, "--fail-on",
-        help="Fail build if findings match severity (critical,high,medium,low,all,none). Use with --wait"
+        help="Fail build if findings match SARIF level (error,warning,note,info,all,none). Use with --wait"
     ),
     export_sarif: Optional[str] = typer.Option(
         None, "--export-sarif",
@@ -423,8 +423,9 @@ def execute_workflow(
                 # Don't fail the whole operation if database save fails
                 console.print(f"⚠️  Failed to save execution to database: {e}", style="yellow")
 
-            console.print(f"\n💡 Monitor progress: [bold cyan]fuzzforge monitor live {response.run_id}[/bold cyan]")
-            console.print(f"💡 Check status: [bold cyan]fuzzforge workflow status {response.run_id}[/bold cyan]")
+            console.print(f"\n💡 Monitor progress: [bold cyan]ff monitor live {response.run_id}[/bold cyan]")
+            console.print(f"💡 Check status: [bold cyan]ff workflow status {response.run_id}[/bold cyan]")
+            console.print(f"💡 View findings: [bold cyan]ff finding {response.run_id}[/bold cyan]")
 
             # Suggest --live for fuzzing workflows
             if not live and not wait and "fuzzing" in workflow.lower():
@@ -501,7 +502,7 @@ def execute_workflow(
                                 console.print(f"⚠️  Failed to check findings: {e}", style="yellow")
 
                         if not fail_on and not export_sarif:
-                            console.print(f"💡 View findings: [bold cyan]fuzzforge findings {response.run_id}[/bold cyan]")
+                            console.print(f"💡 View findings: [bold cyan]ff finding {response.run_id}[/bold cyan]")
 
                 except KeyboardInterrupt:
                     console.print("\n⏹️  Monitoring cancelled (execution continues in background)", style="yellow")

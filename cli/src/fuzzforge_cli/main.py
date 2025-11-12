@@ -316,7 +316,7 @@ def finding_main(
                 console.print("❌ No project database found", style="red")
                 return
 
-        get_findings(run_id=finding_id, save=True, format="table")
+        get_findings(run_id=finding_id, save=True, format="table", limit=None, offset=0)
     except Exception as e:
         console.print(f"❌ Failed to get findings: {e}", style="red")
 
@@ -390,7 +390,7 @@ def main():
                     console.print(f"🔍 Displaying finding: {finding_id}")
 
                     try:
-                        get_findings(run_id=finding_id, save=True, format="table")
+                        get_findings(run_id=finding_id, save=True, format="table", limit=None, offset=0)
                         return
                     except Exception as e:
                         console.print(f"❌ Failed to get finding: {e}", style="red")
