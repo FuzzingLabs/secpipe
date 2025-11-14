@@ -125,6 +125,7 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
+      set -e;
       echo 'Waiting for MinIO to be ready...';
       sleep 2;
 
@@ -139,8 +140,8 @@ services:
       mc mb fuzzforge/projects --ignore-existing;
 
       echo 'Configuring project ingestion events...';
-      mc event remove fuzzforge/projects arn:minio:sqs::ingest || true;
-      mc event add fuzzforge/projects arn:minio:sqs::ingest --event put;
+      mc event remove fuzzforge/projects --force || true;
+      mc event add fuzzforge/projects arn:minio:sqs::ingest:amqp --event put -p;
 
       echo 'Setting lifecycle policies...';
       mc ilm add fuzzforge/targets --expiry-days 7;

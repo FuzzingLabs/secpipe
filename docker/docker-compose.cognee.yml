@@ -29,6 +29,11 @@ services:
       LLM_ENDPOINT: http://llm-proxy:4000
       LOG_LEVEL: INFO
       ENVIRONMENT: dev
+      COGNEE_TEMP_DIR: /tmp/cognee
+      # Processed text files must be persisted so downstream ingestion doesn't 404.
+      COGNEE_SKIP_PROCESSED_FILE_STORAGE: "false"
+      # Store normalized Cognee artifacts outside of ingestion prefixes
+      COGNEE_PROCESSED_SUBDIR: cognee_artifacts
     ports:
       - "18000:8000"
     networks:
