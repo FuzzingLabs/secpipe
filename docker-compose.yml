@@ -599,6 +599,12 @@ services:
       LOG_LEVEL: INFO
     networks:
       - fuzzforge-network
+    healthcheck:
+      test: ["CMD", "python", "healthcheck.py"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   # ============================================================================
