@@ -145,3 +145,11 @@ graph LR
 - **Task metadata** (workflow runs, artifact descriptors) lives in the executor’s in-memory caches but is also mirrored through A2A task events so remote agents can resubscribe if the CLI restarts.
 - **Operational check**: Run `/recall <keyword>` or `You> search project knowledge for "topic" using INSIGHTS` after ingestion to confirm both ADK session recall and Cognee graph access are active.
 - **CLI quick check**: `/memory status` summarises the current memory type, session persistence, and Cognee dataset directories from inside the agent shell.
+
+## Reliability Considerations
+
+- **Per-dataset storage**: every dataset (`<project>_codebase`, `<project>_docs`, `<project>_findings`) owns its own graph database (`projects/<project>/graph/<uuid>.db`) and LanceDB vector store, so a failed cognify or rebuild never stomps other categories. The dispatcher derives the dataset name from the MinIO key and Cognee isolates the backing files accordingly.
+- **Notification scope**: MinIO publishes a single AMQP notification for the `projects` bucket and the dispatcher filters on `files/`, `docs/`, and `findings/`. That keeps the pipeline simple (one queue) while still ignoring Cognee’s own artifacts or temporary uploads.
+- **Processed-file hygiene**: Cognee normalises uploads into deterministic `text_<hash>.txt` files under `COGNEE_PROCESSED_SUBDIR` (defaults to `cognee_artifacts`). The dispatcher’s `_cleanup_cognee_artifacts` helper and the standalone `services/ingestion_dispatcher/cleanup_cognee_artifacts.py` script delete any `tmp*` or `text_*` objects that slip into the ingestion prefixes, keeping MinIO tidy.
+- **RabbitMQ health**: `services/ingestion_dispatcher/healthcheck.py` exercises the broker connection every 30 seconds via Docker’s `healthcheck`. If RabbitMQ restarts or credentials break, the container flips to `unhealthy` and Compose/Kubernetes restarts it automatically instead of silently hanging.
+- **Crash recovery**: because uploads land in MinIO first, you can rerun the cleanup script or replay outstanding objects after a dispatcher outage simply by re-seeding the queue (`mc event add … --event put -p`)—no state is lost in the dispatcher itself.
