@@ -416,8 +416,184 @@ class S3CachedStorage(StorageBackend):
                 'total_size_gb': total_size / (1024 ** 3),
                 'file_count': file_count,
                 'max_size_gb': self.cache_max_size / (1024 ** 3),
-                'usage_percent': (total_size / self.cache_max_size) * 100
+                'usage_percent': (total_size / self.cache_max_size) * 100 if self.cache_max_size > 0 else 0
             }
         except Exception as e:
             logger.error(f"Failed to get cache stats: {e}")
             return {'error': str(e)}
+
+    async def get_storage_stats(self) -> Dict[str, Any]:
+        """
+        Get MinIO storage usage statistics.
+        
+        Returns:
+            Dictionary with storage stats including total objects, total size,
+            and per-bucket breakdown.
+        """
+        try:
+            stats = {
+                'buckets': {},
+                'total_objects': 0,
+                'total_size_bytes': 0,
+                'status': 'healthy'
+            }
+            
+            # Check each bucket
+            for bucket_name in ['targets', 'results', 'cache']:
+                try:
+                    bucket_stats = {'objects': 0, 'size_bytes': 0}
+                    paginator = self.s3_client.get_paginator('list_objects_v2')
+                    
+                    for page in paginator.paginate(Bucket=bucket_name):
+                        for obj in page.get('Contents', []):
+                            bucket_stats['objects'] += 1
+                            bucket_stats['size_bytes'] += obj.get('Size', 0)
+                    
+                    bucket_stats['size_gb'] = bucket_stats['size_bytes'] / (1024 ** 3)
+                    stats['buckets'][bucket_name] = bucket_stats
+                    stats['total_objects'] += bucket_stats['objects']
+                    stats['total_size_bytes'] += bucket_stats['size_bytes']
+                    
+                except ClientError as e:
+                    if e.response.get('Error', {}).get('Code') == 'NoSuchBucket':
+                        stats['buckets'][bucket_name] = {'error': 'Bucket not found'}
+                    else:
+                        stats['buckets'][bucket_name] = {'error': str(e)}
+            
+            stats['total_size_gb'] = stats['total_size_bytes'] / (1024 ** 3)
+            
+            # Determine status based on usage (warn at 80%, critical at 95%)
+            # Note: MinIO doesn't expose disk usage via S3 API, so this is object-based
+            if stats['total_size_gb'] > 50:  # Assuming 100GB limit, adjust as needed
+                stats['status'] = 'critical'
+            elif stats['total_size_gb'] > 40:
+                stats['status'] = 'warning'
+            
+            logger.info(f"Storage stats: {stats['total_objects']} objects, {stats['total_size_gb']:.2f} GB")
+            return stats
+            
+        except Exception as e:
+            logger.error(f"Failed to get storage stats: {e}", exc_info=True)
+            return {'error': str(e), 'status': 'unknown'}
+
+    async def cleanup_old_objects(
+        self,
+        bucket: str = 'targets',
+        days_old: int = 7,
+        dry_run: bool = False
+    ) -> Dict[str, Any]:
+        """
+        Delete objects older than specified days.
+        
+        Args:
+            bucket: Bucket to clean up
+            days_old: Delete objects older than this many days
+            dry_run: If True, only report what would be deleted
+            
+        Returns:
+            Dictionary with cleanup results (deleted count, freed space, etc.)
+        """
+        from datetime import timezone, timedelta
+        
+        try:
+            cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_old)
+            objects_to_delete = []
+            total_size = 0
+            
+            logger.info(f"Scanning {bucket} for objects older than {days_old} days...")
+            
+            paginator = self.s3_client.get_paginator('list_objects_v2')
+            for page in paginator.paginate(Bucket=bucket):
+                for obj in page.get('Contents', []):
+                    last_modified = obj.get('LastModified')
+                    if last_modified and last_modified < cutoff_date:
+                        objects_to_delete.append({
+                            'Key': obj['Key'],
+                            'Size': obj.get('Size', 0),
+                            'LastModified': last_modified.isoformat()
+                        })
+                        total_size += obj.get('Size', 0)
+            
+            result = {
+                'bucket': bucket,
+                'days_old': days_old,
+                'objects_found': len(objects_to_delete),
+                'total_size_bytes': total_size,
+                'total_size_mb': total_size / (1024 ** 2),
+                'dry_run': dry_run,
+                'deleted': 0
+            }
+            
+            if dry_run:
+                result['objects_to_delete'] = objects_to_delete[:20]  # First 20 for preview
+                logger.info(f"Dry run: Would delete {len(objects_to_delete)} objects ({result['total_size_mb']:.2f} MB)")
+                return result
+            
+            # Actually delete objects
+            if objects_to_delete:
+                # Delete in batches of 1000 (S3 limit)
+                for i in range(0, len(objects_to_delete), 1000):
+                    batch = objects_to_delete[i:i + 1000]
+                    delete_request = {
+                        'Objects': [{'Key': obj['Key']} for obj in batch],
+                        'Quiet': True
+                    }
+                    self.s3_client.delete_objects(Bucket=bucket, Delete=delete_request)
+                    result['deleted'] += len(batch)
+                
+                logger.info(f"✓ Deleted {result['deleted']} objects from {bucket} ({result['total_size_mb']:.2f} MB freed)")
+            else:
+                logger.info(f"No objects older than {days_old} days found in {bucket}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Cleanup failed: {e}", exc_info=True)
+            raise StorageError(f"Cleanup failed: {e}")
+
+    async def upload_target_safe(
+        self,
+        file_path: Path,
+        user_id: str,
+        metadata: Optional[Dict[str, Any]] = None,
+        max_storage_gb: float = 50.0
+    ) -> str:
+        """
+        Upload target with storage space check.
+        
+        Args:
+            file_path: Path to file to upload
+            user_id: User ID for metadata
+            metadata: Additional metadata
+            max_storage_gb: Maximum total storage allowed before rejecting uploads
+            
+        Returns:
+            Target ID
+            
+        Raises:
+            StorageError: If storage limit would be exceeded
+        """
+        # Check current storage usage
+        stats = await self.get_storage_stats()
+        
+        if stats.get('status') == 'unknown':
+            logger.warning("Could not check storage stats, proceeding with upload")
+        elif stats.get('total_size_gb', 0) >= max_storage_gb:
+            raise StorageError(
+                f"Storage limit exceeded: {stats['total_size_gb']:.2f} GB used, "
+                f"limit is {max_storage_gb} GB. Please clean up old targets."
+            )
+        
+        # Check if adding this file would exceed the limit
+        file_size_gb = file_path.stat().st_size / (1024 ** 3)
+        projected_usage = stats.get('total_size_gb', 0) + file_size_gb
+        
+        if projected_usage >= max_storage_gb:
+            raise StorageError(
+                f"Upload would exceed storage limit: {projected_usage:.2f} GB "
+                f"(limit: {max_storage_gb} GB). Please clean up old targets."
+            )
+        
+        # Proceed with upload
+        return await self.upload_target(file_path, user_id, metadata)
+

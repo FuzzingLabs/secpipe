@@ -131,9 +131,12 @@ services:
       mc mb fuzzforge/cache --ignore-existing;
 
       echo 'Setting lifecycle policies...';
-      mc ilm add fuzzforge/targets --expiry-days 7;
-      mc ilm add fuzzforge/results --expiry-days 30;
-      mc ilm add fuzzforge/cache --expiry-days 3;
+      mc ilm rule add --expire-days 7 fuzzforge/targets || echo 'Warning: Failed to set targets lifecycle policy';
+      mc ilm rule add --expire-days 30 fuzzforge/results || echo 'Warning: Failed to set results lifecycle policy';
+      mc ilm rule add --expire-days 3 fuzzforge/cache || echo 'Warning: Failed to set cache lifecycle policy';
+
+      echo 'Checking current storage usage...';
+      mc admin info fuzzforge || echo 'Storage info check completed';
 
       echo 'Setting access policies...';
       mc anonymous set download fuzzforge/results;
