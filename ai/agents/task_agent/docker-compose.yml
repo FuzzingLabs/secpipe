@@ -1,0 +1,24 @@
+version: '3.8'
+
+services:
+  task-agent:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fuzzforge-task-agent
+    ports:
+      - "10900:8000"
+    env_file:
+      - ../../../volumes/env/.env
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      # Mount volumes/env for runtime config access
+      - ../../../volumes/env:/app/config:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

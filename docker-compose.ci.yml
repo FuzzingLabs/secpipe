@@ -1,0 +1,110 @@
+# Docker Compose Override for CI/CD Environments
+#
+# This file optimizes FuzzForge for ephemeral CI/CD environments where:
+# - Data persistence is not needed
+# - Fast startup is critical
+# - Disk I/O can be bypassed
+#
+# Usage:
+#   docker-compose -f docker-compose.yml -f docker-compose.ci.yml up -d
+#
+# Benefits:
+# - Faster startup (tmpfs instead of volumes)
+# - Reduced disk I/O
+# - Automatic cleanup (no persistent data)
+#
+# WARNING: All data is lost when containers stop!
+
+version: '3.8'
+
+services:
+  # Temporal - Use in-memory storage and faster health checks
+  temporal:
+    environment:
+      # Skip some init steps for faster startup
+      - SKIP_DEFAULT_NAMESPACE_CREATION=false
+    healthcheck:
+      # More aggressive health checking for faster feedback
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: "no"  # Don't restart in CI
+
+  # PostgreSQL - Use in-memory storage and disable durability features
+  postgresql:
+    command: >
+      postgres
+      -c fsync=off
+      -c full_page_writes=off
+      -c synchronous_commit=off
+      -c wal_level=minimal
+      -c max_wal_senders=0
+    tmpfs:
+      # Store database in RAM (fast, but ephemeral)
+      - /var/lib/postgresql/data
+    healthcheck:
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+
+  # MinIO - Use in-memory storage
+  minio:
+    environment:
+      # Already set in main compose, but ensure CI mode is enabled
+      - MINIO_CI_CD=true
+    tmpfs:
+      # Store objects in RAM
+      - /data
+    healthcheck:
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    restart: "no"
+
+  # Backend - Optimize for CI
+  backend:
+    environment:
+      # Add CI-specific environment variables if needed
+      - CI=true
+      - LOG_LEVEL=WARNING  # Reduce log noise
+    healthcheck:
+      interval: 5s
+      timeout: 3s
+      retries: 15
+    restart: "no"
+
+  # Temporal UI - Disable in CI (not needed, saves resources)
+  temporal-ui:
+    profiles:
+      - ui  # Don't start unless explicitly requested
+
+  # MinIO Setup - Speed up bucket creation
+  minio-setup:
+    restart: "no"
+
+# Volumes - Use tmpfs for all persistent data in CI
+# Note: This overrides the named volumes with in-memory storage
+volumes:
+  temporal_data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  temporal_postgres:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+  minio_data:
+    driver: local
+    driver_opts:
+      type: tmpfs
+      device: tmpfs
+
+# Networks - Keep the same
+networks:
+  fuzzforge-network:
+    driver: bridge

@@ -1,0 +1,29 @@
+/**
+ * Any CSS included here will be global. The classic template
+ * bundles Infima by default. Infima is a CSS framework designed to
+ * work well for content-centric websites.
+ */
+
+:root {
+    --ifm-color-primary: #6c61f2; /* Medium Slate Blue */
+    --ifm-color-primary-dark: #201d40; /* Space Cadet */
+    --ifm-color-primary-darker: #1b1e3e; /* Space Cadet 2 */
+    --ifm-color-primary-darkest: #100f29; /* Oxford Blue */
+    --ifm-color-primary-light: #acb4fd; /* Periwinkle */
+    --ifm-color-primary-lighter: #acb4fd; /* Periwinkle (Re-used) */
+    --ifm-color-primary-lightest: #acb4fd; /* Periwinkle (Re-used) */
+    --ifm-code-font-size: 95%;
+    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+}
+
+/* For readability concerns, you should choose a lighter palette in dark mode. */
+[data-theme="dark"] {
+    --ifm-color-primary: #acb4fd; /* Periwinkle */
+    --ifm-color-primary-dark: #6c61f2; /* Medium Slate Blue */
+    --ifm-color-primary-darker: #6c61f2; /* Medium Slate Blue (Re-used) */
+    --ifm-color-primary-darkest: #6c61f2; /* Medium Slate Blue (Re-used) */
+    --ifm-color-primary-light: #acb4fd; /* Periwinkle (Re-used) */
+    --ifm-color-primary-lighter: #acb4fd; /* Periwinkle (Re-used) */
+    --ifm-color-primary-lightest: #acb4fd; /* Periwinkle (Re-used) */
+    --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+}

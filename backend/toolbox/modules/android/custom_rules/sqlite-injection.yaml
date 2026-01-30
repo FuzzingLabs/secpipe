@@ -1,0 +1,21 @@
+rules:
+  - id: sqlite-injection
+    severity: ERROR
+    languages: [java]
+    message: "Possible SQL injection: concatenated input in rawQuery or execSQL."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M7
+      category: injection
+      area: database
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    patterns:
+      - pattern-either:
+          - pattern: "$DB.rawQuery($QUERY, ...)"
+          - pattern: "$DB.execSQL($QUERY)"
+      - pattern-regex: "$QUERY =~ /.*\".*\".*\\+.*/"
+

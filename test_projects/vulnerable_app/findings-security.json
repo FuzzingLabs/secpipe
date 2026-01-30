@@ -1,0 +1,695 @@
+{
+  "tool": {
+    "name": "FuzzForge Security Assessment",
+    "version": "1.0.0"
+  },
+  "summary": {
+    "total_issues": 68,
+    "by_severity": {
+      "warning": 51,
+      "error": 17
+    }
+  },
+  "findings": [
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at .env",
+      "location": {
+        "file": ".env",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at .git-credentials",
+      "location": {
+        "file": ".git-credentials",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at private_key.pem",
+      "location": {
+        "file": "private_key.pem",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at wallet.json",
+      "location": {
+        "file": "wallet.json",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at SECRETS_GROUND_TRUTH.json",
+      "location": {
+        "file": "SECRETS_GROUND_TRUTH.json",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at .npmrc",
+      "location": {
+        "file": ".npmrc",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at .fuzzforge/.env",
+      "location": {
+        "file": ".fuzzforge/.env",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at .fuzzforge/.env.template",
+      "location": {
+        "file": ".fuzzforge/.env.template",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at data/credentials.json",
+      "location": {
+        "file": "data/credentials.json",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sensitive_file_medium",
+      "severity": "warning",
+      "message": "Found potentially sensitive file at data/api_keys.txt",
+      "location": {
+        "file": "data/api_keys.txt",
+        "line": null,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via F-string in SQL query",
+      "location": {
+        "file": "app.py",
+        "line": 31,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded API Key in src/api_handler.py",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 25,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_medium",
+      "severity": "warning",
+      "message": "Found potential hardcoded Authentication Token in src/api_handler.py",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 21,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function eval(): Arbitrary code execution",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 34,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function eval(): Arbitrary code execution",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 54,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function exec(): Arbitrary code execution",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 49,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function os.system(): Command injection risk",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 44,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function os.system(): Command injection risk",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 71,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function subprocess with shell=True: Command injection risk",
+      "location": {
+        "file": "src/api_handler.py",
+        "line": 39,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via String concatenation in SQL",
+      "location": {
+        "file": "src/database.py",
+        "line": 43,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via String formatting in SQL",
+      "location": {
+        "file": "src/database.py",
+        "line": 50,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via String formatting in SQL",
+      "location": {
+        "file": "src/database.py",
+        "line": 57,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via F-string in SQL query",
+      "location": {
+        "file": "src/database.py",
+        "line": 50,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via Dynamic query building",
+      "location": {
+        "file": "src/database.py",
+        "line": 43,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via Dynamic query building",
+      "location": {
+        "file": "src/database.py",
+        "line": 75,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function os.system(): Command injection risk",
+      "location": {
+        "file": "src/database.py",
+        "line": 69,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function pickle.load(): Deserialization vulnerability",
+      "location": {
+        "file": "src/database.py",
+        "line": 64,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded Private Key in scripts/backup.js",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 81,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_medium",
+      "severity": "warning",
+      "message": "Found potential hardcoded Potential Secret Hash in scripts/backup.js",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 81,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function eval(): Arbitrary code execution",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function new Function(): Arbitrary code execution",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 28,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function innerHTML: XSS vulnerability",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 33,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function innerHTML: XSS vulnerability",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 37,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function document.write(): XSS vulnerability",
+      "location": {
+        "file": "scripts/backup.js",
+        "line": 42,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded Private Key in src/Main.java",
+      "location": {
+        "file": "src/Main.java",
+        "line": 77,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via String concatenation in SQL",
+      "location": {
+        "file": "src/Main.java",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via String concatenation in SQL",
+      "location": {
+        "file": "src/Main.java",
+        "line": 29,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via Dynamic query building",
+      "location": {
+        "file": "src/Main.java",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "sql_injection_high",
+      "severity": "error",
+      "message": "Detected potential SQL injection vulnerability via Dynamic query building",
+      "location": {
+        "file": "src/Main.java",
+        "line": 29,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function eval(): Arbitrary code execution",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 28,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function exec(): Command execution",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 22,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function exec(): Command execution",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function system(): Command execution",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 21,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function shell_exec(): Command execution",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 12,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 21,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 23,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 24,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 31,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 45,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 50,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_GET usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 57,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 13,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 22,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 27,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 32,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 40,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 46,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 53,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 54,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 61,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "dangerous_function_medium",
+      "severity": "warning",
+      "message": "Use of potentially dangerous function Direct $_POST usage: Input validation missing",
+      "location": {
+        "file": "scripts/deploy.php",
+        "line": 62,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded API Key in src/utils.rb",
+      "location": {
+        "file": "src/utils.rb",
+        "line": 64,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_medium",
+      "severity": "warning",
+      "message": "Found potential hardcoded Hardcoded Password in src/utils.rb",
+      "location": {
+        "file": "src/utils.rb",
+        "line": 63,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded Private Key in src/app.go",
+      "location": {
+        "file": "src/app.go",
+        "line": 59,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_high",
+      "severity": "error",
+      "message": "Found potential hardcoded Private Key in src/app.go",
+      "location": {
+        "file": "src/app.go",
+        "line": 62,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_medium",
+      "severity": "warning",
+      "message": "Found potential hardcoded Potential Secret Hash in src/app.go",
+      "location": {
+        "file": "src/app.go",
+        "line": 59,
+        "column": null
+      }
+    },
+    {
+      "rule_id": "hardcoded_secret_medium",
+      "severity": "warning",
+      "message": "Found potential hardcoded Potential Secret Hash in src/app.go",
+      "location": {
+        "file": "src/app.go",
+        "line": 62,
+        "column": null
+      }
+    }
+  ]
+}

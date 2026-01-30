@@ -1,0 +1,11 @@
+{
+  "oauth_provider": "google",
+  "client_id": "123456789012-abcdefghijklmnopqrstuvwxyz123456.apps.googleusercontent.com",
+  "client_secret": "GOCSPX-Ab12Cd34Ef56Gh78Ij90Kl12",
+  "redirect_uri": "https://example.com/oauth/callback",
+  "scopes": [
+    "openid",
+    "email",
+    "profile"
+  ]
+}

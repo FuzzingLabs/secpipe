@@ -1,0 +1,60 @@
+name: atheris_fuzzing
+version: "1.0.0"
+vertical: python
+description: "Fuzz Python code using Atheris with real-time monitoring. Automatically discovers and fuzzes TestOneInput() functions in user code."
+author: "FuzzForge Team"
+tags:
+  - "fuzzing"
+  - "atheris"
+  - "python"
+  - "coverage"
+  - "security"
+
+# Workspace isolation mode (system-level configuration)
+# - "isolated" (default): Each workflow run gets its own isolated workspace (safe for concurrent fuzzing)
+# - "shared": All runs share the same workspace (for read-only analysis workflows)
+# - "copy-on-write": Download once, copy for each run (balances performance and isolation)
+workspace_isolation: "isolated"
+
+parameters:
+  type: object
+  properties:
+    target_file:
+      type: string
+      description: "Python file with TestOneInput() function (auto-discovered if not specified)"
+    max_iterations:
+      type: integer
+      default: 1000000
+      description: "Maximum fuzzing iterations"
+    timeout_seconds:
+      type: integer
+      default: 1800
+      description: "Fuzzing timeout in seconds (30 minutes)"
+
+output_schema:
+  type: object
+  properties:
+    findings:
+      type: array
+      description: "Crashes and vulnerabilities found during fuzzing"
+      items:
+        type: object
+        properties:
+          title:
+            type: string
+          severity:
+            type: string
+          category:
+            type: string
+          metadata:
+            type: object
+    summary:
+      type: object
+      description: "Fuzzing execution summary"
+      properties:
+        total_executions:
+          type: integer
+        crashes_found:
+          type: integer
+        execution_time:
+          type: number

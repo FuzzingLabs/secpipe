@@ -1,0 +1,9 @@
+# FuzzForge Registered Agents
+# These agents will be automatically registered on startup
+
+registered_agents:
+
+# Example entries:
+# - name: Calculator
+#   url: http://localhost:10201
+#   description: Mathematical calculations agent

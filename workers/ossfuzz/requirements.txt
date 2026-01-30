@@ -1,0 +1,4 @@
+temporalio==1.5.0
+boto3==1.34.50
+pyyaml==6.0.1
+psutil==5.9.8

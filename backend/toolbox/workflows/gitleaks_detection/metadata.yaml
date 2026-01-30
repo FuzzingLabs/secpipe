@@ -1,0 +1,34 @@
+name: gitleaks_detection
+version: "1.0.0"
+vertical: secrets
+description: "Detect secrets and credentials using Gitleaks"
+author: "FuzzForge Team"
+tags:
+  - "secrets"
+  - "gitleaks"
+  - "git"
+  - "leak-detection"
+
+workspace_isolation: "shared"
+
+parameters:
+  type: object
+  properties:
+    scan_mode:
+      type: string
+      enum: ["detect", "protect"]
+      default: "detect"
+      description: "Scan mode: detect (entire repo history) or protect (staged changes)"
+
+    redact:
+      type: boolean
+      default: true
+      description: "Redact secrets in output"
+
+    no_git:
+      type: boolean
+      default: false
+      description: "Scan files without Git context"
+
+required_modules:
+  - "gitleaks"

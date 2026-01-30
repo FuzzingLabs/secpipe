@@ -1,0 +1,172 @@
+name: android_static_analysis
+version: "1.0.0"
+vertical: android
+description: "Comprehensive Android application security testing using Jadx decompilation, OpenGrep static analysis, and MobSF mobile security framework"
+author: "FuzzForge Team"
+tags:
+  - "android"
+  - "mobile"
+  - "static-analysis"
+  - "security"
+  - "opengrep"
+  - "semgrep"
+  - "mobsf"
+  - "jadx"
+  - "apk"
+  - "sarif"
+
+# Workspace isolation mode
+# Using "shared" mode for read-only APK analysis (no file modifications except decompilation output)
+workspace_isolation: "shared"
+
+parameters:
+  type: object
+  properties:
+    apk_path:
+      type: string
+      description: "Path to the APK file to analyze (relative to uploaded target or absolute within workspace)"
+      default: ""
+
+    decompile_apk:
+      type: boolean
+      description: "Whether to decompile APK with Jadx before OpenGrep analysis"
+      default: true
+
+    jadx_config:
+      type: object
+      description: "Jadx decompiler configuration"
+      properties:
+        output_dir:
+          type: string
+          description: "Output directory for decompiled sources"
+          default: "jadx_output"
+        overwrite:
+          type: boolean
+          description: "Overwrite existing decompilation output"
+          default: true
+        threads:
+          type: integer
+          description: "Number of decompilation threads"
+          default: 4
+          minimum: 1
+          maximum: 32
+        decompiler_args:
+          type: array
+          items:
+            type: string
+          description: "Additional Jadx arguments"
+          default: []
+
+    opengrep_config:
+      type: object
+      description: "OpenGrep/Semgrep static analysis configuration"
+      properties:
+        config:
+          type: string
+          enum: ["auto", "p/security-audit", "p/owasp-top-ten", "p/cwe-top-25"]
+          description: "Preset OpenGrep ruleset (ignored if custom_rules_path is set)"
+          default: "auto"
+        custom_rules_path:
+          type: string
+          description: "Path to custom OpenGrep rules directory (use Android-specific rules for best results)"
+          default: "/app/toolbox/modules/android/custom_rules"
+        languages:
+          type: array
+          items:
+            type: string
+          description: "Programming languages to analyze (defaults to java, kotlin for Android)"
+          default: ["java", "kotlin"]
+        include_patterns:
+          type: array
+          items:
+            type: string
+          description: "File patterns to include in scan"
+          default: []
+        exclude_patterns:
+          type: array
+          items:
+            type: string
+          description: "File patterns to exclude from scan"
+          default: []
+        max_target_bytes:
+          type: integer
+          description: "Maximum file size to analyze (bytes)"
+          default: 1000000
+        timeout:
+          type: integer
+          description: "Analysis timeout in seconds"
+          default: 300
+        severity:
+          type: array
+          items:
+            type: string
+            enum: ["ERROR", "WARNING", "INFO"]
+          description: "Severity levels to include in results"
+          default: ["ERROR", "WARNING", "INFO"]
+        confidence:
+          type: array
+          items:
+            type: string
+            enum: ["HIGH", "MEDIUM", "LOW"]
+          description: "Confidence levels to include in results"
+          default: ["HIGH", "MEDIUM", "LOW"]
+
+    mobsf_config:
+      type: object
+      description: "MobSF scanner configuration"
+      properties:
+        enabled:
+          type: boolean
+          description: "Enable MobSF analysis (requires APK file)"
+          default: true
+        mobsf_url:
+          type: string
+          description: "MobSF server URL"
+          default: "http://localhost:8877"
+        api_key:
+          type: string
+          description: "MobSF API key (if not provided, uses MOBSF_API_KEY env var)"
+          default: null
+        rescan:
+          type: boolean
+          description: "Force rescan even if APK was previously analyzed"
+          default: false
+
+    reporter_config:
+      type: object
+      description: "SARIF reporter configuration"
+      properties:
+        include_code_flows:
+          type: boolean
+          description: "Include code flow information in SARIF output"
+          default: false
+        logical_id:
+          type: string
+          description: "Custom identifier for the SARIF report"
+          default: null
+
+output_schema:
+  type: object
+  properties:
+    sarif:
+      type: object
+      description: "SARIF-formatted findings from all Android security tools"
+    summary:
+      type: object
+      description: "Android security analysis summary"
+      properties:
+        total_findings:
+          type: integer
+        decompiled_java_files:
+          type: integer
+          description: "Number of Java files decompiled by Jadx"
+        opengrep_findings:
+          type: integer
+          description: "Findings from OpenGrep/Semgrep analysis"
+        mobsf_findings:
+          type: integer
+          description: "Findings from MobSF analysis"
+        severity_distribution:
+          type: object
+        category_distribution:
+          type: object

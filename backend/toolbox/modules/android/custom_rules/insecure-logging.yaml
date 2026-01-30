@@ -1,0 +1,21 @@
+rules:
+  - id: insecure-logging
+    severity: WARNING
+    languages: [java]
+    message: "Sensitive data logged via Android Log API."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M2
+      category: logging
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    patterns:
+      - pattern-either:
+          - pattern: "Log.d($TAG, $MSG)"
+          - pattern: "Log.e($TAG, $MSG)"
+          - pattern: "System.out.println($MSG)"
+      - pattern-regex: "$MSG =~ /(?i).*(password|token|secret|api|auth|session).*/"
+

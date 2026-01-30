@@ -1,0 +1,37 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Deploy to server
+      env:
+        # Hardcoded secrets in workflow
+        SSH_PRIVATE_KEY: |
+          -----BEGIN RSA PRIVATE KEY-----
+          MIIEpAIBAAKCAQEA1234567890abcdefghijklmnopqrstuvwxyz
+          ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890abcdefghijklmnop
+          -----END RSA PRIVATE KEY-----
+        SERVER_PASSWORD: ProductionServerPass123!
+        API_KEY: api_1234567890abcdefghijklmnopqrstuvwxyz
+        AWS_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
+        AWS_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      run: |
+        echo "Deploying with hardcoded credentials"
+        echo "$SSH_PRIVATE_KEY" > deploy_key
+        chmod 600 deploy_key
+
+    - name: Database migration
+      run: |
+        mysql -h production.db.com -u root -pRootPassword123! < migration.sql
+
+    - name: Sync files
+      run: |
+        rsync -avz -e "sshpass -p 'ServerPassword456!' ssh" ./dist/ user@production:/var/www/

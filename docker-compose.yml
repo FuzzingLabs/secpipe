@@ -1,0 +1,710 @@
+# FuzzForge AI - Temporal Architecture with Vertical Workers
+#
+# This is the new architecture using:
+# - Temporal for workflow orchestration
+# - MinIO for unified storage (dev + prod)
+# - Vertical workers with pre-built toolchains
+#
+# Usage:
+#   Development: docker-compose -f docker-compose.temporal.yaml up
+#   Production:  docker-compose -f docker-compose.temporal.yaml -f docker-compose.temporal.prod.yaml up
+
+services:
+  # ============================================================================
+  # Temporal Server - Workflow Orchestration
+  # ============================================================================
+  temporal:
+    image: temporalio/auto-setup:latest
+    container_name: fuzzforge-temporal
+    depends_on:
+      - postgresql
+    ports:
+      - "7233:7233"   # gRPC API
+    environment:
+      # Database configuration
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+      # Temporal configuration (no custom dynamic config)
+      - ENABLE_ES=false
+      - ES_SEEDS=
+      # Address configuration
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CLI_ADDRESS=temporal:7233
+    volumes:
+      - temporal_data:/etc/temporal
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD", "tctl", "--address", "temporal:7233", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================================
+  # Temporal UI - Web Interface
+  # ============================================================================
+  temporal-ui:
+    image: temporalio/ui:latest
+    container_name: fuzzforge-temporal-ui
+    depends_on:
+      - temporal
+    ports:
+      - "8080:8080"   # Web UI (http://localhost:8080)
+    environment:
+      - TEMPORAL_ADDRESS=temporal:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Temporal Database - PostgreSQL (lightweight for dev)
+  # ============================================================================
+  postgresql:
+    image: postgres:14-alpine
+    container_name: fuzzforge-temporal-postgresql
+    environment:
+      POSTGRES_USER: temporal
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_DB: temporal
+    volumes:
+      - temporal_postgres:/var/lib/postgresql/data
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U temporal"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================================
+  # MinIO - S3-Compatible Object Storage
+  # ============================================================================
+  minio:
+    image: minio/minio:latest
+    container_name: fuzzforge-minio
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web Console (http://localhost:9001)
+    environment:
+      MINIO_ROOT_USER: fuzzforge
+      MINIO_ROOT_PASSWORD: fuzzforge123
+      # Lightweight mode for development (reduces memory to 256MB)
+      MINIO_CI_CD: "true"
+    volumes:
+      - minio_data:/data
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================================================
+  # MinIO Setup - Create Buckets and Lifecycle Policies
+  # ============================================================================
+  minio-setup:
+    image: minio/mc:latest
+    container_name: fuzzforge-minio-setup
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      echo 'Waiting for MinIO to be ready...';
+      sleep 2;
+
+      echo 'Setting up MinIO alias...';
+      mc alias set fuzzforge http://minio:9000 fuzzforge fuzzforge123;
+
+      echo 'Creating buckets...';
+      mc mb fuzzforge/targets --ignore-existing;
+      mc mb fuzzforge/results --ignore-existing;
+      mc mb fuzzforge/cache --ignore-existing;
+
+      echo 'Setting lifecycle policies...';
+      mc ilm add fuzzforge/targets --expiry-days 7;
+      mc ilm add fuzzforge/results --expiry-days 30;
+      mc ilm add fuzzforge/cache --expiry-days 3;
+
+      echo 'Setting access policies...';
+      mc anonymous set download fuzzforge/results;
+
+      echo 'MinIO setup complete!';
+      exit 0;
+      "
+    networks:
+      - fuzzforge-network
+
+  # ============================================================================
+  # LLM Proxy - LiteLLM Gateway
+  # ============================================================================
+  llm-proxy:
+    image: ghcr.io/berriai/litellm:main-stable
+    container_name: fuzzforge-llm-proxy
+    depends_on:
+      llm-proxy-db:
+        condition: service_healthy
+      otel-collector:
+        condition: service_started
+    env_file:
+      - ./volumes/env/.env
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://litellm:litellm@llm-proxy-db:5432/litellm
+      STORE_MODEL_IN_DB: "True"
+      UI_USERNAME: ${UI_USERNAME:-fuzzforge}
+      UI_PASSWORD: ${UI_PASSWORD:-fuzzforge123}
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
+      OTEL_EXPORTER_OTLP_PROTOCOL: grpc
+      ANTHROPIC_API_KEY: ${LITELLM_ANTHROPIC_API_KEY:-}
+      OPENAI_API_KEY: ${LITELLM_OPENAI_API_KEY:-}
+    command:
+      - "--config"
+      - "/etc/litellm/proxy_config.yaml"
+    ports:
+      - "10999:4000"   # Web UI + OpenAI-compatible API
+    volumes:
+      - litellm_proxy_data:/var/lib/litellm
+      - ./volumes/litellm/proxy_config.yaml:/etc/litellm/proxy_config.yaml:ro
+    networks:
+      - fuzzforge-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 http://localhost:4000/health/liveliness || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector:latest
+    container_name: fuzzforge-otel-collector
+    command: ["--config=/etc/otel-collector/config.yaml"]
+    volumes:
+      - ./volumes/otel/collector-config.yaml:/etc/otel-collector/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  llm-proxy-db:
+    image: postgres:16
+    container_name: fuzzforge-llm-proxy-db
+    environment:
+      POSTGRES_DB: litellm
+      POSTGRES_USER: litellm
+      POSTGRES_PASSWORD: litellm
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d litellm -U litellm"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    volumes:
+      - litellm_proxy_db:/var/lib/postgresql/data
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # LLM Proxy Bootstrap - Seed providers and virtual keys
+  # ============================================================================
+  llm-proxy-bootstrap:
+    image: python:3.11-slim
+    container_name: fuzzforge-llm-proxy-bootstrap
+    depends_on:
+      llm-proxy:
+        condition: service_started
+    env_file:
+      - ./volumes/env/.env
+    environment:
+      PROXY_BASE_URL: http://llm-proxy:4000
+      ENV_FILE_PATH: /bootstrap/env/.env
+      UI_USERNAME: ${UI_USERNAME:-fuzzforge}
+      UI_PASSWORD: ${UI_PASSWORD:-fuzzforge123}
+    volumes:
+      - ./docker/scripts/bootstrap_llm_proxy.py:/app/bootstrap.py:ro
+      - ./volumes/env:/bootstrap/env
+      - litellm_proxy_data:/bootstrap/data
+    networks:
+      - fuzzforge-network
+    command: ["python", "/app/bootstrap.py"]
+    restart: "no"
+
+  # ============================================================================
+  # Vertical Worker: Rust/Native Security
+  # ============================================================================
+  # This is a template/example worker. In production, you'll have multiple
+  # vertical workers (android, rust, web, ios, blockchain, etc.)
+  worker-rust:
+    build:
+      context: ./workers/rust
+      dockerfile: Dockerfile
+    container_name: fuzzforge-worker-rust
+    profiles:
+      - workers
+      - rust
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Worker configuration
+      WORKER_VERTICAL: rust
+      WORKER_TASK_QUEUE: rust-queue
+      MAX_CONCURRENT_ACTIVITIES: 5
+
+      # Storage configuration (MinIO)
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Cache configuration
+      CACHE_DIR: /cache
+      CACHE_MAX_SIZE: 10GB
+      CACHE_TTL: 7d
+
+      # Logging
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount workflow code (read-only) for dynamic discovery
+      - ./backend/toolbox:/app/toolbox:ro
+      # Worker cache for downloaded targets
+      - worker_rust_cache:/cache
+    networks:
+      - fuzzforge-network
+    restart: "no"
+    # Resource limits (adjust based on vertical needs)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 512M
+
+  # ============================================================================
+  # Vertical Worker: Python Fuzzing
+  # ============================================================================
+  worker-python:
+    build:
+      context: ./workers/python
+      dockerfile: Dockerfile
+    container_name: fuzzforge-worker-python
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Worker configuration
+      WORKER_VERTICAL: python
+      WORKER_TASK_QUEUE: python-queue
+      MAX_CONCURRENT_ACTIVITIES: 5
+
+      # Storage configuration (MinIO)
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Cache configuration
+      CACHE_DIR: /cache
+      CACHE_MAX_SIZE: 10GB
+      CACHE_TTL: 7d
+
+      # Logging
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount workflow code (read-only) for dynamic discovery
+      - ./backend/toolbox:/app/toolbox:ro
+      # Mount AI module for A2A wrapper access
+      - ./ai/src:/app/ai_src:ro
+      # Worker cache for downloaded targets
+      - worker_python_cache:/cache
+    networks:
+      - fuzzforge-network
+    restart: "no"
+    # Resource limits (lighter than rust)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================================================
+  # Vertical Worker: Secret Detection
+  # ============================================================================
+  worker-secrets:
+    build:
+      context: ./workers/secrets
+      dockerfile: Dockerfile
+    container_name: fuzzforge-worker-secrets
+    profiles:
+      - workers
+      - secrets
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Worker configuration
+      WORKER_VERTICAL: secrets
+      WORKER_TASK_QUEUE: secrets-queue
+      MAX_CONCURRENT_ACTIVITIES: 5
+
+      # Storage configuration (MinIO)
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Cache configuration
+      CACHE_DIR: /cache
+      CACHE_MAX_SIZE: 10GB
+      CACHE_TTL: 7d
+
+      # Logging
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount workflow code (read-only) for dynamic discovery
+      - ./backend/toolbox:/app/toolbox:ro
+      # Mount AI module for A2A wrapper access
+      - ./ai/src:/app/ai_src:ro
+      # Worker cache for downloaded targets
+      - worker_secrets_cache:/cache
+    networks:
+      - fuzzforge-network
+    restart: "no"
+    # Resource limits (lighter than rust)
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  # ============================================================================
+  # Vertical Worker: Android Security
+  # ============================================================================
+  worker-android:
+    build:
+      context: ./workers/android
+      dockerfile: ${ANDROID_DOCKERFILE:-Dockerfile.amd64}
+    container_name: fuzzforge-worker-android
+    profiles:
+      - workers
+      - android
+      - full
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Worker configuration
+      WORKER_VERTICAL: android
+      WORKER_TASK_QUEUE: android-queue
+      MAX_CONCURRENT_ACTIVITIES: 5
+
+      # Storage configuration (MinIO)
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Cache configuration
+      CACHE_DIR: /cache
+      CACHE_MAX_SIZE: 10GB
+      CACHE_TTL: 7d
+
+      # Logging
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount workflow code (read-only) for dynamic discovery
+      - ./backend/toolbox:/app/toolbox:ro
+      # Worker cache for downloaded targets
+      - worker_android_cache:/cache
+    networks:
+      - fuzzforge-network
+    restart: "no"
+    # Resource limits (Android tools need more memory)
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 3G
+        reservations:
+          cpus: '1'
+          memory: 1G
+
+  # ============================================================================
+  # FuzzForge Backend API
+  # ============================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: fuzzforge-backend
+    depends_on:
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Storage configuration (MinIO)
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Python configuration
+      PYTHONPATH: /app
+      PYTHONUNBUFFERED: 1
+
+      # Host filesystem paths (for CLI worker management)
+      FUZZFORGE_HOST_ROOT: ${PWD}
+
+      # Logging
+      LOG_LEVEL: INFO
+    ports:
+      - "8000:8000"  # FastAPI REST API
+      - "8010:8010"  # MCP (Model Context Protocol)
+    volumes:
+      # Mount toolbox for workflow discovery (read-only)
+      - ./backend/toolbox:/app/toolbox:ro
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ============================================================================
+  # Task Agent - A2A LiteLLM Agent
+  # ============================================================================
+  task-agent:
+    build:
+      context: ./ai/agents/task_agent
+      dockerfile: Dockerfile
+    container_name: fuzzforge-task-agent
+    depends_on:
+      llm-proxy-bootstrap:
+        condition: service_completed_successfully
+    ports:
+      - "10900:8000"
+    environment:
+      - PORT=8000
+      - PYTHONUNBUFFERED=1
+    volumes:
+      - ./volumes/env:/app/config:ro
+    networks:
+      - fuzzforge-network
+    restart: unless-stopped
+
+  # ============================================================================
+  # Vertical Worker: OSS-Fuzz Campaigns
+  # ============================================================================
+  worker-ossfuzz:
+    build:
+      context: ./workers/ossfuzz
+      dockerfile: Dockerfile
+    container_name: fuzzforge-worker-ossfuzz
+    profiles:
+      - workers
+      - ossfuzz
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Temporal configuration
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_NAMESPACE: default
+
+      # Worker configuration
+      WORKER_VERTICAL: ossfuzz
+      WORKER_TASK_QUEUE: ossfuzz-queue
+      MAX_CONCURRENT_ACTIVITIES: 2  # Lower concurrency for resource-intensive fuzzing
+
+      # Storage configuration (MinIO)
+      STORAGE_BACKEND: s3
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: fuzzforge
+      S3_SECRET_KEY: fuzzforge123
+      S3_BUCKET: targets
+      S3_REGION: us-east-1
+      S3_USE_SSL: "false"
+
+      # Cache configuration (larger for OSS-Fuzz builds)
+      CACHE_DIR: /cache
+      CACHE_MAX_SIZE: 50GB
+      CACHE_TTL: 30d
+
+      # Logging
+      LOG_LEVEL: INFO
+      PYTHONUNBUFFERED: 1
+    volumes:
+      # Mount workflow code (read-only) for dynamic discovery
+      - ./backend/toolbox:/app/toolbox:ro
+      # Worker cache for OSS-Fuzz builds and corpus
+      - worker_ossfuzz_cache:/cache
+      # OSS-Fuzz build output
+      - worker_ossfuzz_build:/opt/oss-fuzz/build
+    networks:
+      - fuzzforge-network
+    restart: "no"
+    # Higher resource limits for fuzzing campaigns
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 8G
+        reservations:
+          cpus: '2'
+          memory: 2G
+
+# ============================================================================
+# Volumes
+# ============================================================================
+volumes:
+  temporal_data:
+    name: fuzzforge_temporal_data
+  temporal_postgres:
+    name: fuzzforge_temporal_postgres
+  minio_data:
+    name: fuzzforge_minio_data
+  worker_rust_cache:
+    name: fuzzforge_worker_rust_cache
+  worker_python_cache:
+    name: fuzzforge_worker_python_cache
+  worker_secrets_cache:
+    name: fuzzforge_worker_secrets_cache
+  worker_android_cache:
+    name: fuzzforge_worker_android_cache
+  worker_ossfuzz_cache:
+    name: fuzzforge_worker_ossfuzz_cache
+  worker_ossfuzz_build:
+    name: fuzzforge_worker_ossfuzz_build
+  litellm_proxy_data:
+    name: fuzzforge_litellm_proxy_data
+  litellm_proxy_db:
+    name: fuzzforge_litellm_proxy_db
+  # Add more worker caches as you add verticals:
+  # worker_web_cache:
+  # worker_ios_cache:
+
+# ============================================================================
+# Networks
+# ============================================================================
+networks:
+  fuzzforge-network:
+    name: fuzzforge_temporal_network
+    driver: bridge
+
+# ============================================================================
+# Notes:
+# ============================================================================
+#
+# 1. First Startup:
+#    - Creates all buckets and policies automatically
+#    - Temporal auto-setup creates database schema
+#    - Takes ~30-60 seconds for all health checks
+#
+# 2. Adding Vertical Workers:
+#    - Copy worker-rust section
+#    - Update: container_name, build.context, WORKER_VERTICAL, volumes
+#    - Add corresponding cache volume
+#
+# 3. Scaling Workers:
+#    - Horizontal: docker-compose up -d --scale worker-rust=3
+#    - Vertical: Increase MAX_CONCURRENT_ACTIVITIES env var
+#
+# 4. Web UIs:
+#    - Temporal UI: http://localhost:8233
+#    - MinIO Console: http://localhost:9001 (user: fuzzforge, pass: fuzzforge123)
+#    - LiteLLM Proxy: http://localhost:10999
+#
+# 5. Resource Usage (Baseline):
+#    - Temporal: ~500MB
+#    - Temporal DB: ~100MB
+#    - MinIO: ~256MB (with CI_CD=true)
+#    - Worker-rust: ~512MB (varies by toolchain)
+#    - Total: ~1.4GB baseline
+#
+# 6. Production Overrides:
+#    - Use docker-compose.temporal.prod.yaml for:
+#      - Disable CI_CD mode (more memory but better performance)
+#      - Add more workers
+#      - Increase resource limits
+#      - Add monitoring/logging

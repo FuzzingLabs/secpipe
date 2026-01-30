@@ -1,0 +1,16 @@
+rules:
+  - id: webview-javascript-enabled
+    severity: ERROR
+    languages: [java]
+    message: "WebView with JavaScript enabled can be dangerous if loading untrusted content."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M7
+      category: webview
+      area: ui
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    pattern: "$W.getSettings().setJavaScriptEnabled(true)"

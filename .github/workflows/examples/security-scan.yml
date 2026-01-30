@@ -1,0 +1,152 @@
+# FuzzForge CI/CD Example - Security Scanning
+#
+# This workflow demonstrates how to integrate FuzzForge into your CI/CD pipeline
+# for automated security testing on pull requests and pushes.
+#
+# Features:
+#   - Runs entirely in GitHub Actions (no external infrastructure needed)
+#   - Auto-starts FuzzForge services on-demand
+#   - Fails builds on error-level SARIF findings
+#   - Uploads SARIF results to GitHub Security tab
+#   - Exports findings as artifacts
+#
+# Prerequisites:
+#   - Ubuntu runner with Docker support
+#   - At least 4GB RAM available
+#   - ~90 seconds startup time
+
+name: Security Scan Example
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+jobs:
+  security-scan:
+    name: Security Assessment
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start FuzzForge
+        run: |
+          bash scripts/ci-start.sh
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install FuzzForge CLI
+        run: |
+          pip install ./cli
+
+      - name: Initialize FuzzForge
+        run: |
+          ff init --api-url http://localhost:8000 --name "GitHub Actions Security Scan"
+
+      - name: Run Security Assessment
+        run: |
+          ff workflow run security_assessment . \
+            --wait \
+            --fail-on error \
+            --export-sarif results.sarif
+
+      - name: Upload SARIF to GitHub Security
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: results.sarif
+
+      - name: Upload findings as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-findings
+          path: results.sarif
+          retention-days: 30
+
+      - name: Stop FuzzForge
+        if: always()
+        run: |
+          bash scripts/ci-stop.sh
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start FuzzForge
+        run: bash scripts/ci-start.sh
+
+      - name: Install CLI
+        run: |
+          pip install ./cli
+
+      - name: Initialize & Scan
+        run: |
+          ff init --api-url http://localhost:8000 --name "Secret Detection"
+          ff workflow run secret_detection . \
+            --wait \
+            --fail-on all \
+            --export-sarif secrets.sarif
+
+      - name: Upload results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: secret-scan-results
+          path: secrets.sarif
+          retention-days: 30
+
+      - name: Cleanup
+        if: always()
+        run: bash scripts/ci-stop.sh
+
+  # Example: Nightly fuzzing campaign (long-running)
+  nightly-fuzzing:
+    name: Nightly Fuzzing
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    # Only run on schedule
+    if: github.event_name == 'schedule'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start FuzzForge
+        run: bash scripts/ci-start.sh
+
+      - name: Install CLI
+        run: pip install ./cli
+
+      - name: Run Fuzzing Campaign
+        run: |
+          ff init --api-url http://localhost:8000
+          ff workflow run atheris_fuzzing . \
+            max_iterations=100000000 \
+            timeout_seconds=7200 \
+            --wait \
+            --export-sarif fuzzing-results.sarif
+        # Don't fail on fuzzing findings, just report
+        continue-on-error: true
+
+      - name: Upload fuzzing results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzzing-results
+          path: fuzzing-results.sarif
+          retention-days: 90
+
+      - name: Cleanup
+        if: always()
+        run: bash scripts/ci-stop.sh

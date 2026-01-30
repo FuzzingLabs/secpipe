@@ -1,0 +1,16 @@
+rules:
+  - id: vulnerable-service
+    severity: WARNING
+    languages: [xml]
+    message: "Service exported without permission."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      category: component
+      area: manifest
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/AndroidManifest.xml"
+    pattern: |
+      <service android:exported="true"

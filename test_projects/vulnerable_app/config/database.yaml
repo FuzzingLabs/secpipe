@@ -1,0 +1,58 @@
+# Database configuration with sensitive information
+production:
+  adapter: postgresql
+  host: production-db.example.com
+  port: 5432
+  database: production_database
+  username: postgres
+  password: ProductionPassword123!
+  pool: 10
+
+staging:
+  adapter: mysql
+  host: staging-db.example.com
+  port: 3306
+  database: staging_database
+  username: root
+  password: StagingPassword456!
+
+development:
+  adapter: sqlite3
+  database: db/development.sqlite3
+
+# Redis configuration
+redis:
+  host: redis.example.com
+  port: 6379
+  password: RedisPassword789!
+  db: 0
+
+# MongoDB configuration
+mongodb:
+  connection_string: mongodb://admin:MongoAdminPass@mongo.example.com:27017/admin
+  database: myapp_production
+
+# Elasticsearch
+elasticsearch:
+  host: elastic.example.com
+  port: 9200
+  username: elastic
+  password: ElasticPassword321!
+
+# API endpoints with keys
+external_apis:
+  payment_gateway:
+    url: https://api.payment.com
+    api_key: pk_live_1234567890abcdefghijklmnop
+    secret_key: sk_live_0987654321zyxwvutsrqponmlk
+
+  email_service:
+    smtp_host: smtp.sendgrid.net
+    smtp_port: 587
+    username: apikey
+    password: SG.1234567890.abcdefghijklmnopqrstuvwxyz-1234567890
+
+  sms_service:
+    account_sid: AC1234567890abcdefghijklmnopqrstuv
+    auth_token: 1234567890abcdefghijklmnopqrstuvw
+    phone_number: "+1234567890"

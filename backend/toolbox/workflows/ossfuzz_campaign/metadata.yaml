@@ -1,0 +1,106 @@
+name: ossfuzz_campaign
+version: "1.0.0"
+vertical: ossfuzz
+description: "Generic OSS-Fuzz fuzzing campaign. Automatically reads project configuration from OSS-Fuzz repo and runs fuzzing using Google's infrastructure."
+author: "FuzzForge Team"
+tags:
+  - "fuzzing"
+  - "oss-fuzz"
+  - "libfuzzer"
+  - "afl"
+  - "honggfuzz"
+  - "memory-safety"
+  - "security"
+
+# Workspace isolation mode
+# OSS-Fuzz campaigns use isolated mode for safe concurrent campaigns
+workspace_isolation: "isolated"
+
+parameters:
+  type: object
+  required:
+    - project_name
+  properties:
+    project_name:
+      type: string
+      description: "OSS-Fuzz project name (e.g., 'curl', 'sqlite3', 'libxml2')"
+      examples:
+        - "curl"
+        - "sqlite3"
+        - "libxml2"
+        - "openssl"
+        - "zlib"
+
+    campaign_duration_hours:
+      type: integer
+      default: 1
+      minimum: 1
+      maximum: 168  # 1 week max
+      description: "How many hours to run the fuzzing campaign"
+
+    override_engine:
+      type: string
+      enum: ["libfuzzer", "afl", "honggfuzz"]
+      description: "Override fuzzing engine from project.yaml (optional)"
+
+    override_sanitizer:
+      type: string
+      enum: ["address", "memory", "undefined", "dataflow"]
+      description: "Override sanitizer from project.yaml (optional)"
+
+    max_iterations:
+      type: integer
+      minimum: 1000
+      description: "Optional limit on fuzzing iterations (optional)"
+
+output_schema:
+  type: object
+  properties:
+    project_name:
+      type: string
+      description: "OSS-Fuzz project that was fuzzed"
+
+    summary:
+      type: object
+      description: "Campaign execution summary"
+      properties:
+        total_executions:
+          type: integer
+        crashes_found:
+          type: integer
+        unique_crashes:
+          type: integer
+        duration_hours:
+          type: number
+        engine_used:
+          type: string
+        sanitizer_used:
+          type: string
+
+    crashes:
+      type: array
+      description: "List of crash file paths"
+      items:
+        type: string
+
+    sarif:
+      type: object
+      description: "SARIF-formatted crash reports (future)"
+
+examples:
+  - name: "Fuzz curl for 1 hour"
+    parameters:
+      project_name: "curl"
+      campaign_duration_hours: 1
+
+  - name: "Fuzz sqlite3 with AFL"
+    parameters:
+      project_name: "sqlite3"
+      campaign_duration_hours: 2
+      override_engine: "afl"
+
+  - name: "Fuzz libxml2 with memory sanitizer"
+    parameters:
+      project_name: "libxml2"
+      campaign_duration_hours: 6
+      override_sanitizer: "memory"

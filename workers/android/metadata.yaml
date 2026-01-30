@@ -1,0 +1,42 @@
+# Android Worker Metadata
+#
+# Platform-specific configuration for Android security analysis worker.
+# This file defines which Dockerfile to use for each platform and what tools
+# are available on that platform.
+
+name: android
+version: "1.0.0"
+description: "Android application security testing worker with Jadx, OpenGrep, and MobSF"
+
+# Default platform when auto-detection fails or metadata is not platform-aware
+default_platform: linux/amd64
+
+# Platform-specific configurations
+platforms:
+  # x86_64 / Intel / AMD platform (full toolchain including MobSF)
+  linux/amd64:
+    dockerfile: Dockerfile.amd64
+    description: "Full Android toolchain with MobSF support"
+    supported_tools:
+      - jadx          # APK decompiler
+      - opengrep      # Static analysis with custom Android rules
+      - mobsf         # Mobile Security Framework
+      - frida         # Dynamic instrumentation
+      - androguard    # Python APK analysis
+
+  # ARM64 / Apple Silicon platform (MobSF excluded due to Rosetta limitations)
+  linux/arm64:
+    dockerfile: Dockerfile.arm64
+    description: "Android toolchain without MobSF (ARM64/Apple Silicon compatible)"
+    supported_tools:
+      - jadx          # APK decompiler
+      - opengrep      # Static analysis with custom Android rules
+      - frida         # Dynamic instrumentation
+      - androguard    # Python APK analysis
+    disabled_tools:
+      mobsf: "Incompatible with Rosetta 2 emulation (requires syscall 284: copy_file_range)"
+    notes: |
+      MobSF cannot run under Rosetta 2 on Apple Silicon Macs due to missing
+      syscall implementations. The workflow will gracefully skip MobSF analysis
+      on this platform while still providing comprehensive security testing via
+      Jadx decompilation and OpenGrep static analysis.

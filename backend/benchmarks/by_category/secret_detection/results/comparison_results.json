@@ -1,0 +1,253 @@
+{
+  "target_path": "/Users/tduhamel/Documents/FuzzingLabs/fuzzforge_ai/test_projects/secret_detection_benchmark",
+  "results": [
+    {
+      "tool_name": "Gitleaks",
+      "execution_time": 5.177123069763184,
+      "findings_count": 12,
+      "findings_by_file": {
+        ".env": [
+          3
+        ],
+        "config/app.properties": [
+          6
+        ],
+        "config/keys.yaml": [
+          6
+        ],
+        "id_rsa": [
+          1
+        ],
+        "config/oauth.json": [
+          4
+        ],
+        "scripts/deploy.sh": [
+          5
+        ],
+        "config/settings.py": [
+          6,
+          9
+        ],
+        "src/Main.java": [
+          5
+        ],
+        "src/obfuscated.py": [
+          7,
+          17
+        ],
+        "src/config.py": [
+          7
+        ]
+      },
+      "unique_files": 10,
+      "unique_locations": 12,
+      "secret_density": 1.2,
+      "file_types": {
+        ".env": 1,
+        ".properties": 1,
+        ".yaml": 1,
+        "[no extension]": 1,
+        ".json": 1,
+        ".sh": 1,
+        ".py": 3,
+        ".java": 1
+      }
+    },
+    {
+      "tool_name": "TruffleHog",
+      "execution_time": 5.061383008956909,
+      "findings_count": 1,
+      "findings_by_file": {
+        "config/database.yaml": [
+          6
+        ]
+      },
+      "unique_files": 1,
+      "unique_locations": 1,
+      "secret_density": 1.0,
+      "file_types": {
+        ".yaml": 1
+      }
+    },
+    {
+      "tool_name": "LLM (gpt-4o-mini)",
+      "execution_time": 296.8492441177368,
+      "findings_count": 30,
+      "findings_by_file": {
+        "src/obfuscated.py": [
+          7,
+          10,
+          13,
+          18,
+          20,
+          23
+        ],
+        "src/app.py": [
+          7
+        ],
+        "scripts/webhook.js": [
+          4
+        ],
+        "src/advanced.js": [
+          4,
+          7,
+          10,
+          12,
+          17
+        ],
+        "src/Main.java": [
+          5
+        ],
+        "src/Crypto.go": [
+          6,
+          10
+        ],
+        ".env": [
+          3,
+          4
+        ],
+        "config/keys.yaml": [
+          6,
+          12
+        ],
+        "config/database.yaml": [
+          7
+        ],
+        "config/oauth.json": [
+          3,
+          4
+        ],
+        "config/legacy.ini": [
+          4,
+          7
+        ],
+        "src/database.sql": [
+          4
+        ],
+        "config/app.properties": [
+          6
+        ],
+        "scripts/deploy.sh": [
+          6,
+          9
+        ],
+        "id_rsa": [
+          1
+        ]
+      },
+      "unique_files": 15,
+      "unique_locations": 30,
+      "secret_density": 2.0,
+      "file_types": {
+        ".py": 2,
+        ".js": 2,
+        ".java": 1,
+        ".go": 1,
+        ".env": 1,
+        ".yaml": 2,
+        ".json": 1,
+        ".ini": 1,
+        ".sql": 1,
+        ".properties": 1,
+        ".sh": 1,
+        "[no extension]": 1
+      }
+    },
+    {
+      "tool_name": "LLM (gpt-5-mini)",
+      "execution_time": 618.5462851524353,
+      "findings_count": 41,
+      "findings_by_file": {
+        "config/settings.py": [
+          6,
+          9,
+          20
+        ],
+        "src/obfuscated.py": [
+          7,
+          10,
+          13,
+          14,
+          17,
+          20,
+          23
+        ],
+        "src/app.py": [
+          7
+        ],
+        "src/config.py": [
+          7,
+          10,
+          13,
+          14,
+          15,
+          16
+        ],
+        "scripts/webhook.js": [
+          4
+        ],
+        "src/advanced.js": [
+          4,
+          7,
+          9,
+          10,
+          13,
+          17,
+          19
+        ],
+        "src/Main.java": [
+          5
+        ],
+        "src/Crypto.go": [
+          10,
+          15
+        ],
+        ".env": [
+          3,
+          4
+        ],
+        "config/keys.yaml": [
+          6,
+          12
+        ],
+        "config/database.yaml": [
+          7
+        ],
+        "config/oauth.json": [
+          3,
+          4
+        ],
+        "config/legacy.ini": [
+          3,
+          7
+        ],
+        "src/database.sql": [
+          6
+        ],
+        "config/app.properties": [
+          6
+        ],
+        "scripts/deploy.sh": [
+          5,
+          10
+        ]
+      },
+      "unique_files": 16,
+      "unique_locations": 41,
+      "secret_density": 2.5625,
+      "file_types": {
+        ".py": 4,
+        ".js": 2,
+        ".java": 1,
+        ".go": 1,
+        ".env": 1,
+        ".yaml": 2,
+        ".json": 1,
+        ".ini": 1,
+        ".sql": 1,
+        ".properties": 1,
+        ".sh": 1
+      }
+    }
+  ]
+}

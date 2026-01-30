@@ -1,0 +1,16 @@
+rules:
+  - id: webview-load-arbitrary-url
+    severity: WARNING
+    languages: [java]
+    message: "Loading unvalidated URL in WebView may cause open redirect or XSS."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M7
+      category: webview
+      area: ui
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    pattern: "$W.loadUrl($URL)"

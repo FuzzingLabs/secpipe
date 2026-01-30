@@ -1,0 +1,15 @@
+rules:
+  - id: intent-redirection
+    severity: WARNING
+    languages: [java]
+    message: "Potential intent redirection: using getIntent().getExtras() without validation."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      category: intent
+      area: intercomponent
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    pattern: "$ACT.getIntent().getExtras()"

@@ -1,0 +1,83 @@
+name: security_assessment
+version: "2.0.0"
+vertical: python
+description: "Comprehensive security assessment workflow that scans files, analyzes code for vulnerabilities, and generates SARIF reports"
+author: "FuzzForge Team"
+tags:
+  - "security"
+  - "scanner"
+  - "analyzer"
+  - "static-analysis"
+  - "sarif"
+  - "comprehensive"
+
+# Workspace isolation mode (system-level configuration)
+# - "isolated" (default): Each workflow run gets its own isolated workspace (safe for concurrent fuzzing)
+# - "shared": All runs share the same workspace (for read-only analysis workflows)
+# - "copy-on-write": Download once, copy for each run (balances performance and isolation)
+# Using "shared" mode for read-only security analysis (no file modifications)
+workspace_isolation: "shared"
+
+parameters:
+  type: object
+  properties:
+    scanner_config:
+      type: object
+      description: "File scanner configuration"
+      properties:
+        patterns:
+          type: array
+          items:
+            type: string
+          description: "File patterns to scan"
+        check_sensitive:
+          type: boolean
+          description: "Check for sensitive files"
+        calculate_hashes:
+          type: boolean
+          description: "Calculate file hashes"
+        max_file_size:
+          type: integer
+          description: "Maximum file size to scan (bytes)"
+    analyzer_config:
+      type: object
+      description: "Security analyzer configuration"
+      properties:
+        file_extensions:
+          type: array
+          items:
+            type: string
+          description: "File extensions to analyze"
+        check_secrets:
+          type: boolean
+          description: "Check for hardcoded secrets"
+        check_sql:
+          type: boolean
+          description: "Check for SQL injection risks"
+        check_dangerous_functions:
+          type: boolean
+          description: "Check for dangerous function calls"
+    reporter_config:
+      type: object
+      description: "SARIF reporter configuration"
+      properties:
+        include_code_flows:
+          type: boolean
+          description: "Include code flow information"
+
+output_schema:
+  type: object
+  properties:
+    sarif:
+      type: object
+      description: "SARIF-formatted security findings"
+    summary:
+      type: object
+      description: "Scan execution summary"
+      properties:
+        total_findings:
+          type: integer
+        severity_counts:
+          type: object
+        tool_counts:
+          type: object

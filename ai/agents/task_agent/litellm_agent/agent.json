@@ -1,0 +1,24 @@
+{
+  "name": "litellm_agent",
+  "description": "A flexible AI agent powered by LiteLLM with hot-swappable models from OpenRouter and other providers",
+  "url": "http://localhost:8000",
+  "version": "1.0.0",
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain"],
+  "capabilities": {
+    "streaming": true
+  },
+  "skills": [
+    {
+      "id": "litellm-general-purpose",
+      "name": "General Purpose AI Assistant",
+      "description": "A flexible AI assistant that can help with various tasks using any LiteLLM-supported model. Supports runtime model and prompt hot-swapping.",
+      "tags": ["ai", "assistant", "litellm", "flexible", "hot-swap"],
+      "examples": [
+        "Help me write a Python function",
+        "Explain quantum computing",
+        "Switch to Claude model and help me code"
+      ]
+    }
+  ]
+}

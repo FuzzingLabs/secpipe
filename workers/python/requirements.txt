@@ -1,0 +1,23 @@
+# Temporal worker dependencies
+temporalio>=1.5.0
+pydantic>=2.0.0
+
+# Storage (MinIO/S3)
+boto3>=1.34.0
+
+# Configuration
+pyyaml>=6.0.0
+
+# HTTP Client (for real-time stats reporting)
+httpx>=0.27.0
+
+# A2A Agent Communication
+a2a-sdk[all]>=0.1.0
+
+# Fuzzing
+atheris>=2.3.0
+
+# SAST Tools
+bandit>=1.7.0
+pip-audit>=2.6.0
+mypy>=1.8.0

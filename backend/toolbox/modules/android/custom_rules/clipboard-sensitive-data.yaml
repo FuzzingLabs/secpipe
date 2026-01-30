@@ -1,0 +1,15 @@
+rules:
+  - id: clipboard-sensitive-data
+    severity: WARNING
+    languages: [java]
+    message: "Sensitive data may be copied to the clipboard."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      category: security
+      area: clipboard
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    pattern: "$CLIPBOARD.setPrimaryClip($CLIP)"

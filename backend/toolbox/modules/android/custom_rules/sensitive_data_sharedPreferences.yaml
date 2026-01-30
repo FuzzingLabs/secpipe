@@ -1,0 +1,18 @@
+rules:
+  - id: sensitive-data-in-shared-preferences
+    severity: WARNING
+    languages: [java]
+    message: "Sensitive data may be stored in SharedPreferences. Please review the key '$KEY'."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M2
+      category: security
+      area: storage
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    patterns:
+      - pattern: "$EDITOR.putString($KEY, $VAL);"
+      - pattern-regex: "$KEY =~ /(?i).*(username|password|pass|token|auth_token|api_key|secret|sessionid|email).*/"

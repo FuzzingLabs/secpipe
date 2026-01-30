@@ -1,0 +1,18 @@
+rules:
+  - id: insecure-data-storage
+    severity: WARNING
+    languages: [java]
+    message: "Potential insecure data storage (external storage)."
+    metadata:
+      authors:
+        - Guerric ELOI (FuzzingLabs)
+      owasp-mobile: M2
+      category: security
+      area: storage
+      verification-level: [L1]
+    paths:
+      include:
+        - "**/*.java"
+    pattern-either:
+      - pattern: "$CTX.openFileOutput($NAME, $MODE)"
+      - pattern: "Environment.getExternalStorageDirectory()"

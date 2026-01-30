@@ -1,0 +1,121 @@
+# FuzzForge CI/CD Example - GitLab CI
+#
+# This file demonstrates how to integrate FuzzForge into your GitLab CI/CD pipeline.
+# Copy this to `.gitlab-ci.yml` in your project root to enable security scanning.
+#
+# Features:
+#   - Runs entirely in GitLab runners (no external infrastructure)
+#   - Auto-starts FuzzForge services on-demand
+#   - Fails pipelines on critical/high severity findings
+#   - Uploads SARIF reports to GitLab Security Dashboard
+#   - Exports findings as artifacts
+#
+# Prerequisites:
+#   - GitLab Runner with Docker support (docker:dind)
+#   - At least 4GB RAM available
+#   - ~90 seconds startup time
+
+stages:
+  - security
+
+variables:
+  FUZZFORGE_API_URL: "http://localhost:8000"
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+# Base template for all FuzzForge jobs
+.fuzzforge_template:
+  image: docker:24
+  services:
+    - docker:24-dind
+  before_script:
+    # Install dependencies
+    - apk add --no-cache bash curl python3 py3-pip git
+    # Start FuzzForge
+    - bash scripts/ci-start.sh
+    # Install CLI
+    - pip3 install ./cli --break-system-packages
+    # Initialize project
+    - ff init --api-url $FUZZFORGE_API_URL --name "GitLab CI Security Scan"
+  after_script:
+    # Cleanup
+    - bash scripts/ci-stop.sh || true
+
+# Security Assessment - Comprehensive code analysis
+security:scan:
+  extends: .fuzzforge_template
+  stage: security
+  timeout: 30 minutes
+  script:
+    - ff workflow run security_assessment . --wait --fail-on error --export-sarif results.sarif
+  artifacts:
+    when: always
+    reports:
+      sast: results.sarif
+    paths:
+      - results.sarif
+    expire_in: 30 days
+  only:
+    - merge_requests
+    - main
+    - develop
+
+# Secret Detection - Scan for exposed credentials
+security:secrets:
+  extends: .fuzzforge_template
+  stage: security
+  timeout: 15 minutes
+  script:
+    - ff workflow run secret_detection . --wait --fail-on all --export-sarif secrets.sarif
+  artifacts:
+    when: always
+    paths:
+      - secrets.sarif
+    expire_in: 30 days
+  only:
+    - merge_requests
+    - main
+
+# Nightly Fuzzing - Long-running fuzzing campaign (scheduled only)
+security:fuzzing:
+  extends: .fuzzforge_template
+  stage: security
+  timeout: 2 hours
+  script:
+    - |
+      ff workflow run atheris_fuzzing . \
+        max_iterations=100000000 \
+        timeout_seconds=7200 \
+        --wait \
+        --export-sarif fuzzing-results.sarif
+  artifacts:
+    when: always
+    paths:
+      - fuzzing-results.sarif
+    expire_in: 90 days
+  allow_failure: true  # Don't fail pipeline on fuzzing findings
+  only:
+    - schedules
+
+# OSS-Fuzz Campaign (for supported projects)
+security:ossfuzz:
+  extends: .fuzzforge_template
+  stage: security
+  timeout: 1 hour
+  script:
+    - |
+      ff workflow run ossfuzz_campaign . \
+        project_name=your-project-name \
+        campaign_duration_hours=0.5 \
+        --wait \
+        --export-sarif ossfuzz-results.sarif
+  artifacts:
+    when: always
+    paths:
+      - ossfuzz-results.sarif
+    expire_in: 90 days
+  allow_failure: true
+  only:
+    - schedules
+  # Uncomment and set your project name
+  # when: manual

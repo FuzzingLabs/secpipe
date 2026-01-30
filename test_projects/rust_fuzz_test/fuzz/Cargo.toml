@@ -1,0 +1,35 @@
+[package]
+name = "rust_fuzz_test-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+
+[dependencies.rust_fuzz_test]
+path = ".."
+
+[[bin]]
+name = "fuzz_target_1"
+path = "fuzz_targets/fuzz_target_1.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_divide"
+path = "fuzz_targets/fuzz_divide.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "fuzz_waterfall"
+path = "fuzz_targets/fuzz_waterfall.rs"
+test = false
+doc = false
+bench = false
