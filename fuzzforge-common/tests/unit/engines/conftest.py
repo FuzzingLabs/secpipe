@@ -1,9 +1,3 @@
-import pytest
+"""Conftest for engine tests."""
 
-from fuzzforge_common.sandboxes.engines.podman.engine import Podman
-
-
-@pytest.fixture
-def podman_engine(podman_socket: str) -> Podman:
-    """TODO."""
-    return Podman(socket=podman_socket)
+# No special fixtures needed - PodmanCLI tests use tmp_path directly

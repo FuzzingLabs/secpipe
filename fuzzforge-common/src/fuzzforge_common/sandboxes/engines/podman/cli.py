@@ -29,44 +29,79 @@ def get_logger() -> BoundLogger:
     return cast("BoundLogger", get_logger())
 
 
+def _is_running_under_snap() -> bool:
+    """Check if running under Snap environment.
+    
+    VS Code installed via Snap sets XDG_DATA_HOME to a version-specific path,
+    causing Podman to look for storage in non-standard locations. When SNAP
+    is set, we use custom storage paths to ensure consistency.
+    
+    Note: Snap only exists on Linux, so this also handles macOS implicitly.
+    """
+    import os  # noqa: PLC0415
+    return os.getenv("SNAP") is not None
+
+
 class PodmanCLI(AbstractFuzzForgeSandboxEngine):
     """Podman engine using CLI with custom storage paths.
 
     This implementation uses subprocess calls to the Podman CLI with --root
-    and --runroot flags, providing isolation from system Podman storage.
-    This is particularly useful when running from VS Code snap which sets
-    XDG_DATA_HOME to a version-specific path.
+    and --runroot flags when running under Snap, providing isolation from
+    system Podman storage.
+    
+    The custom storage is only used when:
+    1. Running under Snap (SNAP env var is set) - to fix XDG_DATA_HOME issues
+    2. Custom paths are explicitly provided
+    
+    Otherwise, uses default Podman storage which works for:
+    - Native Linux installations
+    - macOS (where Podman runs in a VM via podman machine)
     """
 
-    __graphroot: Path
-    __runroot: Path
+    __graphroot: Path | None
+    __runroot: Path | None
+    __use_custom_storage: bool
 
-    def __init__(self, graphroot: Path, runroot: Path) -> None:
+    def __init__(self, graphroot: Path | None = None, runroot: Path | None = None) -> None:
         """Initialize the PodmanCLI engine.
 
         :param graphroot: Path to container image storage.
         :param runroot: Path to container runtime state.
 
+        Custom storage is used when running under Snap AND paths are provided.
         """
         AbstractFuzzForgeSandboxEngine.__init__(self)
-        self.__graphroot = graphroot
-        self.__runroot = runroot
-
-        # Ensure directories exist
-        self.__graphroot.mkdir(parents=True, exist_ok=True)
-        self.__runroot.mkdir(parents=True, exist_ok=True)
+        
+        # Use custom storage only under Snap (to fix XDG_DATA_HOME issues)
+        self.__use_custom_storage = (
+            _is_running_under_snap() 
+            and graphroot is not None 
+            and runroot is not None
+        )
+        
+        if self.__use_custom_storage:
+            self.__graphroot = graphroot
+            self.__runroot = runroot
+            # Ensure directories exist
+            self.__graphroot.mkdir(parents=True, exist_ok=True)
+            self.__runroot.mkdir(parents=True, exist_ok=True)
+        else:
+            self.__graphroot = None
+            self.__runroot = None
 
     def _base_cmd(self) -> list[str]:
         """Get base Podman command with storage flags.
 
-        :returns: Base command list with --root and --runroot.
+        :returns: Base command list, with --root and --runroot only under Snap.
 
         """
-        return [
-            "podman",
-            "--root", str(self.__graphroot),
-            "--runroot", str(self.__runroot),
-        ]
+        if self.__use_custom_storage and self.__graphroot and self.__runroot:
+            return [
+                "podman",
+                "--root", str(self.__graphroot),
+                "--runroot", str(self.__runroot),
+            ]
+        return ["podman"]
 
     def _run(self, args: list[str], *, check: bool = True, capture: bool = True) -> subprocess.CompletedProcess:
         """Run a Podman command.

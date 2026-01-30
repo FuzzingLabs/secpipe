@@ -9,6 +9,7 @@ dependencies = [
     "fuzzforge-types==0.0.1",
     "podman==5.6.0",
     "pydantic==2.12.4",
+    "structlog>=24.0.0",
 ]
 
 [project.optional-dependencies]
