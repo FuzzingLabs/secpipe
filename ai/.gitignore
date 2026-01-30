@@ -1,6 +1,0 @@
-.env
-__pycache__/
-*.pyc
-fuzzforge_sessions.db
-agentops.log
-*.log

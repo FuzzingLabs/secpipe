@@ -1,9 +1,0 @@
-__pycache__
-*.pyc
-*.pyo
-*.pytest_cache
-*.coverage
-coverage.xml
-build/
-dist/
-.env

@@ -1,4 +1,0 @@
-google-adk
-a2a-sdk[all]
-litellm
-python-dotenv
