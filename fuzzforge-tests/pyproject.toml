@@ -9,6 +9,7 @@ dependencies = [
     "boto3==1.42.8",
     "podman==5.6.0",
     "pytest==9.0.2",
+    "fuzzforge-common==0.0.1",
     "fuzzforge-types==0.0.1",
     "testcontainers[minio]==4.13.3",
 ]
@@ -21,4 +22,5 @@ lints = [
 ]
 
 [tool.uv.sources]
+fuzzforge-common = { workspace = true }
 fuzzforge-types = { workspace = true }

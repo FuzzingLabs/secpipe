@@ -15,19 +15,21 @@ import boto3
 import pytest
 from fuzzforge_common.sandboxes.engines.podman.configuration import PodmanConfiguration
 from fuzzforge_common.storage.configuration import StorageConfiguration
-from fuzzforge_sdk.constants import (
-    FUZZFORGE_MODULE_DESCRIPTION_LENGTH_MAX,
-    FUZZFORGE_MODULE_NAME_LENGTH_MAX,
-    FUZZFORGE_MODULE_NAME_LENGTH_MIN,
-    FUZZFORGE_PROJECT_DESCRIPTION_LENGTH_MAX,
-    FUZZFORGE_PROJECT_NAME_LENGTH_MAX,
-    FUZZFORGE_PROJECT_NAME_LENGTH_MIN,
-    FUZZFORGE_WORKFLOW_DESCRIPTION_LENGTH_MAX,
-    FUZZFORGE_WORKFLOW_NAME_LENGTH_MAX,
-    FUZZFORGE_WORKFLOW_NAME_LENGTH_MIN,
-)
 from podman import PodmanClient
 from testcontainers.minio import MinioContainer
+
+# Constants for validation (moved from enterprise SDK)
+FUZZFORGE_PROJECT_NAME_LENGTH_MIN: int = 3
+FUZZFORGE_PROJECT_NAME_LENGTH_MAX: int = 64
+FUZZFORGE_PROJECT_DESCRIPTION_LENGTH_MAX: int = 256
+
+FUZZFORGE_MODULE_NAME_LENGTH_MIN: int = 3
+FUZZFORGE_MODULE_NAME_LENGTH_MAX: int = 64
+FUZZFORGE_MODULE_DESCRIPTION_LENGTH_MAX: int = 256
+
+FUZZFORGE_WORKFLOW_NAME_LENGTH_MIN: int = 3
+FUZZFORGE_WORKFLOW_NAME_LENGTH_MAX: int = 64
+FUZZFORGE_WORKFLOW_DESCRIPTION_LENGTH_MAX: int = 256
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
