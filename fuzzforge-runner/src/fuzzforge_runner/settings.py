@@ -60,10 +60,15 @@ class ProjectSettings(BaseModel):
 
 
 class RegistrySettings(BaseModel):
-    """Container registry configuration for module images."""
+    """Container registry configuration for module images.
 
-    #: Registry URL for pulling module images.
-    url: str = Field(default="ghcr.io/fuzzinglabs")
+    By default, registry URL is empty (local-only mode). When empty,
+    modules must be built locally with `make build-modules`.
+    Set via FUZZFORGE_REGISTRY__URL environment variable if needed.
+    """
+
+    #: Registry URL for pulling module images (empty = local-only mode).
+    url: str = Field(default="")
 
     #: Default tag to use when pulling images.
     default_tag: str = Field(default="latest")

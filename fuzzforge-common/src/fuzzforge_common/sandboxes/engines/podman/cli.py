@@ -31,14 +31,15 @@ def get_logger() -> BoundLogger:
 
 def _is_running_under_snap() -> bool:
     """Check if running under Snap environment.
-    
+
     VS Code installed via Snap sets XDG_DATA_HOME to a version-specific path,
     causing Podman to look for storage in non-standard locations. When SNAP
     is set, we use custom storage paths to ensure consistency.
-    
+
     Note: Snap only exists on Linux, so this also handles macOS implicitly.
     """
     import os  # noqa: PLC0415
+
     return os.getenv("SNAP") is not None
 
 
@@ -48,11 +49,11 @@ class PodmanCLI(AbstractFuzzForgeSandboxEngine):
     This implementation uses subprocess calls to the Podman CLI with --root
     and --runroot flags when running under Snap, providing isolation from
     system Podman storage.
-    
+
     The custom storage is only used when:
     1. Running under Snap (SNAP env var is set) - to fix XDG_DATA_HOME issues
     2. Custom paths are explicitly provided
-    
+
     Otherwise, uses default Podman storage which works for:
     - Native Linux installations
     - macOS (where Podman runs in a VM via podman machine)
@@ -69,16 +70,24 @@ class PodmanCLI(AbstractFuzzForgeSandboxEngine):
         :param runroot: Path to container runtime state.
 
         Custom storage is used when running under Snap AND paths are provided.
+
+        :raises FuzzForgeError: If running on macOS (Podman not supported).
         """
+        import sys  # noqa: PLC0415
+
+        if sys.platform == "darwin":
+            msg = (
+                "Podman is not supported on macOS. Please use Docker instead:\n"
+                "  brew install --cask docker\n"
+                "  # Or download from https://docker.com/products/docker-desktop"
+            )
+            raise FuzzForgeError(msg)
+
         AbstractFuzzForgeSandboxEngine.__init__(self)
-        
+
         # Use custom storage only under Snap (to fix XDG_DATA_HOME issues)
-        self.__use_custom_storage = (
-            _is_running_under_snap() 
-            and graphroot is not None 
-            and runroot is not None
-        )
-        
+        self.__use_custom_storage = _is_running_under_snap() and graphroot is not None and runroot is not None
+
         if self.__use_custom_storage:
             self.__graphroot = graphroot
             self.__runroot = runroot
@@ -98,8 +107,10 @@ class PodmanCLI(AbstractFuzzForgeSandboxEngine):
         if self.__use_custom_storage and self.__graphroot and self.__runroot:
             return [
                 "podman",
-                "--root", str(self.__graphroot),
-                "--runroot", str(self.__runroot),
+                "--root",
+                str(self.__graphroot),
+                "--runroot",
+                str(self.__runroot),
             ]
         return ["podman"]
 

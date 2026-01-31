@@ -136,7 +136,7 @@ class ModuleExecutor:
         # - fuzzforge-module-{name}:{tag} (OSS local builds with module prefix)
         # - localhost/fuzzforge-module-{name}:{tag} (standard convention)
         # - localhost/{name}:{tag} (legacy/short form)
-        
+
         # For OSS local builds (no localhost/ prefix)
         for tag in tags_to_check:
             # Check direct module name (fuzzforge-cargo-fuzzer:0.1.0)
@@ -146,7 +146,7 @@ class ModuleExecutor:
             if not module_identifier.startswith("fuzzforge-"):
                 if engine.image_exists(f"fuzzforge-{module_identifier}:{tag}"):
                     return True
-        
+
         # For registry-style naming (localhost/ prefix)
         name_prefixes = [f"fuzzforge-module-{module_identifier}", module_identifier]
 
@@ -166,17 +166,17 @@ class ModuleExecutor:
 
         """
         engine = self._get_engine()
-        
+
         # Try common tags
         tags_to_check = ["latest", "0.1.0", "0.0.1"]
-        
+
         # Check OSS local builds first (no localhost/ prefix)
         for tag in tags_to_check:
             # Direct module name (fuzzforge-cargo-fuzzer:0.1.0)
             direct_name = f"{module_identifier}:{tag}"
             if engine.image_exists(direct_name):
                 return direct_name
-            
+
             # With fuzzforge- prefix if not already present
             if not module_identifier.startswith("fuzzforge-"):
                 prefixed_name = f"fuzzforge-{module_identifier}:{tag}"
@@ -189,7 +189,7 @@ class ModuleExecutor:
             prefixed_name = f"localhost/fuzzforge-module-{module_identifier}:{tag}"
             if engine.image_exists(prefixed_name):
                 return prefixed_name
-            
+
             # Legacy short form: localhost/{name}:{tag}
             short_name = f"localhost/{module_identifier}:{tag}"
             if engine.image_exists(short_name):
@@ -198,7 +198,7 @@ class ModuleExecutor:
         # Default fallback
         return f"localhost/{module_identifier}:latest"
 
-    def _pull_module_image(self, module_identifier: str, registry_url: str = "ghcr.io/fuzzinglabs", tag: str = "latest") -> None:
+    def _pull_module_image(self, module_identifier: str, registry_url: str, tag: str = "latest") -> None:
         """Pull a module image from the container registry.
 
         :param module_identifier: Name/identifier of the module to pull.
@@ -238,21 +238,30 @@ class ModuleExecutor:
             )
             raise SandboxError(message) from exc
 
-    def _ensure_module_image(self, module_identifier: str, registry_url: str = "ghcr.io/fuzzinglabs", tag: str = "latest") -> None:
+    def _ensure_module_image(self, module_identifier: str, registry_url: str = "", tag: str = "latest") -> None:
         """Ensure module image exists, pulling it if necessary.
 
         :param module_identifier: Name/identifier of the module image.
-        :param registry_url: Container registry URL to pull from.
+        :param registry_url: Container registry URL to pull from (empty = local-only mode).
         :param tag: Image tag to pull.
-        :raises SandboxError: If image check or pull fails.
+        :raises SandboxError: If image not found locally and no registry configured.
 
         """
         logger = get_logger()
-        
+
         if self._check_image_exists(module_identifier):
             logger.debug("module image exists locally", module=module_identifier)
             return
-        
+
+        # If no registry configured, we're in local-only mode
+        if not registry_url:
+            raise SandboxError(
+                f"Module image '{module_identifier}' not found locally.\n"
+                "Build it with: make build-modules\n"
+                "\n"
+                "Or configure a registry URL via FUZZFORGE_REGISTRY__URL environment variable."
+            )
+
         logger.info(
             "module image not found locally, pulling from registry",
             module=module_identifier,
@@ -260,7 +269,7 @@ class ModuleExecutor:
             info="This may take a moment on first run",
         )
         self._pull_module_image(module_identifier, registry_url, tag)
-        
+
         # Verify image now exists
         if not self._check_image_exists(module_identifier):
             message = (
@@ -332,6 +341,7 @@ class ModuleExecutor:
         try:
             # Create temporary directory - caller must clean it up after container finishes
             from tempfile import mkdtemp
+
             temp_path = Path(mkdtemp(prefix="fuzzforge-input-"))
 
             # Copy assets to temp directory
@@ -341,16 +351,19 @@ class ModuleExecutor:
                     if assets_path.suffix == ".gz" or assets_path.name.endswith(".tar.gz"):
                         # Extract archive contents
                         import tarfile
+
                         with tarfile.open(assets_path, "r:gz") as tar:
                             tar.extractall(path=temp_path)
                         logger.debug("extracted tar.gz archive", archive=str(assets_path))
                     else:
                         # Single file - copy it
                         import shutil
+
                         shutil.copy2(assets_path, temp_path / assets_path.name)
                 else:
                     # Directory - copy all files (including subdirectories)
                     import shutil
+
                     for item in assets_path.iterdir():
                         if item.is_file():
                             shutil.copy2(item, temp_path / item.name)
@@ -363,19 +376,23 @@ class ModuleExecutor:
                 if item.name == "input.json":
                     continue
                 if item.is_file():
-                    resources.append({
-                        "name": item.stem,
-                        "description": f"Input file: {item.name}",
-                        "kind": "unknown",
-                        "path": f"/data/input/{item.name}",
-                    })
+                    resources.append(
+                        {
+                            "name": item.stem,
+                            "description": f"Input file: {item.name}",
+                            "kind": "unknown",
+                            "path": f"/data/input/{item.name}",
+                        }
+                    )
                 elif item.is_dir():
-                    resources.append({
-                        "name": item.name,
-                        "description": f"Input directory: {item.name}",
-                        "kind": "unknown",
-                        "path": f"/data/input/{item.name}",
-                    })
+                    resources.append(
+                        {
+                            "name": item.name,
+                            "description": f"Input directory: {item.name}",
+                            "kind": "unknown",
+                            "path": f"/data/input/{item.name}",
+                        }
+                    )
 
             # Create input.json with settings and resources
             input_data = {
@@ -461,6 +478,7 @@ class ModuleExecutor:
         try:
             # Create temporary directory for results
             from tempfile import mkdtemp
+
             temp_dir = Path(mkdtemp(prefix="fuzzforge-results-"))
 
             # Copy entire output directory from container
@@ -489,6 +507,7 @@ class ModuleExecutor:
 
             # Clean up temp directory
             import shutil
+
             shutil.rmtree(temp_dir, ignore_errors=True)
 
             logger.info("results pulled successfully", sandbox=sandbox, archive=str(archive_path))
@@ -571,6 +590,7 @@ class ModuleExecutor:
                 self.terminate_sandbox(sandbox)
             if input_dir and input_dir.exists():
                 import shutil
+
                 shutil.rmtree(input_dir, ignore_errors=True)
 
     # -------------------------------------------------------------------------
@@ -669,4 +689,5 @@ class ModuleExecutor:
             self.terminate_sandbox(container_id)
             if input_dir:
                 import shutil
+
                 shutil.rmtree(input_dir, ignore_errors=True)

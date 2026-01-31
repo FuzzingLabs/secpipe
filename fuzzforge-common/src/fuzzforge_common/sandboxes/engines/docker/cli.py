@@ -95,8 +95,8 @@ class DockerCLI(AbstractFuzzForgeSandboxEngine):
                 continue
                 
             reference = f"{repo}:{tag}"
-            
-            if filter_prefix and not reference.startswith(filter_prefix):
+
+            if filter_prefix and filter_prefix not in reference:
                 continue
 
             images.append(
