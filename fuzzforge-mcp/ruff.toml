@@ -1,0 +1,16 @@
+line-length = 120
+
+[lint]
+select = [ "ALL" ]
+ignore = [
+    "COM812",   # conflicts with the formatter
+    "D203",     # conflicts with 'D211'
+    "D213",     # conflicts with 'D212'
+]
+
+[lint.per-file-ignores]
+"tests/*" = [
+    "PLR0913",  # allowing functions with many arguments in tests (required for fixtures)
+    "PLR2004",  # allowing comparisons using unamed numerical constants in tests
+    "S101",     # allowing 'assert' statements in tests
+]

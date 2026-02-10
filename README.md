@@ -1,243 +1,283 @@
-<p align="center">
-  <img src="docs/static/img/fuzzforge_banner_github.png" alt="FuzzForge Banner" width="100%">
-</p>
-<h1 align="center">🚧 FuzzForge is under active development</h1>
-
-<p align="center"><strong>AI-powered workflow automation and AI Agents for AppSec, Fuzzing & Offensive Security</strong></p>
+<h1 align="center"> FuzzForge OSS</h1>
+<h3 align="center">AI-Powered Security Research Orchestration via MCP</h3>
 
 <p align="center">
   <a href="https://discord.gg/8XEX33UUwZ"><img src="https://img.shields.io/discord/1420767905255133267?logo=discord&label=Discord" alt="Discord"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-BSL%20%2B%20Apache-orange" alt="License: BSL + Apache"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11%2B-blue" alt="Python 3.11+"/></a>
-  <a href="https://fuzzforge.ai"><img src="https://img.shields.io/badge/Website-fuzzforge.ai-blue" alt="Website"/></a>
-  <img src="https://img.shields.io/badge/version-0.7.3-green" alt="Version">
-  <a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers"><img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars"></a>
-  
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue" alt="License: Apache 2.0"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.12%2B-blue" alt="Python 3.12+"/></a>
+  <a href="https://modelcontextprotocol.io"><img src="https://img.shields.io/badge/MCP-compatible-green" alt="MCP Compatible"/></a>
+  <a href="https://fuzzforge.ai"><img src="https://img.shields.io/badge/Website-fuzzforge.ai-purple" alt="Website"/></a>
+</p>
+
+<p align="center">
+  <strong>Let AI agents orchestrate your security research workflows locally</strong>
 </p>
 
 <p align="center">
   <sub>
-    <a href="#-overview"><b>Overview</b></a>
-    • <a href="#-key-features"><b>Features</b></a>
-    • <a href="#-installation"><b>Installation</b></a>
-    • <a href="#-quickstart"><b>Quickstart</b></a>
-    • <a href="#ai-powered-workflow-execution"><b>AI Demo</b></a>
-    • <a href="#-contributing"><b>Contributing</b></a>
-    • <a href="#%EF%B8%8F-roadmap"><b>Roadmap</b></a>
+    <a href="#-overview"><b>Overview</b></a> •
+    <a href="#-features"><b>Features</b></a> •
+    <a href="#-installation"><b>Installation</b></a> •
+    <a href="USAGE.md"><b>Usage Guide</b></a> •
+    <a href="#-modules"><b>Modules</b></a> •
+    <a href="#-contributing"><b>Contributing</b></a>
   </sub>
 </p>
 
 ---
 
+> 🚧 **FuzzForge OSS is under active development.** Expect breaking changes and new features!
+
+---
+
 ## 🚀 Overview
 
-**FuzzForge** helps security researchers and engineers automate **application security** and **offensive security** workflows with the power of AI and fuzzing frameworks.
+**FuzzForge OSS** is an open-source runtime that enables AI agents (GitHub Copilot, Claude, etc.) to orchestrate security research workflows through the **Model Context Protocol (MCP)**.
 
-- Orchestrate static & dynamic analysis
-- Automate vulnerability research
-- Scale AppSec testing with AI agents
-- Build, share & reuse workflows across teams
+### The Core: Modules
 
-FuzzForge is **open source**, built to empower security teams, researchers, and the community.
+At the heart of FuzzForge are **modules** - containerized security tools that AI agents can discover, configure, and orchestrate. Each module encapsulates a specific security capability (static analysis, fuzzing, crash analysis, etc.) and runs in an isolated container.
 
-> 🚧 FuzzForge is under active development. Expect breaking changes.
->
-> **Note:** Fuzzing workflows (`atheris_fuzzing`, `cargo_fuzzing`, `ossfuzz_campaign`) are in early development. OSS-Fuzz integration is under heavy active development. For stable workflows, use: `security_assessment`, `gitleaks_detection`, `trufflehog_detection`, or `llm_secret_detection`.
+- **🔌 Plug & Play**: Modules are self-contained - just pull and run
+- **🤖 AI-Native**: Designed for AI agent orchestration via MCP
+- **🔗 Composable**: Chain modules together into automated workflows
+- **📦 Extensible**: Build custom modules with the Python SDK
 
----
+The OSS runtime handles module discovery, execution, and result collection. Security modules (developed separately) provide the actual security tooling - from static analyzers to fuzzers to crash triagers.
 
-## Demo - Manual Workflow Setup
+Instead of manually running security tools, describe what you want and let your AI assistant handle it.
 
-![Manual Workflow Demo](docs/static/videos/manual_workflow.gif)
+### 🎬 Use Case: Rust Fuzzing Pipeline
 
-_Setting up and running security workflows through the interface_
+> **Scenario**: Fuzz a Rust crate to discover vulnerabilities using AI-assisted harness generation and parallel fuzzing.
 
-👉 More installation options in the [Documentation](https://docs.fuzzforge.ai).
-
----
-
-## ✨ Key Features
-
-- 🤖 **AI Agents for Security** – Specialized agents for AppSec, reversing, and fuzzing
-- 🛠 **Workflow Automation** – Define & execute AppSec workflows as code
-- 📈 **Vulnerability Research at Scale** – Rediscover 1-days & find 0-days with automation
-- 🔗 **Fuzzer Integration** – Atheris (Python), cargo-fuzz (Rust), OSS-Fuzz campaigns
-- 🌐 **Community Marketplace** – Share workflows, corpora, PoCs, and modules
-- 🔒 **Enterprise Ready** – Team/Corp cloud tiers for scaling offensive security
+<table align="center">
+  <tr>
+    <th>1️⃣ Analyze, Generate & Validate Harnesses</th>
+    <th>2️⃣ Run Parallel Continuous Fuzzing</th>
+  </tr>
+  <tr>
+    <td><img src="assets/demopart2.gif" alt="FuzzForge Demo - Analysis Pipeline" width="100%"></td>
+    <td><img src="assets/demopart1.gif" alt="FuzzForge Demo - Parallel Fuzzing" width="100%"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>AI agent analyzes code, generates harnesses, and validates they compile</sub></td>
+    <td align="center"><sub>Multiple fuzzing sessions run in parallel with live metrics</sub></td>
+  </tr>
+</table>
 
 ---
 
 ## ⭐ Support the Project
 
+If you find FuzzForge useful, please **star the repo** to support development! 🚀
+
 <a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers">
   <img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars">
 </a>
 
-If you find FuzzForge useful, please star the repo to support development 🚀
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---------|-------------|
+| 🤖 **AI-Native** | Built for MCP - works with GitHub Copilot, Claude, and any MCP-compatible agent |
+| 📦 **Containerized** | Each module runs in isolation via Docker or Podman |
+| 🔄 **Continuous Mode** | Long-running tasks (fuzzing) with real-time metrics streaming |
+| 🔗 **Workflows** | Chain multiple modules together in automated pipelines |
+| 🛠️ **Extensible** | Create custom modules with the Python SDK |
+| 🏠 **Local First** | All execution happens on your machine - no cloud required |
+| 🔒 **Secure** | Sandboxed containers with no network access by default |
 
 ---
 
-## 🔍 Secret Detection Benchmarks
+## 🏗️ Architecture
 
-FuzzForge includes three secret detection workflows benchmarked on a controlled dataset of **32 documented secrets** (12 Easy, 10 Medium, 10 Hard):
-
-| Tool | Recall | Secrets Found | Speed |
-|------|--------|---------------|-------|
-| **LLM (gpt-5-mini)** | **84.4%** | 41 | 618s |
-| **LLM (gpt-4o-mini)** | 56.2% | 30 | 297s |
-| **Gitleaks** | 37.5% | 12 | 5s |
-| **TruffleHog** | 0.0% | 1 | 5s |
-
-📊 [Full benchmark results and analysis](backend/benchmarks/by_category/secret_detection/results/comparison_report.md)
-
-The LLM-based detector excels at finding obfuscated and hidden secrets through semantic analysis, while pattern-based tools (Gitleaks) offer speed for standard secret formats.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     AI Agent (Copilot/Claude)                   │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │ MCP Protocol (stdio)
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     FuzzForge MCP Server                        │
+│  ┌─────────────┐  ┌──────────────┐  ┌────────────────────────┐  │
+│  │list_modules │  │execute_module│  │start_continuous_module │  │
+│  └─────────────┘  └──────────────┘  └────────────────────────┘  │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     FuzzForge Runner                            │
+│                  Container Engine (Docker/Podman)               │
+└───────────────────────────┬─────────────────────────────────────┘
+                            │
+        ┌───────────────────┼───────────────────┐
+        ▼                   ▼                   ▼
+┌───────────────┐   ┌───────────────┐   ┌───────────────┐
+│  Module A     │   │  Module B     │   │  Module C     │
+│  (Container)  │   │  (Container)  │   │  (Container)  │
+└───────────────┘   └───────────────┘   └───────────────┘
+```
 
 ---
 
 ## 📦 Installation
 
-### Requirements
+### Prerequisites
 
-**Python 3.11+**
-Python 3.11 or higher is required.
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** package manager
+- **Docker** ([Install Docker](https://docs.docker.com/get-docker/)) or Podman
 
-**uv Package Manager**
-
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
-```
-
-**Docker**
-For containerized workflows, see the [Docker Installation Guide](https://docs.docker.com/get-docker/).
-
-#### Configure AI Agent API Keys (Optional)
-
-For AI-powered workflows, configure your LLM API keys:
-
-```bash
-cp volumes/env/.env.template volumes/env/.env
-# Edit volumes/env/.env and add your API keys (OpenAI, Anthropic, Google, etc.)
-# Add your key to LITELLM_GEMINI_API_KEY 
-```
-> Dont change the OPENAI_API_KEY default value, as it is used for the LLM proxy. 
-
-This is required for:
-- `llm_secret_detection` workflow
-- AI agent features (`ff ai agent`)
-
-Basic security workflows (gitleaks, trufflehog, security_assessment) work without this configuration.
-
-### CLI Installation
-
-After installing the requirements, install the FuzzForge CLI:
+### Quick Install
 
 ```bash
 # Clone the repository
-git clone https://github.com/fuzzinglabs/fuzzforge_ai.git
+git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
 cd fuzzforge_ai
 
-# Install CLI with uv (from the root directory)
-uv tool install --python python3.12 .
+# Install dependencies
+uv sync
+
+# Build module images
+make build-modules
+```
+
+### Configure MCP for Your AI Agent
+
+```bash
+# For GitHub Copilot
+uv run fuzzforge mcp install copilot
+
+# For Claude Code (CLI)
+uv run fuzzforge mcp install claude-code
+
+# For Claude Desktop (standalone app)
+uv run fuzzforge mcp install claude-desktop
+
+# Verify installation
+uv run fuzzforge mcp status
+```
+
+**Restart your editor** and your AI agent will have access to FuzzForge tools!
+
+---
+
+## 📦 Modules
+
+FuzzForge modules are containerized security tools that AI agents can orchestrate. The module ecosystem is designed around a simple principle: **the OSS runtime orchestrates, enterprise modules execute**.
+
+### Module Ecosystem
+
+| | FuzzForge OSS | FuzzForge Enterprise Modules |
+|---|---|---|
+| **What** | Runtime & MCP server | Security research modules |
+| **License** | Apache 2.0 | BSL 1.1 (Business Source License) |
+| **Compatibility** | ✅ Runs any compatible module | ✅ Works with OSS runtime |
+
+**Enterprise modules** are developed separately and provide production-ready security tooling:
+
+| Category | Modules | Description |
+|----------|---------|-------------|
+| 🔍 **Static Analysis** | Rust Analyzer, Solidity Analyzer, Cairo Analyzer | Code analysis and fuzzable function detection |
+| 🎯 **Fuzzing** | Cargo Fuzzer, Honggfuzz, AFL++ | Coverage-guided fuzz testing |
+| 💥 **Crash Analysis** | Crash Triager, Root Cause Analyzer | Automated crash deduplication and analysis |
+| 🔐 **Vulnerability Detection** | Pattern Matcher, Taint Analyzer | Security vulnerability scanning |
+| 📝 **Reporting** | Report Generator, SARIF Exporter | Automated security report generation |
+
+> 💡 **Build your own modules!** The FuzzForge SDK allows you to create custom modules that integrate seamlessly with the OSS runtime. See [Creating Custom Modules](#-creating-custom-modules).
+
+### Execution Modes
+
+Modules run in two execution modes:
+
+#### One-shot Execution
+
+Run a module once and get results:
+
+```python
+result = execute_module("my-analyzer", assets_path="/path/to/project")
+```
+
+#### Continuous Execution
+
+For long-running tasks like fuzzing, with real-time metrics:
+
+```python
+# Start continuous execution
+session = start_continuous_module("my-fuzzer", 
+    assets_path="/path/to/project",
+    configuration={"target": "my_target"})
+
+# Check status with live metrics
+status = get_continuous_status(session["session_id"])
+
+# Stop and collect results
+stop_continuous_module(session["session_id"])
 ```
 
 ---
 
-## ⚡ Quickstart
+## 🛠️ Creating Custom Modules
 
-Run your first workflow with **Temporal orchestration** and **automatic file upload**:
+Build your own security modules with the FuzzForge SDK:
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/fuzzinglabs/fuzzforge_ai.git
-cd fuzzforge_ai
+```python
+from fuzzforge_modules_sdk import FuzzForgeModule, FuzzForgeModuleResults
 
-# 2. Copy the default LLM env config
-cp volumes/env/.env.template volumes/env/.env
-
-# 3. Start FuzzForge with Temporal
-docker compose up -d
-
-# 4. Start the Python worker (needed for security_assessment workflow)
-docker compose up -d worker-python
+class MySecurityModule(FuzzForgeModule):
+    def _run(self, resources):
+        self.emit_event("started", target=resources[0].path)
+        
+        # Your analysis logic here
+        results = self.analyze(resources)
+        
+        self.emit_progress(100, status="completed", 
+            message=f"Analysis complete")
+        return FuzzForgeModuleResults.SUCCESS
 ```
 
-> The first launch can take 2-3 minutes for services to initialize ☕
->
-> Workers don't auto-start by default (saves RAM). Start the worker you need before running workflows.
+📖 See the [Module SDK Guide](fuzzforge-modules/fuzzforge-modules-sdk/README.md) for details.
 
-**Workflow-to-Worker Quick Reference:**
+---
 
-| Workflow | Worker Required | Startup Command |
-|----------|----------------|-----------------|
-| `security_assessment`, `python_sast`, `llm_analysis`, `atheris_fuzzing` | worker-python | `docker compose up -d worker-python` |
-| `android_static_analysis` | worker-android | `docker compose up -d worker-android` |
-| `cargo_fuzzing` | worker-rust | `docker compose up -d worker-rust` |
-| `ossfuzz_campaign` | worker-ossfuzz | `docker compose up -d worker-ossfuzz` |
-| `llm_secret_detection`, `trufflehog_detection`, `gitleaks_detection` | worker-secrets | `docker compose up -d worker-secrets` |
+## 📁 Project Structure
 
-```bash
-# 5. Run your first workflow (files are automatically uploaded)
-cd test_projects/vulnerable_app/
-fuzzforge init                           # Initialize FuzzForge project
-ff workflow run security_assessment .    # Start workflow - CLI uploads files automatically!
-
-# The CLI will:
-# - Detect the local directory
-# - Create a compressed tarball
-# - Upload to backend (via MinIO)
-# - Start the workflow on vertical worker
 ```
-
-**What's running:**
-- **Temporal**: Workflow orchestration (UI at http://localhost:8080)
-- **MinIO**: File storage for targets (Console at http://localhost:9001)
-- **Vertical Workers**: Pre-built workers with security toolchains
-- **Backend API**: FuzzForge REST API (http://localhost:8000)
-
-## AI-Powered Workflow Execution
-
-![LLM Workflow Demo](docs/static/videos/llm_workflow.gif)
-
-_AI agents automatically analyzing code and providing security insights_
-
-## 📚 Resources
-
-- 🌐 [Website](https://fuzzforge.ai)
-- 📖 [Documentation](https://docs.fuzzforge.ai)
-- 💬 [Community Discord](https://discord.gg/8XEX33UUwZ)
-- 🎓 [FuzzingLabs Academy](https://academy.fuzzinglabs.com/?coupon=GITHUB_FUZZFORGE)
+fuzzforge_ai/
+├── fuzzforge-cli/           # Command-line interface
+├── fuzzforge-common/        # Shared abstractions (containers, storage)
+├── fuzzforge-mcp/           # MCP server for AI agents
+├── fuzzforge-modules/       # Security modules
+│   └── fuzzforge-modules-sdk/   # Module development SDK
+├── fuzzforge-runner/        # Local execution engine
+├── fuzzforge-types/         # Type definitions & schemas
+└── demo/                    # Demo projects for testing
+```
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the community!  
-There are many ways to help:
+We welcome contributions from the community!
 
-- Report bugs by opening an [issue](../../issues)
-- Suggest new features or improvements
-- Submit pull requests with fixes or enhancements
-- Share workflows, corpora, or modules with the community
+- 🐛 Report bugs via [GitHub Issues](../../issues)
+- 💡 Suggest features or improvements
+- 🔧 Submit pull requests
+- 📦 Share your custom modules
 
-See our [Contributing Guide](CONTRIBUTING.md) for details.
-
----
-
-## 🗺️ Roadmap
-
-Planned features and improvements:
-
-- 📦 Public workflow & module marketplace
-- 🤖 New specialized AI agents (Rust, Go, Android, Automotive)
-- 🔗 Expanded fuzzer integrations (LibFuzzer, Jazzer, more network fuzzers)
-- ☁️ Multi-tenant SaaS platform with team collaboration
-- 📊 Advanced reporting & analytics
-
-👉 Follow updates in the [GitHub issues](../../issues) and [Discord](https://discord.gg/8XEX33UUwZ)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 📜 License
+## 📄 License
 
-FuzzForge is released under the **Business Source License (BSL) 1.1**, with an automatic fallback to **Apache 2.0** after 4 years.  
-See [LICENSE](LICENSE) and [LICENSE-APACHE](LICENSE-APACHE) for details.
+Apache 2.0 - See [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <strong>Built with ❤️ by <a href="https://fuzzinglabs.com">FuzzingLabs</a></strong>
+</p>

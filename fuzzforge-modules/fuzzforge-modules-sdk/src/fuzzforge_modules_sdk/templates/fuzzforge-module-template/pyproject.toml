@@ -1,0 +1,74 @@
+[project]
+name = "fuzzforge-module-template"
+version = "0.1.0"
+description = "FIXME: Add module description"
+authors = []
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fuzzforge-modules-sdk==0.0.1",
+    "pydantic==2.12.4",
+    "structlog==25.5.0",
+]
+
+[project.optional-dependencies]
+lints = [
+    "bandit==1.8.6",
+    "mypy==1.18.2",
+    "ruff==0.14.4",
+]
+tests = [
+    "pytest==9.0.2",
+]
+
+[project.scripts]
+module = "module.__main__:main"
+
+[tool.uv.sources]
+fuzzforge-modules-sdk = { workspace = true }
+
+[tool.uv]
+package = true
+
+# FuzzForge module metadata for AI agent discovery
+# See MODULE_METADATA.md for full documentation
+[tool.fuzzforge.module]
+# REQUIRED: Unique module identifier (should match Docker image name)
+identifier = "fuzzforge-module-template"
+
+# REQUIRED: Module category - one of: analyzer, validator, fuzzer, reporter
+category = "analyzer"
+
+# Optional: Target programming language
+language = "rust"
+
+# Optional: Pipeline stage name
+pipeline_stage = "analysis"
+
+# Optional: Numeric order in pipeline (for sorting)
+pipeline_order = 1
+
+# Optional: List of module identifiers that must run before this one
+dependencies = []
+
+# Optional: Whether this module supports continuous/background execution
+continuous_mode = false
+
+# Optional: Expected runtime (e.g., "30s", "5m", "continuous")
+typical_duration = "30s"
+
+# REQUIRED: Use cases help AI agents understand when to use this module
+use_cases = [
+    "FIXME: Describe what this module does",
+    "FIXME: Describe typical usage scenario"
+]
+
+# REQUIRED: What inputs the module expects
+input_requirements = [
+    "FIXME: List required input files or artifacts"
+]
+
+# REQUIRED: What outputs the module produces
+output_artifacts = [
+    "FIXME: List output files produced"
+]

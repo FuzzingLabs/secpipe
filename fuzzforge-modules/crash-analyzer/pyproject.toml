@@ -1,0 +1,64 @@
+[project]
+name = "fuzzforge-crash-analyzer"
+version = "0.1.0"
+description = "Analyzes fuzzing crashes, deduplicates them, and generates security reports"
+authors = []
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fuzzforge-modules-sdk==0.0.1",
+    "pydantic==2.12.4",
+    "structlog==25.5.0",
+    "jinja2==3.1.6",
+]
+
+[project.optional-dependencies]
+lints = [
+    "bandit==1.8.6",
+    "mypy==1.18.2",
+    "ruff==0.14.4",
+]
+tests = [
+    "pytest==9.0.2",
+]
+
+[project.scripts]
+module = "module.__main__:main"
+
+[tool.uv.sources]
+fuzzforge-modules-sdk = { workspace = true }
+
+[tool.uv]
+package = true
+
+# FuzzForge module metadata for AI agent discovery
+[tool.fuzzforge.module]
+identifier = "fuzzforge-crash-analyzer"
+category = "reporter"
+language = "rust"
+pipeline_stage = "crash-analysis"
+pipeline_order = 4
+suggested_predecessors = ["fuzzforge-cargo-fuzzer"]
+continuous_mode = false
+typical_duration = "1m"
+
+use_cases = [
+    "Analyze crash artifacts from fuzzing",
+    "Deduplicate crashes by stack trace signature",
+    "Triage crashes by severity (critical, high, medium, low)",
+    "Generate security vulnerability reports"
+]
+
+common_inputs = [
+    "crash-artifacts",
+    "stack-traces",
+    "rust-source-code"
+]
+
+output_artifacts = [
+    "unique-crashes.json",
+    "crash-report.md",
+    "severity-analysis.json"
+]
+
+output_treatment = "Display crash-report.md as rendered markdown - this is the primary output. Show unique-crashes.json as a table with crash ID, severity, and affected function. Summarize severity-analysis.json showing counts by severity level (critical, high, medium, low)."

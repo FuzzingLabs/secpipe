@@ -1,0 +1,19 @@
+line-length = 120
+
+[lint]
+select = [ "ALL" ]
+ignore = [
+    "COM812",   # conflicts with the formatter
+    "D100",     # ignoring missing docstrings in public modules
+    "D104",     # ignoring missing docstrings in public packages
+    "D203",     # conflicts with 'D211'
+    "D213",     # conflicts with 'D212'
+    "TD002",    # ignoring missing author in 'TODO' statements
+    "TD003",    # ignoring missing issue link in 'TODO' statements
+]
+
+[lint.per-file-ignores]
+"tests/*" = [
+    "PLR2004",  # allowing comparisons using unamed numerical constants in tests
+    "S101",     # allowing 'assert' statements in tests
+]

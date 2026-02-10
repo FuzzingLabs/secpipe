@@ -1,28 +1,40 @@
 [project]
-name = "fuzzforge"
-version = "0.7.3"
-description = "FuzzForge Platform - Complete fuzzing and security testing platform with AI capabilities"
+name = "fuzzforge-oss"
+version = "1.0.0"
+description = "FuzzForge OSS - AI-driven security research platform for local execution"
 readme = "README.md"
-license = { text = "BSL-1.1" }
-requires-python = ">=3.11"
-dependencies = [
-    "fuzzforge-sdk",
-    "fuzzforge-ai",
-    "fuzzforge-cli",
+requires-python = ">=3.14"
+authors = [
+    { name = "FuzzingLabs", email = "contact@fuzzinglabs.com" }
 ]
 
-[project.scripts]
-fuzzforge = "fuzzforge_cli.main:main"
-ff = "fuzzforge_cli.main:main"
+[project.optional-dependencies]
+dev = [
+    "pytest==9.0.2",
+    "pytest-asyncio==1.3.0",
+    "pytest-httpx==0.36.0",
+    "fuzzforge-tests",
+    "fuzzforge-common",
+    "fuzzforge-types",
+    "fuzzforge-mcp",
+]
 
-[build-system]
-requires = ["uv_build>=0.8.22,<0.9.0"]
-build-backend = "uv_build"
-
-[tool.setuptools]
-packages = []
+[tool.uv.workspace]
+members = [
+    "fuzzforge-common",
+    "fuzzforge-types",
+    "fuzzforge-modules/fuzzforge-modules-sdk",
+    "fuzzforge-runner",
+    "fuzzforge-mcp",
+    "fuzzforge-cli",
+    "fuzzforge-tests",
+]
 
 [tool.uv.sources]
-fuzzforge-sdk = { path = "./sdk", editable = true }
-fuzzforge-ai = { path = "./ai", editable = true }
-fuzzforge-cli = { path = "./cli", editable = true }
+fuzzforge-common = { workspace = true }
+fuzzforge-types = { workspace = true }
+fuzzforge-modules-sdk = { workspace = true }
+fuzzforge-runner = { workspace = true }
+fuzzforge-mcp = { workspace = true }
+fuzzforge-cli = { workspace = true }
+fuzzforge-tests = { workspace = true }

@@ -1,0 +1,57 @@
+[project]
+name = "fuzzforge-rust-analyzer"
+version = "0.1.0"
+description = "Analyzes Rust projects to identify functions suitable for fuzzing"
+authors = []
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fuzzforge-modules-sdk==0.0.1",
+    "pydantic==2.12.4",
+    "structlog==25.5.0",
+]
+
+[project.optional-dependencies]
+lints = [
+    "bandit==1.8.6",
+    "mypy==1.18.2",
+    "ruff==0.14.4",
+]
+tests = [
+    "pytest==9.0.2",
+]
+
+[project.scripts]
+module = "module.__main__:main"
+
+[tool.uv]
+package = true
+
+# FuzzForge module metadata for AI agent discovery
+[tool.fuzzforge.module]
+identifier = "fuzzforge-rust-analyzer"
+category = "analyzer"
+language = "rust"
+pipeline_stage = "analysis"
+pipeline_order = 1
+suggested_predecessors = []
+continuous_mode = false
+typical_duration = "30s"
+
+use_cases = [
+    "Analyze Rust crate to find fuzzable functions",
+    "First step in Rust fuzzing pipeline before harness generation",
+    "Produces fuzzable_functions.json for AI harness generation"
+]
+
+common_inputs = [
+    "rust-source-code",
+    "Cargo.toml"
+]
+
+output_artifacts = [
+    "fuzzable_functions.json",
+    "analysis_report.md"
+]
+
+output_treatment = "Display analysis_report.md as rendered markdown. Show fuzzable_functions.json as a table listing function names, signatures, and fuzz-worthiness scores."
