@@ -8,17 +8,21 @@ common test utilities shared across multiple FuzzForge packages.
 import random
 import string
 from os import environ
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING
 from uuid import uuid4, uuid7
 
-import boto3
 import pytest
 from fuzzforge_common.sandboxes.engines.podman.configuration import PodmanConfiguration
-from fuzzforge_common.storage.configuration import StorageConfiguration
 from podman import PodmanClient
-from testcontainers.minio import MinioContainer
+from pydantic import UUID7
 
-# Constants for validation (moved from enterprise SDK)
+# Type aliases for identifiers (inlined from fuzzforge-types)
+type FuzzForgeProjectIdentifier = UUID7
+type FuzzForgeModuleIdentifier = UUID7
+type FuzzForgeWorkflowIdentifier = UUID7
+type FuzzForgeExecutionIdentifier = UUID7
+
+# Constants for validation
 FUZZFORGE_PROJECT_NAME_LENGTH_MIN: int = 3
 FUZZFORGE_PROJECT_NAME_LENGTH_MAX: int = 64
 FUZZFORGE_PROJECT_DESCRIPTION_LENGTH_MAX: int = 256
@@ -34,16 +38,6 @@ FUZZFORGE_WORKFLOW_DESCRIPTION_LENGTH_MAX: int = 256
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
     from pathlib import Path
-
-    from fuzzforge_types import (
-        FuzzForgeExecutionIdentifier,
-        FuzzForgeModuleIdentifier,
-        FuzzForgeProjectIdentifier,
-        FuzzForgeWorkflowIdentifier,
-    )
-
-
-MINIO_DEFAULT_IMAGE: str = "minio/minio:RELEASE.2025-09-07T16-13-09Z"
 
 
 def generate_random_string(
@@ -199,65 +193,6 @@ def random_module_execution_identifier() -> Callable[[], FuzzForgeExecutionIdent
         return uuid7()
 
     return inner
-
-
-@pytest.fixture(scope="session")
-def minio_container() -> Generator[MinioContainer]:
-    """Provide MinIO testcontainer for test session.
-
-    Creates a MinIO container that persists for the entire test session.
-    All tests share the same container but use different buckets/keys.
-
-    :return: MinIO container instance.
-
-    """
-    with MinioContainer(image=MINIO_DEFAULT_IMAGE) as container:
-        yield container
-
-
-@pytest.fixture
-def minio_container_configuration(minio_container: MinioContainer) -> dict[str, str]:
-    """TODO."""
-    return cast("dict[str, str]", minio_container.get_config())
-
-
-@pytest.fixture
-def storage_configuration(minio_container_configuration: dict[str, str]) -> StorageConfiguration:
-    """Provide S3 storage backend connected to MinIO testcontainer.
-
-    Creates the bucket in MinIO before returning the backend instance.
-
-    :param minio_container: MinIO testcontainer fixture.
-    :return: Configured S3StorageBackend instance with bucket already created.
-
-    """
-    return StorageConfiguration(
-        endpoint=f"http://{minio_container_configuration['endpoint']}",
-        access_key=minio_container_configuration["access_key"],
-        secret_key=minio_container_configuration["secret_key"],
-    )
-
-
-@pytest.fixture
-def boto3_client(minio_container_configuration: dict[str, str]) -> Any:
-    """TODO."""
-    return boto3.client(
-        "s3",
-        endpoint_url=f"http://{minio_container_configuration['endpoint']}",
-        aws_access_key_id=minio_container_configuration["access_key"],
-        aws_secret_access_key=minio_container_configuration["secret_key"],
-    )
-
-
-@pytest.fixture
-def random_bucket(
-    boto3_client: Any,
-    random_project_identifier: Callable[[], FuzzForgeProjectIdentifier],
-) -> str:
-    """TODO."""
-    project_identifier: FuzzForgeProjectIdentifier = random_project_identifier()
-    boto3_client.create_bucket(Bucket=str(project_identifier))
-    return str(project_identifier)
 
 
 @pytest.fixture

@@ -1,10 +1,15 @@
 """FuzzForge Runner constants."""
 
+from pydantic import UUID7
+
+#: Type alias for execution identifiers.
+type FuzzForgeExecutionIdentifier = UUID7
+
 #: Default directory name for module input inside sandbox.
-SANDBOX_INPUT_DIRECTORY: str = "/data/input"
+SANDBOX_INPUT_DIRECTORY: str = "/fuzzforge/input"
 
 #: Default directory name for module output inside sandbox.
-SANDBOX_OUTPUT_DIRECTORY: str = "/data/output"
+SANDBOX_OUTPUT_DIRECTORY: str = "/fuzzforge/output"
 
 #: Default archive filename for results.
 RESULTS_ARCHIVE_FILENAME: str = "results.tar.gz"

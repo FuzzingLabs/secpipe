@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable
 
     from fastmcp.client import FastMCPTransport
-    from fuzzforge_types import FuzzForgeProjectIdentifier
+    from fuzzforge_tests.fixtures import FuzzForgeProjectIdentifier
 
 pytest_plugins = ["fuzzforge_tests.fixtures"]
 

@@ -18,13 +18,13 @@ from typing import TYPE_CHECKING, Any, cast
 
 from fuzzforge_common.sandboxes.engines.docker.configuration import DockerConfiguration
 from fuzzforge_common.sandboxes.engines.podman.configuration import PodmanConfiguration
-from fuzzforge_types.executions import FuzzForgeExecutionIdentifier
 
 from fuzzforge_runner.constants import (
     MODULE_ENTRYPOINT,
     RESULTS_ARCHIVE_FILENAME,
     SANDBOX_INPUT_DIRECTORY,
     SANDBOX_OUTPUT_DIRECTORY,
+    FuzzForgeExecutionIdentifier,
 )
 from fuzzforge_runner.exceptions import ModuleExecutionError, SandboxError
 
@@ -284,7 +284,7 @@ class ModuleExecutor:
         Automatically pulls the module image from registry if it doesn't exist locally.
 
         :param module_identifier: Name/identifier of the module image.
-        :param input_volume: Optional path to mount as /data/input in the container.
+        :param input_volume: Optional path to mount as /fuzzforge/input in the container.
         :returns: The sandbox container identifier.
         :raises SandboxError: If sandbox creation fails.
 
@@ -362,7 +362,7 @@ class ModuleExecutor:
                                 "name": item.stem,
                                 "description": f"Input file: {item.name}",
                                 "kind": "unknown",
-                                "path": f"/data/input/{item.name}",
+                                "path": f"{SANDBOX_INPUT_DIRECTORY}/{item.name}",
                             }
                         )
                     elif item.is_dir():
@@ -371,7 +371,7 @@ class ModuleExecutor:
                                 "name": item.name,
                                 "description": f"Input directory: {item.name}",
                                 "kind": "unknown",
-                                "path": f"/data/input/{item.name}",
+                                "path": f"{SANDBOX_INPUT_DIRECTORY}/{item.name}",
                             }
                         )
 
@@ -441,7 +441,7 @@ class ModuleExecutor:
                             "name": item.stem,
                             "description": f"Input file: {item.name}",
                             "kind": "unknown",
-                            "path": f"/data/input/{item.name}",
+                            "path": f"{SANDBOX_INPUT_DIRECTORY}/{item.name}",
                         }
                     )
                 elif item.is_dir():
@@ -450,7 +450,7 @@ class ModuleExecutor:
                             "name": item.name,
                             "description": f"Input directory: {item.name}",
                             "kind": "unknown",
-                            "path": f"/data/input/{item.name}",
+                            "path": f"{SANDBOX_INPUT_DIRECTORY}/{item.name}",
                         }
                     )
 
@@ -730,7 +730,7 @@ class ModuleExecutor:
             "module": module_identifier,
         }
 
-    def read_module_output(self, container_id: str, output_file: str = "/data/output/stream.jsonl") -> str:
+    def read_module_output(self, container_id: str, output_file: str = f"{SANDBOX_OUTPUT_DIRECTORY}/stream.jsonl") -> str:
         """Read output file from a running module container.
 
         :param container_id: The container identifier.

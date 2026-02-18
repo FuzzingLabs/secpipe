@@ -15,14 +15,12 @@ dev = [
     "pytest-httpx==0.36.0",
     "fuzzforge-tests",
     "fuzzforge-common",
-    "fuzzforge-types",
     "fuzzforge-mcp",
 ]
 
 [tool.uv.workspace]
 members = [
     "fuzzforge-common",
-    "fuzzforge-types",
     "fuzzforge-modules/fuzzforge-modules-sdk",
     "fuzzforge-runner",
     "fuzzforge-mcp",
@@ -32,7 +30,6 @@ members = [
 
 [tool.uv.sources]
 fuzzforge-common = { workspace = true }
-fuzzforge-types = { workspace = true }
 fuzzforge-modules-sdk = { workspace = true }
 fuzzforge-runner = { workspace = true }
 fuzzforge-mcp = { workspace = true }

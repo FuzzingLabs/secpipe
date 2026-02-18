@@ -13,8 +13,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from uuid import uuid4
 
-from fuzzforge_types.executions import FuzzForgeExecutionIdentifier
-
+from fuzzforge_runner.constants import FuzzForgeExecutionIdentifier
 from fuzzforge_runner.exceptions import WorkflowExecutionError
 from fuzzforge_runner.executor import ModuleExecutor
 

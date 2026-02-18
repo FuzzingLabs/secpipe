@@ -7,7 +7,6 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fuzzforge-common",
-    "fuzzforge-types",
     "structlog>=25.5.0",
     "pydantic>=2.12.4",
     "pydantic-settings>=2.8.1",
@@ -25,4 +24,3 @@ packages = ["src/fuzzforge_runner"]
 
 [tool.uv.sources]
 fuzzforge-common = { workspace = true }
-fuzzforge-types = { workspace = true }

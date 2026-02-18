@@ -2,7 +2,6 @@
 
 This package provides:
 - Sandbox engine abstractions (Podman, Docker)
-- Storage abstractions (S3) - requires 'storage' extra
 - Common exceptions
 
 Example usage:
@@ -12,9 +11,6 @@ Example usage:
         Podman,
         PodmanConfiguration,
     )
-
-    # For storage (requires boto3):
-    from fuzzforge_common.storage import Storage
 """
 
 from fuzzforge_common.exceptions import FuzzForgeError
@@ -29,14 +25,6 @@ from fuzzforge_common.sandboxes import (
     PodmanConfiguration,
 )
 
-# Storage exceptions are always available (no boto3 required)
-from fuzzforge_common.storage.exceptions import (
-    FuzzForgeStorageError,
-    StorageConnectionError,
-    StorageDownloadError,
-    StorageUploadError,
-)
-
 __all__ = [
     "AbstractFuzzForgeEngineConfiguration",
     "AbstractFuzzForgeSandboxEngine",
@@ -44,11 +32,7 @@ __all__ = [
     "DockerConfiguration",
     "FuzzForgeError",
     "FuzzForgeSandboxEngines",
-    "FuzzForgeStorageError",
     "ImageInfo",
     "Podman",
     "PodmanConfiguration",
-    "StorageConnectionError",
-    "StorageDownloadError",
-    "StorageUploadError",
 ]
