@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 import structlog
 
 from fuzzforge_modules_sdk.api.constants import PATH_TO_INPUTS, PATH_TO_OUTPUTS
-from fuzzforge_modules_sdk.api.models import FuzzForgeModuleResults
+from fuzzforge_modules_sdk.api.models import FuzzForgeModuleResults, FuzzForgeModuleStatus
 from fuzzforge_modules_sdk.api.modules.base import FuzzForgeModule
 
 from module.models import Input, Output, CrashInfo, FuzzingStats, TargetResult
@@ -79,19 +79,19 @@ class Module(FuzzForgeModule):
         logger.info("cargo-fuzzer starting", resource_count=len(resources))
         
         # Emit initial progress
-        self.emit_progress(0, status="initializing", message="Setting up fuzzing environment")
+        self.emit_progress(0, status=FuzzForgeModuleStatus.INITIALIZING, message="Setting up fuzzing environment")
         self.emit_event("module_started", resource_count=len(resources))
 
         # Setup the fuzzing environment
         if not self._setup_environment(resources):
-            self.emit_progress(100, status="failed", message="Failed to setup environment")
+            self.emit_progress(100, status=FuzzForgeModuleStatus.FAILED, message="Failed to setup environment")
             return FuzzForgeModuleResults.FAILURE
 
         # Get list of fuzz targets
         targets = self._get_fuzz_targets()
         if not targets:
             logger.error("no fuzz targets found")
-            self.emit_progress(100, status="failed", message="No fuzz targets found")
+            self.emit_progress(100, status=FuzzForgeModuleStatus.FAILED, message="No fuzz targets found")
             return FuzzForgeModuleResults.FAILURE
 
         # Filter targets if specific ones were requested
@@ -100,7 +100,7 @@ class Module(FuzzForgeModule):
             targets = [t for t in targets if t in requested]
             if not targets:
                 logger.error("none of the requested targets found", requested=list(requested))
-                self.emit_progress(100, status="failed", message="Requested targets not found")
+                self.emit_progress(100, status=FuzzForgeModuleStatus.FAILED, message="Requested targets not found")
                 return FuzzForgeModuleResults.FAILURE
 
         logger.info("found fuzz targets", targets=targets)
@@ -137,7 +137,7 @@ class Module(FuzzForgeModule):
                 progress = int((i / len(targets)) * 100) if not is_continuous else 50
                 self.emit_progress(
                     progress,
-                    status="running",
+                    status=FuzzForgeModuleStatus.RUNNING,
                     message=progress_msg,
                     current_task=target,
                     metrics={
@@ -177,7 +177,7 @@ class Module(FuzzForgeModule):
         # Emit final progress
         self.emit_progress(
             100,
-            status="completed",
+            status=FuzzForgeModuleStatus.COMPLETED,
             message=f"Fuzzing completed. Found {total_crashes} crashes.",
             metrics={
                 "targets_fuzzed": len(self._target_results),
