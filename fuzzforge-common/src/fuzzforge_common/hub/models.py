@@ -92,6 +92,18 @@ class HubServerConfig(BaseModel):
         description="Category for grouping servers",
     )
 
+    #: Per-server timeout override in seconds (None = use default_timeout).
+    timeout: int | None = Field(
+        default=None,
+        description="Per-server execution timeout override in seconds",
+    )
+
+    #: Whether to use persistent container mode (keep container running between calls).
+    persistent: bool = Field(
+        default=False,
+        description="Keep container running between tool calls for stateful interactions",
+    )
+
 
 class HubToolParameter(BaseModel):
     """A parameter for an MCP tool.

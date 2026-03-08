@@ -7,7 +7,7 @@ from rich.console import Console
 from rich.table import Table
 from typer import Argument, Context, Option, Typer
 
-from fuzzforge_cli.context import get_project_path, get_runner
+from fuzzforge_cli.context import get_project_path, get_storage
 
 application: Typer = Typer(
     name="project",
@@ -36,10 +36,10 @@ def init_project(
     :param path: Path to initialize (defaults to current directory).
 
     """
-    runner = get_runner(context)
+    storage = get_storage(context)
     project_path = path or get_project_path(context)
 
-    storage_path = runner.init_project(project_path)
+    storage_path = storage.init_project(project_path)
 
     console = Console()
     console.print(f"[green]✓[/green] Project initialized at {project_path}")
@@ -65,10 +65,10 @@ def set_assets(
     :param assets_path: Path to assets.
 
     """
-    runner = get_runner(context)
+    storage = get_storage(context)
     project_path = get_project_path(context)
 
-    stored_path = runner.set_project_assets(project_path, assets_path)
+    stored_path = storage.set_project_assets(project_path, assets_path)
 
     console = Console()
     console.print(f"[green]✓[/green] Assets stored from {assets_path}")
@@ -87,11 +87,11 @@ def show_info(
     :param context: Typer context.
 
     """
-    runner = get_runner(context)
+    storage = get_storage(context)
     project_path = get_project_path(context)
 
-    executions = runner.list_executions(project_path)
-    assets_path = runner.storage.get_project_assets_path(project_path)
+    executions = storage.list_executions(project_path)
+    assets_path = storage.get_project_assets_path(project_path)
 
     console = Console()
     table = Table(title=f"Project: {project_path.name}")
@@ -118,10 +118,10 @@ def list_executions(
     :param context: Typer context.
 
     """
-    runner = get_runner(context)
+    storage = get_storage(context)
     project_path = get_project_path(context)
 
-    executions = runner.list_executions(project_path)
+    executions = storage.list_executions(project_path)
 
     console = Console()
 
@@ -134,7 +134,7 @@ def list_executions(
     table.add_column("Has Results")
 
     for exec_id in executions:
-        has_results = runner.get_execution_results(project_path, exec_id) is not None
+        has_results = storage.get_execution_results(project_path, exec_id) is not None
         table.add_row(exec_id, "✓" if has_results else "-")
 
     console.print(table)
@@ -168,10 +168,10 @@ def get_results(
     :param extract_to: Optional directory to extract to.
 
     """
-    runner = get_runner(context)
+    storage = get_storage(context)
     project_path = get_project_path(context)
 
-    results_path = runner.get_execution_results(project_path, execution_id)
+    results_path = storage.get_execution_results(project_path, execution_id)
 
     console = Console()
 
@@ -182,5 +182,5 @@ def get_results(
     console.print(f"[green]✓[/green] Results: {results_path}")
 
     if extract_to:
-        extracted = runner.extract_results(results_path, extract_to)
+        extracted = storage.extract_results(results_path, extract_to)
         console.print(f"  Extracted to: {extracted}")

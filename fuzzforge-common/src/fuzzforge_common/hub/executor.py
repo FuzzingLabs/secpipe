@@ -12,7 +12,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
-from fuzzforge_common.hub.client import HubClient, HubClientError
+from fuzzforge_common.hub.client import HubClient, HubClientError, PersistentSession
 from fuzzforge_common.hub.models import HubServer, HubServerConfig, HubTool
 from fuzzforge_common.hub.registry import HubRegistry
 
@@ -106,6 +106,7 @@ class HubExecutor:
         """
         self._registry = HubRegistry(config_path)
         self._client = HubClient(timeout=timeout)
+        self._continuous_sessions: dict[str, dict[str, Any]] = {}
 
     @property
     def registry(self) -> HubRegistry:
@@ -291,6 +292,7 @@ class HubExecutor:
         """
         servers = []
         for server in self._registry.servers:
+            session = self._client.get_persistent_session(server.name)
             servers.append({
                 "name": server.name,
                 "identifier": server.identifier,
@@ -298,6 +300,8 @@ class HubExecutor:
                 "enabled": server.config.enabled,
                 "category": server.config.category,
                 "description": server.config.description,
+                "persistent": server.config.persistent,
+                "persistent_session_active": session is not None and session.alive,
                 "discovered": server.discovered,
                 "tool_count": len(server.tools),
                 "error": server.discovery_error,
@@ -332,3 +336,287 @@ class HubExecutor:
         if tool:
             return tool.input_schema
         return None
+
+    # ------------------------------------------------------------------
+    # Persistent session management
+    # ------------------------------------------------------------------
+
+    async def start_persistent_server(self, server_name: str) -> dict[str, Any]:
+        """Start a persistent container session for a server.
+
+        The container stays running between tool calls, allowing stateful
+        interactions (e.g., radare2 sessions, long-running fuzzing).
+
+        :param server_name: Name of the hub server to start.
+        :returns: Session status dictionary.
+        :raises ValueError: If server not found.
+
+        """
+        logger = get_logger()
+        server = self._registry.get_server(server_name)
+        if not server:
+            msg = f"Server '{server_name}' not found"
+            raise ValueError(msg)
+
+        session = await self._client.start_persistent_session(server.config)
+
+        # Auto-discover tools on the new session
+        try:
+            tools = await self._client.discover_tools(server)
+            self._registry.update_server_tools(server_name, tools)
+        except HubClientError as e:
+            logger.warning(
+                "Tool discovery failed on persistent session",
+                server=server_name,
+                error=str(e),
+            )
+
+        # Include discovered tools in the result so agent knows what's available
+        discovered_tools = []
+        server_obj = self._registry.get_server(server_name)
+        if server_obj:
+            for tool in server_obj.tools:
+                discovered_tools.append({
+                    "identifier": tool.identifier,
+                    "name": tool.name,
+                    "description": tool.description,
+                })
+
+        return {
+            "server_name": session.server_name,
+            "container_name": session.container_name,
+            "alive": session.alive,
+            "initialized": session.initialized,
+            "started_at": session.started_at.isoformat(),
+            "tools": discovered_tools,
+            "tool_count": len(discovered_tools),
+        }
+
+    async def stop_persistent_server(self, server_name: str) -> bool:
+        """Stop a persistent container session.
+
+        :param server_name: Server name.
+        :returns: True if a session was stopped.
+
+        """
+        return await self._client.stop_persistent_session(server_name)
+
+    def get_persistent_status(self, server_name: str) -> dict[str, Any] | None:
+        """Get status of a persistent session.
+
+        :param server_name: Server name.
+        :returns: Status dict or None if no session.
+
+        """
+        session = self._client.get_persistent_session(server_name)
+        if not session:
+            return None
+
+        from datetime import datetime, timezone  # noqa: PLC0415
+
+        return {
+            "server_name": session.server_name,
+            "container_name": session.container_name,
+            "alive": session.alive,
+            "initialized": session.initialized,
+            "started_at": session.started_at.isoformat(),
+            "uptime_seconds": int(
+                (datetime.now(tz=timezone.utc) - session.started_at).total_seconds()
+            ),
+        }
+
+    def list_persistent_sessions(self) -> list[dict[str, Any]]:
+        """List all persistent sessions.
+
+        :returns: List of session status dicts.
+
+        """
+        return self._client.list_persistent_sessions()
+
+    async def stop_all_persistent_servers(self) -> int:
+        """Stop all persistent sessions.
+
+        :returns: Number of sessions stopped.
+
+        """
+        return await self._client.stop_all_persistent_sessions()
+
+    # ------------------------------------------------------------------
+    # Continuous session management
+    # ------------------------------------------------------------------
+
+    async def start_continuous_tool(
+        self,
+        server_name: str,
+        start_tool: str,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Start a continuous hub tool session.
+
+        Ensures a persistent container is running, then calls the start tool
+        (e.g., ``cargo_fuzz_start``) which returns a session_id. Tracks the
+        session for subsequent status/stop calls.
+
+        :param server_name: Hub server name.
+        :param start_tool: Name of the start tool on the server.
+        :param arguments: Arguments for the start tool.
+        :returns: Start result including session_id.
+        :raises ValueError: If server not found.
+
+        """
+        logger = get_logger()
+
+        server = self._registry.get_server(server_name)
+        if not server:
+            msg = f"Server '{server_name}' not found"
+            raise ValueError(msg)
+
+        # Ensure persistent session is running
+        persistent = self._client.get_persistent_session(server_name)
+        if not persistent or not persistent.alive:
+            logger.info(
+                "Auto-starting persistent session for continuous tool",
+                server=server_name,
+            )
+            await self._client.start_persistent_session(server.config)
+            # Discover tools on the new session
+            try:
+                tools = await self._client.discover_tools(server)
+                self._registry.update_server_tools(server_name, tools)
+            except HubClientError as e:
+                logger.warning(
+                    "Tool discovery failed on persistent session",
+                    server=server_name,
+                    error=str(e),
+                )
+
+        # Call the start tool
+        result = await self._client.execute_tool(
+            server, start_tool, arguments,
+        )
+
+        # Extract session_id from result
+        content_text = ""
+        for item in result.get("content", []):
+            if item.get("type") == "text":
+                content_text = item.get("text", "")
+                break
+
+        import json  # noqa: PLC0415
+
+        try:
+            start_result = json.loads(content_text) if content_text else result
+        except json.JSONDecodeError:
+            start_result = result
+
+        session_id = start_result.get("session_id", "")
+
+        if session_id:
+            from datetime import datetime, timezone  # noqa: PLC0415
+
+            self._continuous_sessions[session_id] = {
+                "session_id": session_id,
+                "server_name": server_name,
+                "start_tool": start_tool,
+                "status_tool": start_tool.replace("_start", "_status"),
+                "stop_tool": start_tool.replace("_start", "_stop"),
+                "started_at": datetime.now(tz=timezone.utc).isoformat(),
+                "status": "running",
+            }
+
+        return start_result
+
+    async def get_continuous_tool_status(
+        self,
+        session_id: str,
+    ) -> dict[str, Any]:
+        """Get status of a continuous hub tool session.
+
+        :param session_id: Session ID from start_continuous_tool.
+        :returns: Status dict from the hub server's status tool.
+        :raises ValueError: If session not found.
+
+        """
+        session_info = self._continuous_sessions.get(session_id)
+        if not session_info:
+            msg = f"Unknown continuous session: {session_id}"
+            raise ValueError(msg)
+
+        server = self._registry.get_server(session_info["server_name"])
+        if not server:
+            msg = f"Server '{session_info['server_name']}' not found"
+            raise ValueError(msg)
+
+        result = await self._client.execute_tool(
+            server,
+            session_info["status_tool"],
+            {"session_id": session_id},
+        )
+
+        # Parse the text content
+        content_text = ""
+        for item in result.get("content", []):
+            if item.get("type") == "text":
+                content_text = item.get("text", "")
+                break
+
+        import json  # noqa: PLC0415
+
+        try:
+            return json.loads(content_text) if content_text else result
+        except json.JSONDecodeError:
+            return result
+
+    async def stop_continuous_tool(
+        self,
+        session_id: str,
+    ) -> dict[str, Any]:
+        """Stop a continuous hub tool session.
+
+        :param session_id: Session ID to stop.
+        :returns: Final results from the hub server's stop tool.
+        :raises ValueError: If session not found.
+
+        """
+        session_info = self._continuous_sessions.get(session_id)
+        if not session_info:
+            msg = f"Unknown continuous session: {session_id}"
+            raise ValueError(msg)
+
+        server = self._registry.get_server(session_info["server_name"])
+        if not server:
+            msg = f"Server '{session_info['server_name']}' not found"
+            raise ValueError(msg)
+
+        result = await self._client.execute_tool(
+            server,
+            session_info["stop_tool"],
+            {"session_id": session_id},
+        )
+
+        # Parse the text content
+        content_text = ""
+        for item in result.get("content", []):
+            if item.get("type") == "text":
+                content_text = item.get("text", "")
+                break
+
+        import json  # noqa: PLC0415
+
+        try:
+            stop_result = json.loads(content_text) if content_text else result
+        except json.JSONDecodeError:
+            stop_result = result
+
+        # Update session tracking
+        session_info["status"] = "stopped"
+
+        return stop_result
+
+    def list_continuous_sessions(self) -> list[dict[str, Any]]:
+        """List all tracked continuous sessions.
+
+        :returns: List of continuous session info dicts.
+
+        """
+        return list(self._continuous_sessions.values())

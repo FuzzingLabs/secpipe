@@ -15,7 +15,7 @@ Supported transport types:
 
 """
 
-from fuzzforge_common.hub.client import HubClient, HubClientError
+from fuzzforge_common.hub.client import HubClient, HubClientError, PersistentSession
 from fuzzforge_common.hub.executor import HubExecutionResult, HubExecutor
 from fuzzforge_common.hub.models import (
     HubConfig,
@@ -39,4 +39,5 @@ __all__ = [
     "HubServerType",
     "HubTool",
     "HubToolParameter",
+    "PersistentSession",
 ]

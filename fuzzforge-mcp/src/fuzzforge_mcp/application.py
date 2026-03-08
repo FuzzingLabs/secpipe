@@ -1,7 +1,8 @@
 """FuzzForge MCP Server Application.
 
 This is the main entry point for the FuzzForge MCP server, providing
-AI agents with tools to execute security research modules.
+AI agents with tools to discover and execute MCP hub tools for
+security research.
 
 """
 
@@ -12,7 +13,7 @@ from fastmcp import FastMCP
 from fastmcp.server.middleware.error_handling import ErrorHandlingMiddleware
 
 from fuzzforge_mcp import resources, tools
-from fuzzforge_runner import Settings
+from fuzzforge_mcp.settings import Settings
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
@@ -38,19 +39,18 @@ mcp: FastMCP = FastMCP(
     instructions="""
 FuzzForge is a security research orchestration platform. Use these tools to:
 
-1. **List modules**: Discover available security research modules
-2. **Execute modules**: Run modules in isolated containers
-3. **Execute workflows**: Chain multiple modules together
+1. **List hub servers**: Discover registered MCP tool servers
+2. **Discover tools**: Find available tools from hub servers
+3. **Execute hub tools**: Run security tools in isolated containers
 4. **Manage projects**: Initialize and configure projects
 5. **Get results**: Retrieve execution results
-6. **Hub tools**: Discover and execute tools from external MCP servers
 
 Typical workflow:
 1. Initialize a project with `init_project`
 2. Set project assets with `set_project_assets` (optional, only needed once for the source directory)
-3. List available modules with `list_modules`
-4. Execute a module with `execute_module` — use `assets_path` param to pass different inputs per module
-5. Read outputs from `results_path` returned by `execute_module` — check module's `output_artifacts` metadata for filenames
+3. List available hub servers with `list_hub_servers`
+4. Discover tools from servers with `discover_hub_tools`
+5. Execute hub tools with `execute_hub_tool`
 
 Hub workflow:
 1. List available hub servers with `list_hub_servers`

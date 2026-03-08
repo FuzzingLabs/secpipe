@@ -1,10 +1,23 @@
-"""FuzzForge Runner settings configuration."""
+"""FuzzForge MCP Server settings.
+
+Standalone settings for the MCP server. Replaces the previous dependency
+on fuzzforge-runner Settings now that the module system has been removed
+and FuzzForge operates exclusively through MCP hub tools.
+
+All settings can be configured via environment variables with the prefix
+``FUZZFORGE_``. Nested settings use double-underscore as delimiter.
+
+Example:
+    ``FUZZFORGE_ENGINE__TYPE=docker``
+    ``FUZZFORGE_STORAGE__PATH=/data/fuzzforge``
+    ``FUZZFORGE_HUB__CONFIG_PATH=/path/to/hub-config.json``
+
+"""
 
 from __future__ import annotations
 
 from enum import StrEnum
 from pathlib import Path
-from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,24 +33,21 @@ class EngineType(StrEnum):
 class EngineSettings(BaseModel):
     """Container engine configuration."""
 
-    #: Type of container engine to use. Docker is the default for simplicity.
+    #: Type of container engine to use.
     type: EngineType = EngineType.DOCKER
 
-    #: Path to the container engine socket (only used as fallback for socket-based engines).
+    #: Path to the container engine socket.
     socket: str = Field(default="")
 
-    #: Custom graph root for Podman storage (only used with Podman under Snap).
+    #: Custom graph root for Podman storage.
     graphroot: Path = Field(default=Path.home() / ".fuzzforge" / "containers" / "storage")
 
-    #: Custom run root for Podman runtime state (only used with Podman under Snap).
+    #: Custom run root for Podman runtime state.
     runroot: Path = Field(default=Path.home() / ".fuzzforge" / "containers" / "run")
 
 
 class StorageSettings(BaseModel):
-    """Storage configuration for local filesystem storage.
-
-    OSS uses direct file mounting without archiving for simplicity.
-    """
+    """Storage configuration for local filesystem storage."""
 
     #: Base path for local storage.
     path: Path = Field(default=Path.home() / ".fuzzforge" / "storage")
@@ -50,33 +60,12 @@ class ProjectSettings(BaseModel):
     default_path: Path = Field(default=Path.home() / ".fuzzforge" / "projects")
 
 
-class RegistrySettings(BaseModel):
-    """Container registry configuration for module images.
-
-    By default, registry URL is empty (local-only mode). When empty,
-    modules must be built locally with `make build-modules`.
-    Set via FUZZFORGE_REGISTRY__URL environment variable if needed.
-    """
-
-    #: Registry URL for pulling module images (empty = local-only mode).
-    url: str = Field(default="")
-
-    #: Default tag to use when pulling images.
-    default_tag: str = Field(default="latest")
-
-    #: Registry username for authentication (optional).
-    username: str | None = None
-
-    #: Registry password/token for authentication (optional).
-    password: str | None = None
-
-
 class HubSettings(BaseModel):
     """MCP Hub configuration for external tool servers.
 
     Controls the hub that bridges FuzzForge with external MCP servers
-    (e.g., mcp-security-hub). When enabled, AI agents can discover
-    and execute tools from registered MCP servers.
+    (e.g., mcp-security-hub). AI agents discover and execute tools
+    from registered MCP servers.
 
     Configure via environment variables:
         ``FUZZFORGE_HUB__ENABLED=true``
@@ -95,15 +84,10 @@ class HubSettings(BaseModel):
 
 
 class Settings(BaseSettings):
-    """FuzzForge Runner settings.
+    """FuzzForge MCP Server settings.
 
     Settings can be configured via environment variables with the prefix
-    ``FUZZFORGE_``. Nested settings use underscore as delimiter.
-
-    Example:
-        ``FUZZFORGE_ENGINE_TYPE=docker``
-        ``FUZZFORGE_STORAGE_PATH=/data/fuzzforge``
-        ``FUZZFORGE_MODULES_PATH=/path/to/modules``
+    ``FUZZFORGE_``. Nested settings use double-underscore as delimiter.
 
     """
 
@@ -122,14 +106,8 @@ class Settings(BaseSettings):
     #: Project settings.
     project: ProjectSettings = Field(default_factory=ProjectSettings)
 
-    #: Container registry settings.
-    registry: RegistrySettings = Field(default_factory=RegistrySettings)
-
     #: MCP Hub settings.
     hub: HubSettings = Field(default_factory=HubSettings)
-
-    #: Path to modules directory (for development/local builds).
-    modules_path: Path = Field(default=Path.home() / ".fuzzforge" / "modules")
 
     #: Enable debug logging.
     debug: bool = False

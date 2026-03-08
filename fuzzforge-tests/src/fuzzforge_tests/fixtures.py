@@ -16,24 +16,14 @@ from fuzzforge_common.sandboxes.engines.podman.configuration import PodmanConfig
 from podman import PodmanClient
 from pydantic import UUID7
 
-# Type aliases for identifiers (inlined from fuzzforge-types)
+# Type aliases for identifiers
 type FuzzForgeProjectIdentifier = UUID7
-type FuzzForgeModuleIdentifier = UUID7
-type FuzzForgeWorkflowIdentifier = UUID7
 type FuzzForgeExecutionIdentifier = UUID7
 
 # Constants for validation
 FUZZFORGE_PROJECT_NAME_LENGTH_MIN: int = 3
 FUZZFORGE_PROJECT_NAME_LENGTH_MAX: int = 64
 FUZZFORGE_PROJECT_DESCRIPTION_LENGTH_MAX: int = 256
-
-FUZZFORGE_MODULE_NAME_LENGTH_MIN: int = 3
-FUZZFORGE_MODULE_NAME_LENGTH_MAX: int = 64
-FUZZFORGE_MODULE_DESCRIPTION_LENGTH_MAX: int = 256
-
-FUZZFORGE_WORKFLOW_NAME_LENGTH_MIN: int = 3
-FUZZFORGE_WORKFLOW_NAME_LENGTH_MAX: int = 64
-FUZZFORGE_WORKFLOW_DESCRIPTION_LENGTH_MAX: int = 256
 
 if TYPE_CHECKING:
     from collections.abc import Callable, Generator
@@ -49,8 +39,6 @@ def generate_random_string(
 
 
 # ===== Project Fixtures =====
-# Note: random_project_identifier is provided by fuzzforge-tests
-# Note: random_module_execution_identifier is provided by fuzzforge-tests
 
 
 @pytest.fixture
@@ -80,78 +68,6 @@ def random_project_description() -> Callable[[], str]:
 
 
 @pytest.fixture
-def random_module_name() -> Callable[[], str]:
-    """Generate random module names."""
-
-    def inner() -> str:
-        return generate_random_string(
-            min_length=FUZZFORGE_MODULE_NAME_LENGTH_MIN,
-            max_length=FUZZFORGE_MODULE_NAME_LENGTH_MAX,
-        )
-
-    return inner
-
-
-@pytest.fixture
-def random_module_description() -> Callable[[], str]:
-    """Generate random module descriptions."""
-
-    def inner() -> str:
-        return generate_random_string(
-            min_length=1,
-            max_length=FUZZFORGE_MODULE_DESCRIPTION_LENGTH_MAX,
-        )
-
-    return inner
-
-
-@pytest.fixture
-def random_workflow_identifier() -> Callable[[], FuzzForgeWorkflowIdentifier]:
-    """Generate random workflow identifiers."""
-
-    def inner() -> FuzzForgeWorkflowIdentifier:
-        return uuid7()
-
-    return inner
-
-
-@pytest.fixture
-def random_workflow_name() -> Callable[[], str]:
-    """Generate random workflow names."""
-
-    def inner() -> str:
-        return generate_random_string(
-            min_length=FUZZFORGE_WORKFLOW_NAME_LENGTH_MIN,
-            max_length=FUZZFORGE_WORKFLOW_NAME_LENGTH_MAX,
-        )
-
-    return inner
-
-
-@pytest.fixture
-def random_workflow_description() -> Callable[[], str]:
-    """Generate random workflow descriptions."""
-
-    def inner() -> str:
-        return generate_random_string(
-            min_length=1,
-            max_length=FUZZFORGE_WORKFLOW_DESCRIPTION_LENGTH_MAX,
-        )
-
-    return inner
-
-
-@pytest.fixture
-def random_workflow_execution_identifier() -> Callable[[], FuzzForgeExecutionIdentifier]:
-    """Generate random workflow execution identifiers."""
-
-    def inner() -> FuzzForgeExecutionIdentifier:
-        return uuid7()
-
-    return inner
-
-
-@pytest.fixture
 def random_project_identifier() -> Callable[[], FuzzForgeProjectIdentifier]:
     """Generate random project identifiers.
 
@@ -169,18 +85,8 @@ def random_project_identifier() -> Callable[[], FuzzForgeProjectIdentifier]:
 
 
 @pytest.fixture
-def random_module_identifier() -> Callable[[], FuzzForgeModuleIdentifier]:
-    """Generate random module identifiers."""
-
-    def inner() -> FuzzForgeModuleIdentifier:
-        return uuid7()
-
-    return inner
-
-
-@pytest.fixture
-def random_module_execution_identifier() -> Callable[[], FuzzForgeExecutionIdentifier]:
-    """Generate random workflow execution identifiers.
+def random_execution_identifier() -> Callable[[], FuzzForgeExecutionIdentifier]:
+    """Generate random execution identifiers.
 
     Returns a callable that generates fresh UUID7 identifiers for each call.
     This pattern allows generating multiple unique identifiers within a single test.

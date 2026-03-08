@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError
 
-from fuzzforge_mcp.dependencies import get_project_path, get_runner
-
-if TYPE_CHECKING:
-    from fuzzforge_runner import Runner
+from fuzzforge_mcp.dependencies import get_project_path, get_storage
 
 
 mcp: FastMCP = FastMCP()
@@ -26,16 +23,16 @@ async def list_executions() -> list[dict[str, Any]]:
     :return: List of execution information dictionaries.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        execution_ids = runner.list_executions(project_path)
+        execution_ids = storage.list_executions(project_path)
 
         return [
             {
                 "execution_id": exec_id,
-                "has_results": runner.get_execution_results(project_path, exec_id) is not None,
+                "has_results": storage.get_execution_results(project_path, exec_id) is not None,
             }
             for exec_id in execution_ids
         ]
@@ -53,11 +50,11 @@ async def get_execution(execution_id: str) -> dict[str, Any]:
     :return: Execution information dictionary.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        results_path = runner.get_execution_results(project_path, execution_id)
+        results_path = storage.get_execution_results(project_path, execution_id)
 
         if results_path is None:
             raise ResourceError(f"Execution not found: {execution_id}")

@@ -1,4 +1,4 @@
-.PHONY: help install sync format lint typecheck test build-modules build-hub-images clean
+.PHONY: help install sync format lint typecheck test build-hub-images clean
 
 SHELL := /bin/bash
 
@@ -12,7 +12,6 @@ help:
 	@echo "  make lint          - Lint code with ruff"
 	@echo "  make typecheck     - Type check with mypy"
 	@echo "  make test          - Run all tests"
-	@echo "  make build-modules     - Build all module container images"
 	@echo "  make build-hub-images  - Build all mcp-security-hub images"
 	@echo "  make clean             - Clean build artifacts"
 	@echo ""
@@ -64,35 +63,6 @@ test:
 			cd "$$pkg" && uv run pytest && cd -; \
 		fi \
 	done
-
-# Build all module container images
-# Uses Docker by default, or Podman if FUZZFORGE_ENGINE=podman
-build-modules:
-	@echo "Building FuzzForge module images..."
-	@if [ "$$FUZZFORGE_ENGINE" = "podman" ]; then \
-		if [ -n "$$SNAP" ]; then \
-			echo "Using Podman with isolated storage (Snap detected)"; \
-			CONTAINER_CMD="podman --root ~/.fuzzforge/containers/storage --runroot ~/.fuzzforge/containers/run"; \
-		else \
-			echo "Using Podman"; \
-			CONTAINER_CMD="podman"; \
-		fi; \
-	else \
-		echo "Using Docker"; \
-		CONTAINER_CMD="docker"; \
-	fi; \
-	for module in fuzzforge-modules/*/; do \
-		if [ -f "$$module/Dockerfile" ] && \
-		   [ "$$module" != "fuzzforge-modules/fuzzforge-modules-sdk/" ] && \
-		   [ "$$module" != "fuzzforge-modules/fuzzforge-module-template/" ]; then \
-			name=$$(basename $$module); \
-			version=$$(grep 'version' "$$module/pyproject.toml" 2>/dev/null | head -1 | sed 's/.*"\(.*\\)".*/\\1/' || echo "0.1.0"); \
-			echo "Building $$name:$$version..."; \
-			$$CONTAINER_CMD build -t "fuzzforge-$$name:$$version" "$$module" || exit 1; \
-		fi \
-	done
-	@echo ""
-	@echo "✓ All modules built successfully!"
 
 # Build all mcp-security-hub images for the firmware analysis pipeline
 build-hub-images:

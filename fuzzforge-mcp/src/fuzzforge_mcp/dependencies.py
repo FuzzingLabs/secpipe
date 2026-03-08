@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
 from fastmcp.server.dependencies import get_context
-from fuzzforge_runner import Runner, Settings
 
 from fuzzforge_mcp.exceptions import FuzzForgeMCPError
+from fuzzforge_mcp.settings import Settings
+from fuzzforge_mcp.storage import LocalStorage
 
 if TYPE_CHECKING:
     from fastmcp import Context
@@ -16,6 +17,9 @@ if TYPE_CHECKING:
 
 # Track the current active project path (set by init_project)
 _current_project_path: Path | None = None
+
+# Singleton storage instance
+_storage: LocalStorage | None = None
 
 
 def set_current_project_path(project_path: Path) -> None:
@@ -60,11 +64,14 @@ def get_project_path() -> Path:
     return Path.cwd()
 
 
-def get_runner() -> Runner:
-    """Get a configured Runner instance.
+def get_storage() -> LocalStorage:
+    """Get the storage backend instance.
 
-    :return: Runner instance configured from MCP settings.
+    :return: LocalStorage instance.
 
     """
-    settings: Settings = get_settings()
-    return Runner(settings)
+    global _storage
+    if _storage is None:
+        settings = get_settings()
+        _storage = LocalStorage(settings.storage.path)
+    return _storage

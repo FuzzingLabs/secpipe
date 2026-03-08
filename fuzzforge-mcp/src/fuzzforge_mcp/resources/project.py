@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ResourceError
 
-from fuzzforge_mcp.dependencies import get_project_path, get_runner
-
-if TYPE_CHECKING:
-    from fuzzforge_runner import Runner
+from fuzzforge_mcp.dependencies import get_project_path, get_settings, get_storage
 
 
 mcp: FastMCP = FastMCP()
@@ -27,12 +24,12 @@ async def get_project() -> dict[str, Any]:
     :return: Project information dictionary.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        executions = runner.list_executions(project_path)
-        assets_path = runner.storage.get_project_assets_path(project_path)
+        executions = storage.list_executions(project_path)
+        assets_path = storage.get_project_assets_path(project_path)
 
         return {
             "path": str(project_path),
@@ -40,7 +37,7 @@ async def get_project() -> dict[str, Any]:
             "has_assets": assets_path is not None,
             "assets_path": str(assets_path) if assets_path else None,
             "execution_count": len(executions),
-            "recent_executions": executions[:10],  # Last 10 executions
+            "recent_executions": executions[:10],
         }
 
     except Exception as exception:
@@ -53,13 +50,11 @@ async def get_project_settings() -> dict[str, Any]:
     """Get current FuzzForge settings.
 
     Returns the active configuration for the MCP server including
-    engine, storage, and project settings.
+    engine, storage, and hub settings.
 
     :return: Settings dictionary.
 
     """
-    from fuzzforge_mcp.dependencies import get_settings
-
     try:
         settings = get_settings()
 
@@ -71,9 +66,10 @@ async def get_project_settings() -> dict[str, Any]:
             "storage": {
                 "path": str(settings.storage.path),
             },
-            "project": {
-                "path": str(settings.project.path),
-                "modules_path": str(settings.modules_path),
+            "hub": {
+                "enabled": settings.hub.enabled,
+                "config_path": str(settings.hub.config_path),
+                "timeout": settings.hub.timeout,
             },
             "debug": settings.debug,
         }

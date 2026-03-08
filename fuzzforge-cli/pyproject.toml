@@ -6,7 +6,7 @@ authors = []
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
-    "fuzzforge-runner==0.0.1",
+    "fuzzforge-mcp==0.0.1",
     "rich>=14.0.0",
     "typer==0.20.1",
 ]
@@ -25,4 +25,4 @@ tests = [
 fuzzforge = "fuzzforge_cli.__main__:main"
 
 [tool.uv.sources]
-fuzzforge-runner = { workspace = true }
+fuzzforge-mcp = { workspace = true }

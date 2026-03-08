@@ -5,35 +5,35 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from fuzzforge_runner import Runner, Settings
+from fuzzforge_mcp.storage import LocalStorage
 
 if TYPE_CHECKING:
     from typer import Context as TyperContext
 
 
 class Context:
-    """CLI context holding the runner instance and settings."""
+    """CLI context holding the storage instance and settings."""
 
-    _runner: Runner
+    _storage: LocalStorage
     _project_path: Path
 
-    def __init__(self, runner: Runner, project_path: Path) -> None:
+    def __init__(self, storage: LocalStorage, project_path: Path) -> None:
         """Initialize an instance of the class.
 
-        :param runner: FuzzForge runner instance.
+        :param storage: FuzzForge local storage instance.
         :param project_path: Path to the current project.
 
         """
-        self._runner = runner
+        self._storage = storage
         self._project_path = project_path
 
-    def get_runner(self) -> Runner:
-        """Get the runner instance.
+    def get_storage(self) -> LocalStorage:
+        """Get the storage instance.
 
-        :return: Runner instance.
+        :return: LocalStorage instance.
 
         """
-        return self._runner
+        return self._storage
 
     def get_project_path(self) -> Path:
         """Get the current project path.
@@ -44,14 +44,14 @@ class Context:
         return self._project_path
 
 
-def get_runner(context: TyperContext) -> Runner:
-    """Get runner from Typer context.
+def get_storage(context: TyperContext) -> LocalStorage:
+    """Get storage from Typer context.
 
     :param context: Typer context.
-    :return: Runner instance.
+    :return: LocalStorage instance.
 
     """
-    return cast("Context", context.obj).get_runner()
+    return cast("Context", context.obj).get_storage()
 
 
 def get_project_path(context: TyperContext) -> Path:

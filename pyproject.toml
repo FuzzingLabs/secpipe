@@ -21,8 +21,6 @@ dev = [
 [tool.uv.workspace]
 members = [
     "fuzzforge-common",
-    "fuzzforge-modules/fuzzforge-modules-sdk",
-    "fuzzforge-runner",
     "fuzzforge-mcp",
     "fuzzforge-cli",
     "fuzzforge-tests",
@@ -30,8 +28,6 @@ members = [
 
 [tool.uv.sources]
 fuzzforge-common = { workspace = true }
-fuzzforge-modules-sdk = { workspace = true }
-fuzzforge-runner = { workspace = true }
 fuzzforge-mcp = { workspace = true }
 fuzzforge-cli = { workspace = true }
 fuzzforge-tests = { workspace = true }

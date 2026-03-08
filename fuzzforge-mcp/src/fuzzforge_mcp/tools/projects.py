@@ -3,15 +3,12 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
 
-from fuzzforge_mcp.dependencies import get_project_path, get_runner, set_current_project_path
-
-if TYPE_CHECKING:
-    from fuzzforge_runner import Runner
+from fuzzforge_mcp.dependencies import get_project_path, get_storage, set_current_project_path
 
 
 mcp: FastMCP = FastMCP()
@@ -22,25 +19,24 @@ async def init_project(project_path: str | None = None) -> dict[str, Any]:
     """Initialize a new FuzzForge project.
 
     Creates a `.fuzzforge/` directory inside the project for storing:
-    - assets/: Input files (source code, etc.)
-    - inputs/: Prepared module inputs (for debugging)
-    - runs/: Execution results from each module
+    - config.json: Project configuration
+    - runs/: Execution results
 
-    This should be called before executing modules or workflows.
+    This should be called before executing hub tools.
 
     :param project_path: Path to the project directory. If not provided, uses current directory.
     :return: Project initialization result.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
 
     try:
         path = Path(project_path) if project_path else get_project_path()
-        
+
         # Track this as the current active project
         set_current_project_path(path)
-        
-        storage_path = runner.init_project(path)
+
+        storage_path = storage.init_project(path)
 
         return {
             "success": True,
@@ -58,23 +54,18 @@ async def init_project(project_path: str | None = None) -> dict[str, Any]:
 async def set_project_assets(assets_path: str) -> dict[str, Any]:
     """Set the initial assets (source code) for a project.
 
-    This sets the DEFAULT source directory mounted into modules.
-    Usually this is the project root containing source code (e.g. Cargo.toml, src/).
+    This sets the DEFAULT source directory that will be mounted into
+    hub tool containers via volume mounts.
 
-    IMPORTANT: This OVERWRITES the previous assets path. Only call this once
-    during project setup. To pass different inputs to a specific module
-    (e.g. crash files to crash-analyzer), use the `assets_path` parameter
-    on `execute_module` instead.
-
-    :param assets_path: Path to the project source directory or archive.
+    :param assets_path: Path to the project source directory.
     :return: Result including stored assets path.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        stored_path = runner.set_project_assets(
+        stored_path = storage.set_project_assets(
             project_path=project_path,
             assets_path=Path(assets_path),
         )
@@ -100,11 +91,11 @@ async def list_executions() -> dict[str, Any]:
     :return: List of execution IDs.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        executions = runner.list_executions(project_path)
+        executions = storage.list_executions(project_path)
 
         return {
             "success": True,
@@ -127,11 +118,11 @@ async def get_execution_results(execution_id: str, extract_to: str | None = None
     :return: Result including path to results archive.
 
     """
-    runner: Runner = get_runner()
+    storage = get_storage()
     project_path: Path = get_project_path()
 
     try:
-        results_path = runner.get_execution_results(project_path, execution_id)
+        results_path = storage.get_execution_results(project_path, execution_id)
 
         if results_path is None:
             return {
@@ -140,7 +131,7 @@ async def get_execution_results(execution_id: str, extract_to: str | None = None
                 "error": "Execution results not found",
             }
 
-        result = {
+        result: dict[str, Any] = {
             "success": True,
             "execution_id": execution_id,
             "results_path": str(results_path),
@@ -148,7 +139,7 @@ async def get_execution_results(execution_id: str, extract_to: str | None = None
 
         # Extract if requested
         if extract_to:
-            extracted_path = runner.extract_results(results_path, Path(extract_to))
+            extracted_path = storage.extract_results(results_path, Path(extract_to))
             result["extracted_path"] = str(extracted_path)
 
         return result

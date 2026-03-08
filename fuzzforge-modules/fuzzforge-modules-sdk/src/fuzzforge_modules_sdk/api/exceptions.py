@@ -1,2 +1,0 @@
-class FuzzForgeModuleError(Exception):
-    """TODO."""

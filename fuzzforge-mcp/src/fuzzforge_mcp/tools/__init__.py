@@ -2,13 +2,11 @@
 
 from fastmcp import FastMCP
 
-from fuzzforge_mcp.tools import hub, modules, projects, workflows
+from fuzzforge_mcp.tools import hub, projects
 
 mcp: FastMCP = FastMCP()
 
-mcp.mount(modules.mcp)
 mcp.mount(projects.mcp)
-mcp.mount(workflows.mcp)
 mcp.mount(hub.mcp)
 
 __all__ = [
