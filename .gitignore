@@ -8,5 +8,8 @@
 .vscode
 __pycache__
 
+# Build artifacts
+**/build/
+
 # Podman/Docker container storage artifacts
 ~/.fuzzforge/
