@@ -34,7 +34,7 @@ def main(
             envvar="FUZZFORGE_STORAGE__PATH",
             help="Path to the storage directory.",
         ),
-    ] = Path.home() / ".fuzzforge" / "storage",
+    ] = Path.cwd() / ".fuzzforge" / "storage",
     context: TyperContext = None,  # type: ignore[assignment]
 ) -> None:
     """FuzzForge AI - Security research orchestration platform.
@@ -42,7 +42,7 @@ def main(
     Discover and execute MCP hub tools for security research.
 
     """
-    storage = LocalStorage(storage_path=storage_path)
+    storage = LocalStorage(base_path=storage_path)
 
     context.obj = Context(
         storage=storage,
@@ -52,3 +52,19 @@ def main(
 
 application.add_typer(mcp.application)
 application.add_typer(projects.application)
+
+
+@application.command(
+    name="ui",
+    help="Launch the FuzzForge terminal interface.",
+)
+def launch_ui() -> None:
+    """Launch the interactive FuzzForge TUI dashboard.
+
+    Provides a visual dashboard showing AI agent connection status
+    and hub server availability, with wizards for setup and configuration.
+
+    """
+    from fuzzforge_cli.tui.app import FuzzForgeApp
+
+    FuzzForgeApp().run()

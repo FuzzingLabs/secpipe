@@ -169,7 +169,7 @@ def _generate_mcp_config(
 
     # Self-contained storage paths for FuzzForge containers
     # This isolates FuzzForge from system Podman and avoids snap issues
-    fuzzforge_home = Path.home() / ".fuzzforge"
+    fuzzforge_home = Path.cwd() / ".fuzzforge"
     graphroot = fuzzforge_home / "containers" / "storage"
     runroot = fuzzforge_home / "containers" / "run"
 

@@ -1,8 +1,9 @@
 # FuzzForge AI Usage Guide
 
-This guide covers everything you need to know to get started with FuzzForge AI - from installation to running your first security research workflow with AI.
+This guide covers everything you need to know to get started with FuzzForge AI — from installation to linking your first MCP hub and running security research workflows with AI.
 
 > **FuzzForge is designed to be used with AI agents** (GitHub Copilot, Claude, etc.) via MCP.
+> A terminal UI (`fuzzforge ui`) is provided for managing agents and hubs.
 > The CLI is available for advanced users but the primary experience is through natural language interaction with your AI assistant.
 
 ---
@@ -12,8 +13,17 @@ This guide covers everything you need to know to get started with FuzzForge AI -
 - [Quick Start](#quick-start)
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
-- [Building Modules](#building-modules)
-- [MCP Server Configuration](#mcp-server-configuration)
+- [Terminal UI](#terminal-ui)
+  - [Launching the UI](#launching-the-ui)
+  - [Dashboard](#dashboard)
+  - [Agent Setup](#agent-setup)
+  - [Hub Manager](#hub-manager)
+- [MCP Hub System](#mcp-hub-system)
+  - [What is an MCP Hub?](#what-is-an-mcp-hub)
+  - [FuzzingLabs Security Hub](#fuzzinglabs-security-hub)
+  - [Linking a Custom Hub](#linking-a-custom-hub)
+  - [Building Hub Images](#building-hub-images)
+- [MCP Server Configuration (CLI)](#mcp-server-configuration-cli)
   - [GitHub Copilot](#github-copilot)
   - [Claude Code (CLI)](#claude-code-cli)
   - [Claude Desktop](#claude-desktop)
@@ -27,7 +37,7 @@ This guide covers everything you need to know to get started with FuzzForge AI -
 ## Quick Start
 
 > **Prerequisites:** You need [uv](https://docs.astral.sh/uv/) and [Docker](https://docs.docker.com/get-docker/) installed.
-> See the [Prerequisites](#prerequisites) section for installation instructions.
+> See the [Prerequisites](#prerequisites) section for details.
 
 ```bash
 # 1. Clone and install
@@ -35,20 +45,29 @@ git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
 cd fuzzforge_ai
 uv sync
 
-# 2. Build the module images (one-time setup)
-make build-modules
+# 2. Launch the terminal UI
+uv run fuzzforge ui
 
-# 3. Install MCP for your AI agent
-uv run fuzzforge mcp install copilot  # For VS Code + GitHub Copilot
-# OR
-uv run fuzzforge mcp install claude-code  # For Claude Code CLI
-
-# 4. Restart your AI agent (VS Code, Claude, etc.)
-
-# 5. Start talking to your AI:
-#    "List available FuzzForge modules"
+# 3. Press 'h' → "FuzzingLabs Hub" to clone & link the default security hub
+# 4. Select an agent row and press Enter to link it
+# 5. Restart your AI agent and start talking:
+#    "What security tools are available?"
+#    "Scan this binary with binwalk and yara"
 #    "Analyze this Rust crate for fuzzable functions"
-#    "Start fuzzing the parse_input function"
+```
+
+Or do it entirely from the command line:
+
+```bash
+# Install MCP for your AI agent
+uv run fuzzforge mcp install copilot     # For VS Code + GitHub Copilot
+# OR
+uv run fuzzforge mcp install claude-code # For Claude Code CLI
+
+# Build hub tool images
+./scripts/build-hub-images.sh
+
+# Restart your AI agent — done!
 ```
 
 > **Note:** FuzzForge uses Docker by default. Podman is also supported via `--engine podman`.
@@ -59,9 +78,10 @@ uv run fuzzforge mcp install claude-code  # For Claude Code CLI
 
 Before installing FuzzForge AI, ensure you have:
 
-- **Python 3.12+** - [Download Python](https://www.python.org/downloads/)
-- **uv** package manager - [Install uv](https://docs.astral.sh/uv/)
-- **Docker** - Container runtime ([Install Docker](https://docs.docker.com/get-docker/))
+- **Python 3.12+** — [Download Python](https://www.python.org/downloads/)
+- **uv** package manager — [Install uv](https://docs.astral.sh/uv/)
+- **Docker** — Container runtime ([Install Docker](https://docs.docker.com/get-docker/))
+- **Git** — For cloning hub repositories
 
 ### Installing uv
 
@@ -115,74 +135,164 @@ uv run fuzzforge --help
 
 ---
 
-## Building Modules
+## Terminal UI
 
-FuzzForge modules are containerized security tools. After cloning, you need to build them once:
+FuzzForge ships with a terminal user interface (TUI) built on [Textual](https://textual.textualize.io/) for managing AI agents and MCP hub servers from a single dashboard.
 
-### Build All Modules
-
-```bash
-# From the fuzzforge_ai directory
-make build-modules
-```
-
-This builds all available modules:
-- `fuzzforge-rust-analyzer` - Analyzes Rust code for fuzzable functions
-- `fuzzforge-cargo-fuzzer` - Runs cargo-fuzz on Rust crates
-- `fuzzforge-harness-validator` - Validates generated fuzzing harnesses
-- `fuzzforge-crash-analyzer` - Analyzes crash inputs
-
-### Build a Single Module
+### Launching the UI
 
 ```bash
-# Build a specific module
-cd fuzzforge-modules/rust-analyzer
-make build
+uv run fuzzforge ui
 ```
 
-### Verify Modules are Built
+### Dashboard
 
-```bash
-# List built module images
-docker images | grep fuzzforge
-```
+The main screen is split into two panels:
 
-You should see something like:
-```
-fuzzforge-rust-analyzer    0.1.0    abc123def456    2 minutes ago    850 MB
-fuzzforge-cargo-fuzzer     0.1.0    789ghi012jkl    2 minutes ago    1.2 GB
-...
-```
+| Panel | Content |
+|-------|---------|
+| **AI Agents** (left) | Shows GitHub Copilot, Claude Desktop, and Claude Code with live link status and config file path |
+| **Hub Servers** (right) | Shows all configured MCP hub tools with Docker image name, source hub, and build status (✓ Ready / ✗ Not built) |
+
+### Keyboard Shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Enter` | **Select** — Act on the selected row (setup/unlink an agent) |
+| `h` | **Hub Manager** — Open the hub management screen |
+| `r` | **Refresh** — Re-check all agent and hub statuses |
+| `q` | **Quit** |
+
+### Agent Setup
+
+Select an agent row in the AI Agents table and press `Enter`:
+
+- **If the agent is not linked** → a setup dialog opens asking for your container engine (Docker or Podman), then installs the FuzzForge MCP configuration
+- **If the agent is already linked** → a confirmation dialog offers to unlink it (removes the `fuzzforge` entry without touching other MCP servers)
+
+The setup auto-detects:
+- FuzzForge installation root
+- Docker/Podman socket path
+- Hub configuration from `hub-config.json`
+
+### Hub Manager
+
+Press `h` to open the hub manager. This is where you manage your MCP hub repositories:
+
+| Button | Action |
+|--------|--------|
+| **FuzzingLabs Hub** | One-click clone of the official [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub) repository — clones to `~/.fuzzforge/hubs/mcp-security-hub`, scans for tools, and registers them in `hub-config.json` |
+| **Link Path** | Link any local directory as a hub — enter a name and path, FuzzForge scans it for `category/tool-name/Dockerfile` patterns |
+| **Clone URL** | Clone any git repository and link it as a hub |
+| **Remove** | Unlink the selected hub and remove its servers from the configuration |
+
+The hub table shows:
+- **Name** — Hub name (★ prefix for the default hub)
+- **Path** — Local directory path
+- **Servers** — Number of MCP tools discovered
+- **Source** — Git URL or "local"
 
 ---
 
-## MCP Server Configuration
+## MCP Hub System
 
-FuzzForge integrates with AI agents through the Model Context Protocol (MCP). Configure your preferred AI agent to use FuzzForge tools.
+### What is an MCP Hub?
+
+An MCP hub is a directory containing one or more containerized MCP tools, organized by category:
+
+```
+my-hub/
+├── category-a/
+│   ├── tool-1/
+│   │   └── Dockerfile
+│   └── tool-2/
+│       └── Dockerfile
+├── category-b/
+│   └── tool-3/
+│       └── Dockerfile
+└── ...
+```
+
+FuzzForge scans for the pattern `category/tool-name/Dockerfile` and auto-generates server configuration entries for each discovered tool.
+
+### FuzzingLabs Security Hub
+
+The default MCP hub is [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub), maintained by FuzzingLabs. It includes **40+ security tools** across categories:
+
+| Category | Tools |
+|----------|-------|
+| **Reconnaissance** | nmap, masscan, shodan, zoomeye, whatweb, pd-tools, externalattacker, networksdb |
+| **Binary Analysis** | binwalk, yara, capa, radare2, ghidra, ida |
+| **Code Security** | semgrep, rust-analyzer, harness-tester, cargo-fuzzer, crash-analyzer |
+| **Web Security** | nuclei, nikto, sqlmap, ffuf, burp, waybackurls |
+| **Fuzzing** | boofuzz, dharma |
+| **Exploitation** | searchsploit |
+| **Secrets** | gitleaks |
+| **Cloud Security** | trivy, prowler, roadrecon |
+| **OSINT** | maigret, dnstwist |
+| **Threat Intel** | virustotal, otx |
+| **Password Cracking** | hashcat |
+| **Blockchain** | medusa, solazy, daml-viewer |
+
+**Clone it via the UI:**
+
+1. `uv run fuzzforge ui`
+2. Press `h` → click **FuzzingLabs Hub**
+3. Wait for the clone to finish — servers are auto-registered
+
+**Or clone manually:**
+
+```bash
+git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.fuzzforge/hubs/mcp-security-hub
+```
+
+### Linking a Custom Hub
+
+You can link any directory that follows the `category/tool-name/Dockerfile` layout:
+
+**Via the UI:**
+
+1. Press `h` → **Link Path**
+2. Enter a name and the directory path
+
+**Via the CLI (planned):** Not yet available — use the UI.
+
+### Building Hub Images
+
+After linking a hub, you need to build the Docker images before the tools can be used:
+
+```bash
+# Build all images from the default security hub
+./scripts/build-hub-images.sh
+
+# Or build a single tool image
+docker build -t semgrep-mcp:latest mcp-security-hub/code-security/semgrep-mcp/
+```
+
+The dashboard hub table shows ✓ Ready for built images and ✗ Not built for missing ones.
+
+---
+
+## MCP Server Configuration (CLI)
+
+If you prefer the command line over the TUI, you can configure agents directly:
 
 ### GitHub Copilot
 
 ```bash
-# That's it! Just run this command:
 uv run fuzzforge mcp install copilot
 ```
 
-The command auto-detects everything:
-- **FuzzForge root** - Where FuzzForge is installed
-- **Modules path** - Defaults to `fuzzforge_ai/fuzzforge-modules`
-- **Docker socket** - Auto-detects `/var/run/docker.sock`
+The command auto-detects:
+- **FuzzForge root** — Where FuzzForge is installed
+- **Docker socket** — Auto-detects `/var/run/docker.sock`
 
-**Optional overrides** (usually not needed):
+**Optional overrides:**
 ```bash
-uv run fuzzforge mcp install copilot \
-  --modules /path/to/modules \
-  --engine podman  # if using Podman instead of Docker
+uv run fuzzforge mcp install copilot --engine podman
 ```
 
-**After installation:**
-1. Restart VS Code
-2. Open GitHub Copilot Chat
-3. FuzzForge tools are now available!
+**After installation:** Restart VS Code. FuzzForge tools appear in GitHub Copilot Chat.
 
 ### Claude Code (CLI)
 
@@ -190,141 +300,87 @@ uv run fuzzforge mcp install copilot \
 uv run fuzzforge mcp install claude-code
 ```
 
-Installs to `~/.claude.json` so FuzzForge tools are available from any directory.
-
-**After installation:**
-1. Run `claude` from any directory
-2. FuzzForge tools are now available!
+Installs to `~/.claude.json`. FuzzForge tools are available from any directory after restarting Claude.
 
 ### Claude Desktop
 
 ```bash
-# Automatic installation
 uv run fuzzforge mcp install claude-desktop
-
-# Verify
-uv run fuzzforge mcp status
 ```
 
-**After installation:**
-1. Restart Claude Desktop
-2. FuzzForge tools are now available!
+**After installation:** Restart Claude Desktop.
 
-### Check MCP Status
+### Check Status
 
 ```bash
 uv run fuzzforge mcp status
 ```
 
-Shows configuration status for all supported AI agents:
-
-```
-┏━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Agent                ┃ Config Path                               ┃ Status       ┃ FuzzForge Configured    ┃
-┡━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ GitHub Copilot       │ ~/.config/Code/User/mcp.json              │ ✓ Exists     │ ✓ Yes                   │
-│ Claude Desktop       │ ~/.config/Claude/claude_desktop_config... │ Not found    │ -                       │
-│ Claude Code          │ ~/.claude.json                            │ ✓ Exists     │ ✓ Yes                   │
-└──────────────────────┴───────────────────────────────────────────┴──────────────┴─────────────────────────┘
-```
-
-### Generate Config Without Installing
-
-```bash
-# Preview the configuration that would be installed
-uv run fuzzforge mcp generate copilot
-uv run fuzzforge mcp generate claude-desktop
-uv run fuzzforge mcp generate claude-code
-```
-
-### Remove MCP Configuration
+### Remove Configuration
 
 ```bash
 uv run fuzzforge mcp uninstall copilot
-uv run fuzzforge mcp uninstall claude-desktop
 uv run fuzzforge mcp uninstall claude-code
+uv run fuzzforge mcp uninstall claude-desktop
 ```
 
 ---
 
 ## Using FuzzForge with AI
 
-Once MCP is configured, you interact with FuzzForge through natural language with your AI assistant.
+Once MCP is configured and hub images are built, interact with FuzzForge through natural language with your AI assistant.
 
 ### Example Conversations
 
 **Discover available tools:**
 ```
-You: "What FuzzForge modules are available?"
-AI: Uses list_modules → "I found 4 modules: rust-analyzer, cargo-fuzzer, 
-    harness-validator, and crash-analyzer..."
+You: "What security tools are available in FuzzForge?"
+AI: Queries hub tools → "I found 15 tools across categories: nmap for 
+    port scanning, binwalk for firmware analysis, semgrep for code 
+    scanning, cargo-fuzzer for Rust fuzzing..."
 ```
 
-**Analyze code for fuzzing targets:**
+**Analyze a binary:**
+```
+You: "Extract and analyze this firmware image"
+AI: Uses binwalk to extract → yara for pattern matching → capa for 
+    capability detection → "Found 3 embedded filesystems, 2 YARA 
+    matches for known vulnerabilities..."
+```
+
+**Fuzz Rust code:**
 ```
 You: "Analyze this Rust crate for functions I should fuzz"
-AI: Uses execute_module("rust-analyzer") → "I found 3 good fuzzing candidates:
-    - parse_input() in src/parser.rs - handles untrusted input
-    - decode_message() in src/codec.rs - complex parsing logic
-    ..."
-```
+AI: Uses rust-analyzer → "Found 3 fuzzable entry points..."
 
-**Generate and validate harnesses:**
-```
-You: "Generate a fuzzing harness for the parse_input function"
-AI: Creates harness code, then uses execute_module("harness-validator") 
-    → "Here's a harness that compiles successfully..."
-```
-
-**Run continuous fuzzing:**
-```
 You: "Start fuzzing parse_input for 10 minutes"
-AI: Uses start_continuous_module("cargo-fuzzer") → "Started fuzzing session abc123"
-
-You: "How's the fuzzing going?"
-AI: Uses get_continuous_status("abc123") → "Running for 5 minutes:
-    - 150,000 executions
-    - 2 crashes found
-    - 45% edge coverage"
-
-You: "Stop and show me the crashes"
-AI: Uses stop_continuous_module("abc123") → "Found 2 unique crashes..."
+AI: Uses cargo-fuzzer → "Fuzzing session started. 2 crashes found..."
 ```
 
-### Available MCP Tools
-
-| Tool | Description |
-|------|-------------|
-| `list_modules` | List all available security modules |
-| `execute_module` | Run a module once and get results |
-| `start_continuous_module` | Start a long-running module (e.g., fuzzing) |
-| `get_continuous_status` | Check status of a continuous session |
-| `stop_continuous_module` | Stop a continuous session |
-| `list_continuous_sessions` | List all active sessions |
-| `get_execution_results` | Retrieve results from an execution |
-| `execute_workflow` | Run a multi-step workflow |
+**Scan for vulnerabilities:**
+```
+You: "Scan this codebase with semgrep for security issues"
+AI: Uses semgrep-mcp → "Found 5 findings: 2 high severity SQL injection 
+    patterns, 3 medium severity hardcoded secrets..."
+```
 
 ---
 
 ## CLI Reference
 
-> **Note:** The CLI is for advanced users. Most users should interact with FuzzForge through their AI assistant.
+### UI Command
+
+```bash
+uv run fuzzforge ui                      # Launch the terminal dashboard
+```
 
 ### MCP Commands
 
 ```bash
-uv run fuzzforge mcp status              # Check configuration status
-uv run fuzzforge mcp install <agent>     # Install MCP config
+uv run fuzzforge mcp status              # Check agent configuration status
+uv run fuzzforge mcp install <agent>     # Install MCP config (copilot|claude-code|claude-desktop)
 uv run fuzzforge mcp uninstall <agent>   # Remove MCP config
 uv run fuzzforge mcp generate <agent>    # Preview config without installing
-```
-
-### Module Commands
-
-```bash
-uv run fuzzforge modules list                    # List available modules
-uv run fuzzforge modules info <module>           # Show module details
-uv run fuzzforge modules run <module> --assets . # Run a module
 ```
 
 ### Project Commands
@@ -343,14 +399,13 @@ uv run fuzzforge project results <id>     # Get execution results
 Configure FuzzForge using environment variables:
 
 ```bash
-# Project paths
-export FUZZFORGE_MODULES_PATH=/path/to/modules
+# Storage path for projects and execution results
 export FUZZFORGE_STORAGE_PATH=/path/to/storage
 
 # Container engine (Docker is default)
 export FUZZFORGE_ENGINE__TYPE=docker  # or podman
 
-# Podman-specific settings (only needed if using Podman under Snap)
+# Podman-specific settings
 export FUZZFORGE_ENGINE__GRAPHROOT=~/.fuzzforge/containers/storage
 export FUZZFORGE_ENGINE__RUNROOT=~/.fuzzforge/containers/run
 ```
@@ -384,66 +439,62 @@ Error: Permission denied connecting to Docker socket
 
 **Solution:**
 ```bash
-# Add your user to the docker group
 sudo usermod -aG docker $USER
-
-# Log out and back in for changes to take effect
-# Then verify:
+# Log out and back in, then verify:
 docker run --rm hello-world
 ```
 
-### No Modules Found
+### Hub Images Not Built
 
-```
-No modules found.
-```
+The dashboard shows ✗ Not built for tools:
 
-**Solution:**
-1. Build the modules first: `make build-modules`
-2. Check the modules path: `uv run fuzzforge modules list`
-3. Verify images exist: `docker images | grep fuzzforge`
+```bash
+# Build all hub images
+./scripts/build-hub-images.sh
+
+# Or build a single tool
+docker build -t <tool-name>:latest mcp-security-hub/<category>/<tool-name>/
+```
 
 ### MCP Server Not Starting
 
-Check the MCP configuration:
 ```bash
+# Check agent configuration
 uv run fuzzforge mcp status
-```
 
-Verify the configuration file path exists and contains valid JSON.
-
-### Module Container Fails to Build
-
-```bash
-# Build module container manually to see errors
-cd fuzzforge-modules/<module-name>
-docker build -t <module-name> .
+# Verify the config file path exists and contains valid JSON
+cat ~/.config/Code/User/mcp.json    # Copilot
+cat ~/.claude.json                   # Claude Code
 ```
 
 ### Using Podman Instead of Docker
 
-If you prefer Podman:
 ```bash
-# Use --engine podman with CLI
+# Install with Podman engine
 uv run fuzzforge mcp install copilot --engine podman
 
 # Or set environment variable
 export FUZZFORGE_ENGINE=podman
 ```
 
-### Check Logs
+### Hub Registry
 
-FuzzForge stores execution logs in the storage directory:
+FuzzForge stores linked hub information in `~/.fuzzforge/hubs.json`. If something goes wrong:
+
 ```bash
-ls -la ~/.fuzzforge/storage/<project-id>/<execution-id>/
+# View registry
+cat ~/.fuzzforge/hubs.json
+
+# Reset registry
+rm ~/.fuzzforge/hubs.json
 ```
 
 ---
 
 ## Next Steps
 
-- 📖 Read the [Module SDK Guide](fuzzforge-modules/fuzzforge-modules-sdk/README.md) to create custom modules
-- 🎬 Check the demos in the [README](README.md)
+- 🖥️ Launch `uv run fuzzforge ui` and explore the dashboard
+- 🔒 Clone the [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub) for 40+ security tools
 - 💬 Join our [Discord](https://discord.gg/8XEX33UUwZ) for support
 
 ---

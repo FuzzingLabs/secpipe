@@ -8,6 +8,7 @@ requires-python = ">=3.14"
 dependencies = [
     "fuzzforge-mcp==0.0.1",
     "rich>=14.0.0",
+    "textual>=1.0.0",
     "typer==0.20.1",
 ]
 
