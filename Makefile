@@ -1,6 +1,13 @@
-.PHONY: help install sync format lint typecheck test build-modules clean
+.PHONY: help install sync format lint typecheck test build-modules build-modules-sdk build-modules-images clean
 
 SHELL := /bin/bash
+
+# Container image configuration
+SDK_DIR         := fuzzforge-modules/fuzzforge-modules-sdk/
+MODULE_TEMPLATE := fuzzforge-modules/fuzzforge-module-template/
+SDK_VERSION     := $(shell scripts/pyproject-version.sh $(SDK_DIR)pyproject.toml)
+BASE_IMG_PREFIX := $(if $(filter podman,$(FUZZFORGE_ENGINE)),localhost/,)
+SDK_IMG         := $(BASE_IMG_PREFIX)fuzzforge-modules-sdk:$(SDK_VERSION)
 
 # Default target
 help:
@@ -13,6 +20,8 @@ help:
 	@echo "  make typecheck     - Type check with mypy"
 	@echo "  make test          - Run all tests"
 	@echo "  make build-modules - Build all module container images"
+	@echo "  make build-modules-sdk - Build the SDK base image"
+	@echo "  make build-modules-images - Build all module images (requires SDK image)"
 	@echo "  make clean         - Clean build artifacts"
 	@echo ""
 
@@ -64,54 +73,40 @@ test:
 		fi \
 	done
 
-# Build all module container images
+# Build all module container images (SDK first, then modules)
 # Uses Docker by default, or Podman if FUZZFORGE_ENGINE=podman
-build-modules:
-	@echo "Building FuzzForge module images..."
-	@if [ "$$FUZZFORGE_ENGINE" = "podman" ]; then \
-		if [ -n "$$SNAP" ]; then \
-			echo "Using Podman with isolated storage (Snap detected)"; \
-			CONTAINER_CMD="podman --root ~/.fuzzforge/containers/storage --runroot ~/.fuzzforge/containers/run"; \
-		else \
-			echo "Using Podman"; \
-			CONTAINER_CMD="podman"; \
-		fi; \
-		BASE_IMG_PREFIX="localhost/"; \
-	else \
-		echo "Using Docker"; \
-		CONTAINER_CMD="docker"; \
-		BASE_IMG_PREFIX=""; \
-	fi; \
-	SDK_DIR="fuzzforge-modules/fuzzforge-modules-sdk/"; \
-	SDK_VERSION=$$(grep -m1 '^version\s*=' "$${SDK_DIR}pyproject.toml" 2>/dev/null | sed 's/^version\s*=\s*//;s/"//g;s/\s*$$//' ); \
-	[ -n "$$SDK_VERSION" ] || SDK_VERSION="0.0.1"; \
+build-modules: build-modules-sdk build-modules-images
+	@echo ""
+	@echo "✓ All modules built successfully!"
+
+# Build the SDK base image (also builds its Python wheel)
+build-modules-sdk:
+	@source scripts/container-env.sh; \
 	echo "Building wheels for fuzzforge-modules-sdk..."; \
-	(cd "$$SDK_DIR" && uv build --wheel --out-dir .wheels) || exit 1; \
-	SDK_IMG="$${BASE_IMG_PREFIX}fuzzforge-modules-sdk:$$SDK_VERSION"; \
-	echo "Building $$SDK_IMG..."; \
-	$$CONTAINER_CMD build -t "$$SDK_IMG" "$$SDK_DIR" || exit 1; \
+	(cd "$(SDK_DIR)" && uv build --wheel --out-dir .wheels) || exit 1; \
+	echo "Building $(SDK_IMG)..."; \
+	$$CONTAINER_CMD build -t "$(SDK_IMG)" "$(SDK_DIR)" || exit 1
+
+# Build all module images (requires SDK image to exist)
+build-modules-images:
+	@source scripts/container-env.sh; \
 	for module in fuzzforge-modules/*/; do \
-		if [ "$$module" = "$$SDK_DIR" ] || [ "$$module" = "fuzzforge-modules/fuzzforge-module-template/" ] || [ ! -f "$$module/Dockerfile" ]; then continue; fi; \
-		name=$$(basename $$module); \
-		version=$$(grep -m1 '^version\s*=' "$$module/pyproject.toml" 2>/dev/null | sed 's/^version\s*=\s*//;s/"//g;s/\s*$$//'); \
-		[ -n "$$version" ] || version="0.0.1"; \
+		[ "$$module" = "$(SDK_DIR)" ] && continue; \
+		[ "$$module" = "$(MODULE_TEMPLATE)" ] && continue; \
+		[ -f "$$module/Dockerfile" ] || continue; \
+		name=$$(basename "$$module"); \
+		version=$$(scripts/pyproject-version.sh "$$module/pyproject.toml"); \
 		case $$name in \
 			fuzzforge-*) tag="$$name:$$version" ;; \
 			*) tag="fuzzforge-$$name:$$version" ;; \
 		esac; \
 		echo "Building $$tag..."; \
-		$$CONTAINER_CMD build \
-			--build-arg BASE_IMAGE="$$SDK_IMG" \
-			-t "$$tag" "$$module" || exit 1; \
+		$$CONTAINER_CMD build --build-arg BASE_IMAGE="$(SDK_IMG)" -t "$$tag" "$$module" || exit 1; \
 	done
-	@echo ""
-	@echo "✓ All modules built successfully!"
 
 # Clean build artifacts
 clean:
-	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".ruff_cache" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name "*.egg-info" -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	@for dir in __pycache__ .pytest_cache .mypy_cache .ruff_cache "*.egg-info"; do \
+		find . -type d -name "$$dir" -exec rm -rf {} + 2>/dev/null || true; \
+	done
+	@find . -type f -name "*.pyc" -delete 2>/dev/null || true
