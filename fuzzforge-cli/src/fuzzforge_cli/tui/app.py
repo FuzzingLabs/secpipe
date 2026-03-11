@@ -35,7 +35,7 @@ if TYPE_CHECKING:
 _AgentRow = tuple[str, "AIAgent", Path, str, bool]
 
 
-class SingleClickDataTable(DataTable):
+class SingleClickDataTable(DataTable[Any]):
     """DataTable subclass that also fires ``RowClicked`` on a single mouse click.
 
     Textual's built-in ``RowSelected`` only fires on Enter or on a second click
@@ -56,7 +56,7 @@ class SingleClickDataTable(DataTable):
             """Return the data table that fired this event."""
             return self.data_table
 
-    async def _on_click(self, event: events.Click) -> None:  # type: ignore[override]
+    async def _on_click(self, event: events.Click) -> None:
         """Forward to parent, then post RowClicked on every mouse click.
 
         The hub table is handled exclusively via RowClicked.  RowSelected is
@@ -450,9 +450,10 @@ class FuzzForgeApp(App[None]):
 
         self._build_dialog_open = True
 
-        def _on_build_dialog_done(confirmed: bool, sn: str = server_name, im: str = image, hn: str = hub_name) -> None:
+        def _on_build_dialog_done(result: bool | None) -> None:
             self._build_dialog_open = False
-            self._on_build_confirmed(confirmed, sn, im, hn)
+            if result is not None:
+                self._on_build_confirmed(result, server_name, image, hub_name)
 
         self.push_screen(
             BuildImageScreen(server_name, image, hub_name),

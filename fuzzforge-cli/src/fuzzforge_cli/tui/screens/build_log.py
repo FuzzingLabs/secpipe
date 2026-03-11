@@ -8,6 +8,8 @@ open at any time while the build is running and see up-to-date output.
 
 from __future__ import annotations
 
+from typing import Any
+
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
@@ -51,13 +53,13 @@ class BuildLogScreen(ModalScreen[None]):
             log_widget.write_line(line)
         self._last_line += len(new_lines)
 
-        active: dict = getattr(self.app, "_active_builds", {})
+        active: dict[str, Any] = getattr(self.app, "_active_builds", {})
         status = self.query_one("#build-status", Label)
         if self._image in active:
             status.update("[yellow]⏳ Building…[/yellow]")
         else:
             # Build is done — check if we have a result stored
-            results: dict = getattr(self.app, "_build_results", {})
+            results: dict[str, Any] = getattr(self.app, "_build_results", {})
             if self._image in results:
                 if results[self._image]:
                     status.update(f"[green]✓ {self._image} built successfully[/green]")
