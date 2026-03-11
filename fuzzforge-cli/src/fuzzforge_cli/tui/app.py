@@ -96,7 +96,8 @@ class FuzzForgeApp(App[None]):
 
     /* Modal screens */
     AgentSetupScreen, AgentUnlinkScreen,
-    HubManagerScreen, LinkHubScreen, CloneHubScreen {
+    HubManagerScreen, LinkHubScreen, CloneHubScreen,
+    BuildImageScreen {
         align: center middle;
     }
 
@@ -128,6 +129,30 @@ class FuzzForgeApp(App[None]):
         background: $surface;
         padding: 2 3;
         overflow-y: auto;
+    }
+
+    #build-dialog {
+        width: 100;
+        height: 80%;
+        border: thick #4699fc;
+        background: $surface;
+        padding: 2 3;
+    }
+
+    #build-log {
+        height: 1fr;
+        border: round $panel;
+        margin: 1 0;
+    }
+
+    #build-subtitle {
+        color: $text-muted;
+        margin-bottom: 1;
+    }
+
+    #build-status {
+        height: 1;
+        margin-top: 1;
     }
 
     .dialog-title {
@@ -168,6 +193,7 @@ class FuzzForgeApp(App[None]):
         Binding("q", "quit", "Quit"),
         Binding("h", "manage_hubs", "Hub Manager"),
         Binding("r", "refresh", "Refresh"),
+        Binding("enter", "select_row", "Select", show=False),
     ]
 
     def compose(self) -> ComposeResult:
@@ -194,7 +220,9 @@ class FuzzForgeApp(App[None]):
     def on_mount(self) -> None:
         """Populate tables on startup."""
         self._agent_rows: list[_AgentRow] = []
-        self.query_one("#hub-panel").border_title = "Hub Servers"
+        # hub row data: (server_name, image, hub_name) | None for group headers
+        self._hub_rows: list[tuple[str, str, str] | None] = []
+        self.query_one("#hub-panel").border_title = "Hub Servers  [dim](Enter to build)[/dim]"
         self.query_one("#agents-panel").border_title = "AI Agents"
         self._refresh_agents()
         self._refresh_hub()
@@ -220,6 +248,7 @@ class FuzzForgeApp(App[None]):
 
     def _refresh_hub(self) -> None:
         """Refresh the hub servers table, grouped by source hub."""
+        self._hub_rows = []
         table = self.query_one("#hub-table", DataTable)
         table.clear(columns=True)
         table.add_columns("Server", "Image", "Hub", "Status")
@@ -275,6 +304,7 @@ class FuzzForgeApp(App[None]):
                     style="bold",
                 )
             table.add_row(header, "", "", "")
+            self._hub_rows.append(None)  # group header — not selectable
 
             # Tool rows
             for server, is_ready, status_text in statuses:
@@ -287,7 +317,7 @@ class FuzzForgeApp(App[None]):
                 elif is_ready:
                     status_cell = Text("✓ Ready", style="green")
                 else:
-                    status_cell = Text(f"✗ {status_text}", style="red")
+                    status_cell = Text(f"✗ {status_text}", style="red dim")
 
                 table.add_row(
                     f"  {name}",
@@ -295,13 +325,17 @@ class FuzzForgeApp(App[None]):
                     hub_name,
                     status_cell,
                 )
+                self._hub_rows.append((name, image, hub_name))
 
     def on_data_table_row_selected(self, event: DataTable.RowSelected) -> None:
-        """Handle row selection on the agents table."""
-        if event.data_table.id != "agents-table":
-            return
+        """Handle row selection on agents and hub tables."""
+        if event.data_table.id == "agents-table":
+            self._handle_agent_row(event.cursor_row)
+        elif event.data_table.id == "hub-table":
+            self._handle_hub_row(event.cursor_row)
 
-        idx = event.cursor_row
+    def _handle_agent_row(self, idx: int) -> None:
+        """Open agent setup/unlink for the selected agent row."""
         if idx < 0 or idx >= len(self._agent_rows):
             return
 
@@ -321,6 +355,32 @@ class FuzzForgeApp(App[None]):
                 AgentSetupScreen(agent, display_name),
                 callback=self._on_agent_changed,
             )
+
+    def _handle_hub_row(self, idx: int) -> None:
+        """Open the build dialog for the selected hub tool row."""
+        if idx < 0 or idx >= len(self._hub_rows):
+            return
+        row_data = self._hub_rows[idx]
+        if row_data is None:
+            return  # group header row — ignore
+
+        server_name, image, hub_name = row_data
+        if hub_name == "manual":
+            self.notify("Manual servers must be built outside FuzzForge")
+            return
+
+        from fuzzforge_cli.tui.screens.build_image import BuildImageScreen
+
+        self.push_screen(
+            BuildImageScreen(server_name, image, hub_name),
+            callback=self._on_image_built,
+        )
+
+    def _on_image_built(self, success: bool) -> None:
+        """Refresh hub status after a build attempt."""
+        self._refresh_hub()
+        if success:
+            self.notify("Image built successfully", severity="information")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         """Handle button presses."""

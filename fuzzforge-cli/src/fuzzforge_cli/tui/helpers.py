@@ -287,20 +287,80 @@ def get_default_hubs_dir() -> Path:
     return get_fuzzforge_user_dir() / "hubs"
 
 
+def _discover_hub_dirs() -> list[Path]:
+    """Scan known hub directories for cloned repos.
+
+    Checks both the current global location (``~/.fuzzforge/hubs/``) and the
+    legacy workspace-local location (``<cwd>/.fuzzforge/hubs/``) so that hubs
+    cloned before the global-dir migration are still found.
+
+    :return: List of hub directory paths (each is a direct child with a ``.git``
+        sub-directory).
+
+    """
+    candidates: list[Path] = []
+    for base in (get_fuzzforge_user_dir() / "hubs", get_fuzzforge_dir() / "hubs"):
+        if base.is_dir():
+            for entry in base.iterdir():
+                if entry.is_dir() and (entry / ".git").is_dir():
+                    candidates.append(entry)
+    return candidates
+
+
 def load_hubs_registry() -> dict[str, Any]:
     """Load the hubs registry from disk.
+
+    If the registry file does not exist, auto-recovers it by scanning known hub
+    directories and rebuilding entries for any discovered hubs.  This handles
+    the migration from the old workspace-local ``<cwd>/.fuzzforge/hubs.json``
+    path to the global ``~/.fuzzforge/hubs.json`` path, as well as any case
+    where the registry was lost.
 
     :return: Registry dict with ``hubs`` key containing a list of hub entries.
 
     """
     path = get_hubs_registry_path()
-    if not path.exists():
+    if path.exists():
+        try:
+            data: dict[str, Any] = json.loads(path.read_text())
+            return data
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    # Registry missing — attempt to rebuild from discovered hub directories.
+    discovered = _discover_hub_dirs()
+    if not discovered:
         return {"hubs": []}
+
+    hubs: list[dict[str, Any]] = []
+    for hub_dir in discovered:
+        name = hub_dir.name
+        # Try to read the git remote URL
+        git_url: str = ""
+        try:
+            import subprocess as _sp
+            r = _sp.run(
+                ["git", "-C", str(hub_dir), "remote", "get-url", "origin"],
+                check=False, capture_output=True, text=True, timeout=5,
+            )
+            if r.returncode == 0:
+                git_url = r.stdout.strip()
+        except Exception:
+            pass
+        hubs.append({
+            "name": name,
+            "path": str(hub_dir),
+            "git_url": git_url,
+            "is_default": name == FUZZFORGE_DEFAULT_HUB_NAME,
+        })
+
+    registry: dict[str, Any] = {"hubs": hubs}
+    # Persist so we don't re-scan on every load
     try:
-        data: dict[str, Any] = json.loads(path.read_text())
-        return data
-    except (json.JSONDecodeError, OSError):
-        return {"hubs": []}
+        save_hubs_registry(registry)
+    except OSError:
+        pass
+    return registry
 
 
 def save_hubs_registry(registry: dict[str, Any]) -> None:
@@ -566,3 +626,62 @@ def _remove_hub_servers_from_config(hub_name: str) -> int:
 
     config_path.write_text(json.dumps(config, indent=2))
     return before - after
+
+
+def find_dockerfile_for_server(server_name: str, hub_name: str) -> Path | None:
+    """Find the Dockerfile for a hub server tool.
+
+    Looks up the hub path from the registry, then scans for
+    ``category/<server_name>/Dockerfile``.
+
+    :param server_name: Tool name (e.g. ``"nmap-mcp"``).
+    :param hub_name: Hub name as stored in the registry.
+    :return: Absolute path to the Dockerfile, or ``None`` if not found.
+
+    """
+    registry = load_hubs_registry()
+    hub_entry = next(
+        (h for h in registry.get("hubs", []) if h.get("name") == hub_name),
+        None,
+    )
+    if not hub_entry:
+        return None
+
+    hub_path = Path(hub_entry["path"])
+    for dockerfile in hub_path.rglob("Dockerfile"):
+        rel = dockerfile.relative_to(hub_path)
+        parts = rel.parts
+        if len(parts) == 3 and parts[1] == server_name:
+            return dockerfile
+
+    return None
+
+
+def build_image(
+    image: str,
+    dockerfile: Path,
+    *,
+    engine: str | None = None,
+) -> subprocess.Popen[str]:
+    """Start a non-blocking ``docker/podman build`` subprocess.
+
+    Returns the running :class:`subprocess.Popen` object so the caller
+    can stream ``stdout`` / ``stderr`` lines incrementally.
+
+    :param image: Image tag (e.g. ``"nmap-mcp:latest"``).
+    :param dockerfile: Path to the ``Dockerfile``.
+    :param engine: ``"docker"`` or ``"podman"`` (auto-detected if ``None``).
+    :return: Running subprocess with merged stdout+stderr.
+
+    """
+    if engine is None:
+        engine = os.environ.get("FUZZFORGE_ENGINE__TYPE", "docker").lower()
+        engine = "podman" if engine == "podman" else "docker"
+
+    context_dir = str(dockerfile.parent)
+    return subprocess.Popen(
+        [engine, "build", "-t", image, context_dir],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
