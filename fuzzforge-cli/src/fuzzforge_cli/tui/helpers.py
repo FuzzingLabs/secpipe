@@ -9,6 +9,7 @@ and managing linked MCP hub repositories.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -37,9 +38,16 @@ def get_fuzzforge_user_dir() -> Path:
     repositories, the hub registry, container storage (graphroot/runroot),
     and the hub workspace volume.
 
-    :return: ``Path.home() / ".fuzzforge"``
+    Override with the ``FUZZFORGE_USER_DIR`` environment variable to
+    redirect all user-global data to a custom path — useful for testing
+    a fresh install without touching the real ``~/.fuzzforge/``.
+
+    :return: ``Path.home() / ".fuzzforge"`` or ``$FUZZFORGE_USER_DIR``
 
     """
+    env_dir = os.environ.get("FUZZFORGE_USER_DIR")
+    if env_dir:
+        return Path(env_dir).resolve()
     return Path.home() / ".fuzzforge"
 
 

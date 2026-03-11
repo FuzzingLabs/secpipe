@@ -177,7 +177,9 @@ def _generate_mcp_config(
     # User-global storage paths for FuzzForge containers.
     # Kept under ~/.fuzzforge so images are built once and shared across
     # all workspaces — regardless of where `fuzzforge mcp install` is run.
-    fuzzforge_home = Path.home() / ".fuzzforge"
+    # Override with FUZZFORGE_USER_DIR for isolated testing.
+    user_dir_env = os.environ.get("FUZZFORGE_USER_DIR")
+    fuzzforge_home = Path(user_dir_env).resolve() if user_dir_env else Path.home() / ".fuzzforge"
     graphroot = fuzzforge_home / "containers" / "storage"
     runroot = fuzzforge_home / "containers" / "run"
 
