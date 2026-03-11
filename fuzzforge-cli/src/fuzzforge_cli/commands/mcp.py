@@ -12,7 +12,7 @@ import os
 import sys
 from enum import StrEnum
 from pathlib import Path
-from typing import Annotated
+from typing import Annotated, Any
 
 from rich.console import Console
 from rich.panel import Panel
@@ -44,10 +44,10 @@ def _get_copilot_mcp_path() -> Path:
     """
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "Code" / "User" / "mcp.json"
-    elif sys.platform == "win32":
+    if sys.platform == "win32":
         return Path(os.environ.get("APPDATA", "")) / "Code" / "User" / "mcp.json"
-    else:  # Linux
-        return Path.home() / ".config" / "Code" / "User" / "mcp.json"
+    # Linux
+    return Path.home() / ".config" / "Code" / "User" / "mcp.json"
 
 
 def _get_claude_desktop_mcp_path() -> Path:
@@ -58,10 +58,10 @@ def _get_claude_desktop_mcp_path() -> Path:
     """
     if sys.platform == "darwin":
         return Path.home() / "Library" / "Application Support" / "Claude" / "claude_desktop_config.json"
-    elif sys.platform == "win32":
+    if sys.platform == "win32":
         return Path(os.environ.get("APPDATA", "")) / "Claude" / "claude_desktop_config.json"
-    else:  # Linux
-        return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
+    # Linux
+    return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
 
 
 def _get_claude_code_mcp_path(project_path: Path | None = None) -> Path:
@@ -114,13 +114,13 @@ def _detect_docker_socket() -> str:
     :returns: Path to the Docker socket.
 
     """
-    socket_paths = [
-        "/var/run/docker.sock",
+    socket_paths: list[Path] = [
+        Path("/var/run/docker.sock"),
         Path.home() / ".docker" / "run" / "docker.sock",
     ]
 
     for path in socket_paths:
-        if Path(path).exists():
+        if path.exists():
             return str(path)
 
     return "/var/run/docker.sock"
@@ -148,7 +148,7 @@ def _generate_mcp_config(
     fuzzforge_root: Path,
     engine_type: str,
     engine_socket: str,
-) -> dict:
+) -> dict[str, Any]:
     """Generate MCP server configuration.
 
     :param fuzzforge_root: Path to fuzzforge-oss installation.

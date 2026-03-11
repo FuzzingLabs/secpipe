@@ -81,6 +81,7 @@ class HubManagerScreen(ModalScreen[str | None]):
             is_default = hub.get("is_default", False)
 
             hub_path = Path(path)
+            count: str | Text
             if hub_path.is_dir():
                 servers = scan_hub_for_servers(hub_path)
                 count = str(len(servers))
@@ -88,10 +89,11 @@ class HubManagerScreen(ModalScreen[str | None]):
                 count = Text("dir missing", style="yellow")
 
             source = git_url or "local"
+            name_cell: str | Text
             if is_default:
                 name_cell = Text(f"★ {name}", style="bold")
             else:
-                name_cell = Text(name)
+                name_cell = name
 
             table.add_row(name_cell, path, count, source)
 

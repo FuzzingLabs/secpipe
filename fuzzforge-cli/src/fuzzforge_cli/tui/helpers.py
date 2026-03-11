@@ -108,7 +108,7 @@ def check_hub_image(image: str) -> tuple[bool, str]:
     try:
         result = subprocess.run(
             ["docker", "image", "inspect", image],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             timeout=5,
         )
@@ -132,7 +132,8 @@ def load_hub_config(fuzzforge_root: Path) -> dict[str, Any]:
     if not config_path.exists():
         return {}
     try:
-        return json.loads(config_path.read_text())
+        data: dict[str, Any] = json.loads(config_path.read_text())
+        return data
     except json.JSONDecodeError:
         return {}
 
@@ -264,7 +265,8 @@ def load_hubs_registry() -> dict[str, Any]:
     if not path.exists():
         return {"hubs": []}
     try:
-        return json.loads(path.read_text())
+        data: dict[str, Any] = json.loads(path.read_text())
+        return data
     except (json.JSONDecodeError, OSError):
         return {"hubs": []}
 
@@ -422,8 +424,7 @@ def clone_hub(
     """
     if name is None:
         name = git_url.rstrip("/").split("/")[-1]
-        if name.endswith(".git"):
-            name = name[:-4]
+        name = name.removesuffix(".git")
 
     if dest is None:
         dest = get_default_hubs_dir() / name
@@ -433,7 +434,7 @@ def clone_hub(
             try:
                 result = subprocess.run(
                     ["git", "-C", str(dest), "pull"],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     timeout=120,
                 )
@@ -451,7 +452,7 @@ def clone_hub(
     try:
         result = subprocess.run(
             ["git", "clone", git_url, str(dest)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             timeout=300,
         )

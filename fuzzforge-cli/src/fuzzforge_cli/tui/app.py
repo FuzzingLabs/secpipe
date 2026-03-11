@@ -9,12 +9,14 @@ hub management capabilities.
 from __future__ import annotations
 
 from collections import defaultdict
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from rich.text import Text
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
-from textual.widgets import Button, DataTable, Footer, Header, Label
+from textual.widgets import Button, DataTable, Footer, Header
 
 from fuzzforge_cli.tui.helpers import (
     check_agent_status,
@@ -24,11 +26,14 @@ from fuzzforge_cli.tui.helpers import (
     load_hub_config,
 )
 
+if TYPE_CHECKING:
+    from fuzzforge_cli.commands.mcp import AIAgent
+
 # Agent config entries stored alongside their linked status for row mapping
-_AgentRow = tuple[str, "AIAgent", "Path", str, bool]  # noqa: F821
+_AgentRow = tuple[str, "AIAgent", Path, str, bool]
 
 
-class FuzzForgeApp(App):
+class FuzzForgeApp(App[None]):
     """FuzzForge AI terminal user interface."""
 
     TITLE = "FuzzForge AI"
@@ -236,7 +241,7 @@ class FuzzForgeApp(App):
             return
 
         # Group servers by source hub
-        groups: dict[str, list[dict]] = defaultdict(list)
+        groups: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for server in servers:
             source = server.get("source_hub", "manual")
             groups[source].append(server)
@@ -245,7 +250,7 @@ class FuzzForgeApp(App):
             ready_count = 0
             total = len(hub_servers)
 
-            statuses: list[tuple[dict, bool, str]] = []
+            statuses: list[tuple[dict[str, Any], bool, str]] = []
             for server in hub_servers:
                 enabled = server.get("enabled", True)
                 if not enabled:

@@ -10,7 +10,6 @@ from fastmcp.exceptions import ResourceError
 
 from fuzzforge_mcp.dependencies import get_project_path, get_settings, get_storage
 
-
 mcp: FastMCP = FastMCP()
 
 

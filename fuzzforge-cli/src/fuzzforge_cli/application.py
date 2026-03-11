@@ -3,12 +3,12 @@
 from pathlib import Path
 from typing import Annotated
 
+from fuzzforge_mcp.storage import LocalStorage  # type: ignore[import-untyped]
 from typer import Context as TyperContext
 from typer import Option, Typer
 
 from fuzzforge_cli.commands import mcp, projects
 from fuzzforge_cli.context import Context
-from fuzzforge_mcp.storage import LocalStorage
 
 application: Typer = Typer(
     name="fuzzforge",

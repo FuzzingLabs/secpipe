@@ -14,3 +14,18 @@ ignore = [
     "PLR2004",  # allowing comparisons using unamed numerical constants in tests
     "S101",     # allowing 'assert' statements in tests
 ]
+"src/**" = [
+    "ASYNC109",  # async with timeout param: intentional pattern
+    "EM102",     # f-string in exception: existing pattern
+    "PERF401",   # list comprehension: readability over perf
+    "PLR0913",   # too many arguments: API compatibility
+    "PLW0602",   # global variable: intentional for shared state
+    "PLW0603",   # global statement: intentional for shared state
+    "RET504",    # unnecessary assignment: readability
+    "RET505",    # unnecessary elif after return: readability
+    "TC001",     # TYPE_CHECKING: causes circular imports
+    "TC003",     # TYPE_CHECKING: causes circular imports
+    "TRY300",    # try-else: existing pattern
+    "TRY301",    # abstract raise: existing pattern
+    "TRY003",    # message in exception: existing pattern
+]

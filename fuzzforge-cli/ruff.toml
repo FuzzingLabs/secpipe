@@ -13,3 +13,49 @@ ignore = [
     "PLR2004",  # allowing comparisons using unamed numerical constants in tests
     "S101",     # allowing 'assert' statements in tests
 ]
+"src/fuzzforge_cli/tui/**" = [
+    "ARG002",   # unused method argument: callback signature
+    "BLE001",   # blind exception: broad error handling in UI
+    "C901",     # complexity: UI logic
+    "D107",     # missing docstring in __init__: simple dataclasses
+    "FBT001",   # boolean positional arg
+    "FBT002",   # boolean default arg
+    "PLC0415",  # import outside top-level: lazy loading
+    "PLR0911",  # too many return statements
+    "PLR0912",  # too many branches
+    "PLR2004",  # magic value comparison
+    "RUF012",   # mutable class default: Textual pattern
+    "S603",     # subprocess: validated inputs
+    "S607",     # subprocess: PATH lookup
+    "SIM108",   # ternary: readability preference
+    "TC001",    # TYPE_CHECKING: runtime type needs
+    "TC002",    # TYPE_CHECKING: runtime type needs
+    "TC003",    # TYPE_CHECKING: runtime type needs
+    "TRY300",   # try-else: existing pattern
+]
+"tui/*.py" = [
+    "D107",     # missing docstring in __init__: simple dataclasses
+    "TC001",    # TYPE_CHECKING: runtime type needs
+    "TC002",    # TYPE_CHECKING: runtime type needs
+    "TC003",    # TYPE_CHECKING: runtime type needs
+]
+"src/fuzzforge_cli/commands/mcp.py" = [
+    "ARG001",   # unused argument: callback signature
+    "B904",     # raise from: existing pattern
+    "F841",     # unused variable: legacy code
+    "FBT002",   # boolean default arg
+    "PLR0912",  # too many branches
+    "PLR0915",  # too many statements
+    "SIM108",   # ternary: readability preference
+]
+"src/fuzzforge_cli/application.py" = [
+    "B008",     # function call in default: Path.cwd()
+    "PLC0415",  # import outside top-level: lazy loading
+]
+"src/fuzzforge_cli/commands/projects.py" = [
+    "TC003",    # TYPE_CHECKING: runtime type needs
+]
+"src/fuzzforge_cli/context.py" = [
+    "TC002",    # TYPE_CHECKING: runtime type needs
+    "TC003",    # TYPE_CHECKING: runtime type needs
+]

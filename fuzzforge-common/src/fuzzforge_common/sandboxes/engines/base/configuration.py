@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from pydantic import BaseModel
 
 from fuzzforge_common.sandboxes.engines.enumeration import (
-    FuzzForgeSandboxEngines,  # noqa: TC001 (required by 'pydantic' at runtime)
+    FuzzForgeSandboxEngines,
 )
 
 if TYPE_CHECKING:

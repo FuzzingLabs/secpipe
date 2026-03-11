@@ -10,13 +10,12 @@ through the FuzzForge hub. AI agents can:
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.exceptions import ToolError
-
 from fuzzforge_common.hub import HubExecutor, HubServerConfig, HubServerType
+
 from fuzzforge_mcp.dependencies import get_settings
 
 mcp: FastMCP = FastMCP()

@@ -13,9 +13,9 @@ from __future__ import annotations
 
 import json
 import logging
-import shutil
 from pathlib import Path
 from tarfile import open as Archive  # noqa: N812
+from typing import Any
 
 logger = logging.getLogger("fuzzforge-mcp")
 
@@ -131,7 +131,7 @@ class LocalStorage:
         storage_path.mkdir(parents=True, exist_ok=True)
         config_path = storage_path / "config.json"
 
-        config: dict = {}
+        config: dict[str, Any] = {}
         if config_path.exists():
             config = json.loads(config_path.read_text())
 

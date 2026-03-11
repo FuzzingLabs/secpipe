@@ -10,7 +10,6 @@ from fastmcp.exceptions import ToolError
 
 from fuzzforge_mcp.dependencies import get_project_path, get_storage, set_current_project_path
 
-
 mcp: FastMCP = FastMCP()
 
 

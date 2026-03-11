@@ -18,3 +18,32 @@ ignore = [
     "PLR2004",  # allowing comparisons using unamed numerical constants in tests
     "S101",     # allowing 'assert' statements in tests
 ]
+"src/**" = [
+    "ANN201",    # missing return type: legacy code
+    "ARG002",    # unused argument: callback pattern
+    "ASYNC109",  # async with timeout param: intentional pattern
+    "BLE001",    # blind exception: broad error handling needed
+    "C901",      # complexity: legacy code
+    "EM102",     # f-string in exception: existing pattern
+    "F401",      # unused import: re-export pattern
+    "FBT001",    # boolean positional arg
+    "FBT002",    # boolean default arg
+    "FIX002",    # TODO comments: documented tech debt
+    "N806",      # variable naming: intentional constants
+    "PERF401",   # list comprehension: readability over perf
+    "PLW0603",   # global statement: intentional for shared state
+    "PTH111",    # os.path usage: legacy code
+    "RUF005",    # collection literal: legacy style
+    "S110",      # try-except-pass: intentional suppression
+    "S603",      # subprocess: validated inputs
+    "SIM108",    # ternary: readability preference
+    "TC001",     # TYPE_CHECKING: causes circular imports
+    "TC003",     # TYPE_CHECKING: causes circular imports
+    "TRY003",    # message in exception: existing pattern
+    "TRY300",    # try-else: existing pattern
+    "TRY400",    # logging.error vs exception: existing pattern
+    "UP017",     # datetime.UTC: Python 3.11+ only
+    "UP041",     # TimeoutError alias: compatibility
+    "UP043",     # unnecessary type args: compatibility
+    "W293",      # blank line whitespace: formatting
+]

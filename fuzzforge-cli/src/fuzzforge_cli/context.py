@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
 
-from fuzzforge_mcp.storage import LocalStorage
+from fuzzforge_mcp.storage import LocalStorage  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
     from typer import Context as TyperContext
