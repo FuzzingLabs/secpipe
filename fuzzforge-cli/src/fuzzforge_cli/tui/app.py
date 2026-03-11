@@ -46,13 +46,14 @@ class SingleClickDataTable(DataTable):
     class RowClicked(Message):
         """Fired on every single mouse click on a data row."""
 
-        def __init__(self, data_table: "SingleClickDataTable", cursor_row: int) -> None:
+        def __init__(self, data_table: SingleClickDataTable, cursor_row: int) -> None:
             self.data_table = data_table
             self.cursor_row = cursor_row
             super().__init__()
 
         @property
-        def control(self) -> "SingleClickDataTable":
+        def control(self) -> SingleClickDataTable:
+            """Return the data table that fired this event."""
             return self.data_table
 
     async def _on_click(self, event: events.Click) -> None:  # type: ignore[override]
@@ -471,7 +472,6 @@ class FuzzForgeApp(App[None]):
     @work(thread=True)
     def _run_build(self, server_name: str, image: str, hub_name: str) -> None:
         """Build a Docker/Podman image in a background thread."""
-        import subprocess
         from fuzzforge_cli.tui.helpers import build_image, find_dockerfile_for_server
 
         logs = self._build_logs.setdefault(image, [])
@@ -481,7 +481,7 @@ class FuzzForgeApp(App[None]):
             logs.append(f"ERROR: Dockerfile not found for '{server_name}' in hub '{hub_name}'")
             self._build_results[image] = False
             self._active_builds.pop(image, None)
-            self.call_from_thread(self._on_build_done, image, False)
+            self.call_from_thread(self._on_build_done, image, success=False)
             return
 
         logs.append(f"Building {image} from {dockerfile.parent}")
@@ -493,13 +493,14 @@ class FuzzForgeApp(App[None]):
             logs.append(f"ERROR: {exc}")
             self._build_results[image] = False
             self._active_builds.pop(image, None)
-            self.call_from_thread(self._on_build_done, image, False)
+            self.call_from_thread(self._on_build_done, image, success=False)
             return
 
         self._active_builds[image] = proc  # replace pending marker with actual process
         self.call_from_thread(self._refresh_hub)  # show ⏳ in table
 
-        assert proc.stdout is not None
+        if proc.stdout is None:
+            return
         for line in proc.stdout:
             logs.append(line.rstrip())
 
@@ -507,10 +508,10 @@ class FuzzForgeApp(App[None]):
         self._active_builds.pop(image, None)
         success = proc.returncode == 0
         self._build_results[image] = success
-        self.call_from_thread(self._on_build_done, image, success)
+        self.call_from_thread(self._on_build_done, image, success=success)
 
-    def _on_build_done(self, image: str, success: bool) -> None:
-        """Called on the main thread when a background build finishes."""
+    def _on_build_done(self, image: str, *, success: bool) -> None:
+        """Handle completion of a background build on the main thread."""
         self._refresh_hub()
         if success:
             self.notify(f"✓ {image} built successfully", severity="information")

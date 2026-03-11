@@ -30,6 +30,7 @@ class BuildImageScreen(ModalScreen[bool]):
         self._hub_name = hub_name
 
     def compose(self) -> ComposeResult:
+        """Build the confirmation dialog UI."""
         with Vertical(id="build-dialog"):
             yield Label(f"Build  {self._image}", classes="dialog-title")
             yield Label(
@@ -38,7 +39,7 @@ class BuildImageScreen(ModalScreen[bool]):
             )
             yield Label(
                 "The image will be built in the background.\n"
-                "You\'ll receive a notification when it\'s done.",
+                "You'll receive a notification when it's done.",
                 id="confirm-text",
             )
             with Horizontal(classes="dialog-buttons"):
@@ -46,10 +47,12 @@ class BuildImageScreen(ModalScreen[bool]):
                 yield _NoFocusButton("Cancel", variant="default", id="btn-cancel")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle Build or Cancel button clicks."""
         if event.button.id == "btn-build":
-            self.dismiss(True)
+            self.dismiss(result=True)
         elif event.button.id == "btn-cancel":
-            self.dismiss(False)
+            self.dismiss(result=False)
 
     def action_cancel(self) -> None:
-        self.dismiss(False)
+        """Dismiss the dialog when Escape is pressed."""
+        self.dismiss(result=False)

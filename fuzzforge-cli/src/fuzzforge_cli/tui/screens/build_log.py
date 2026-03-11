@@ -29,6 +29,7 @@ class BuildLogScreen(ModalScreen[None]):
         self._last_line: int = 0
 
     def compose(self) -> ComposeResult:
+        """Build the log viewer UI."""
         with Vertical(id="build-dialog"):
             yield Label(f"Build log — {self._image}", classes="dialog-title")
             yield Label("", id="build-status")
@@ -37,6 +38,7 @@ class BuildLogScreen(ModalScreen[None]):
                 yield _NoFocusButton("Close", variant="default", id="btn-close")
 
     def on_mount(self) -> None:
+        """Initialize log polling when the screen is mounted."""
         self._flush_log()
         self.set_interval(0.5, self._poll_log)
 
@@ -63,12 +65,14 @@ class BuildLogScreen(ModalScreen[None]):
                     status.update(f"[red]✗ {self._image} build failed[/red]")
 
     def _poll_log(self) -> None:
-        """Called every 500 ms by set_interval."""
+        """Poll for new log lines periodically."""
         self._flush_log()
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
+        """Handle Close button click."""
         if event.button.id == "btn-close":
             self.dismiss(None)
 
     def action_close(self) -> None:
+        """Dismiss the dialog when Escape is pressed."""
         self.dismiss(None)

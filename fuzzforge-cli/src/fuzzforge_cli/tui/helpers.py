@@ -8,6 +8,7 @@ and managing linked MCP hub repositories.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import subprocess
@@ -301,9 +302,10 @@ def _discover_hub_dirs() -> list[Path]:
     candidates: list[Path] = []
     for base in (get_fuzzforge_user_dir() / "hubs", get_fuzzforge_dir() / "hubs"):
         if base.is_dir():
-            for entry in base.iterdir():
-                if entry.is_dir() and (entry / ".git").is_dir():
-                    candidates.append(entry)
+            candidates.extend(
+                entry for entry in base.iterdir()
+                if entry.is_dir() and (entry / ".git").is_dir()
+            )
     return candidates
 
 
@@ -356,10 +358,8 @@ def load_hubs_registry() -> dict[str, Any]:
 
     registry: dict[str, Any] = {"hubs": hubs}
     # Persist so we don't re-scan on every load
-    try:
+    with contextlib.suppress(OSError):
         save_hubs_registry(registry)
-    except OSError:
-        pass
     return registry
 
 
