@@ -345,7 +345,7 @@ def load_hubs_registry() -> dict[str, Any]:
             )
             if r.returncode == 0:
                 git_url = r.stdout.strip()
-        except Exception:
+        except Exception:  # noqa: S110 - git URL is optional, failure is acceptable
             pass
         hubs.append({
             "name": name,
