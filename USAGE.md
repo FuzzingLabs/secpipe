@@ -49,8 +49,11 @@ uv sync
 uv run fuzzforge ui
 
 # 3. Press 'h' → "FuzzingLabs Hub" to clone & link the default security hub
-# 4. Select an agent row and press Enter to link it
-# 5. Restart your AI agent and start talking:
+# 4. Select an agent row and press Enter to install the MCP server for your agent
+# 5. Build the Docker images for the hub tools (required before tools can run)
+./scripts/build-hub-images.sh
+
+# 6. Restart your AI agent and start talking:
 #    "What security tools are available?"
 #    "Scan this binary with binwalk and yara"
 #    "Analyze this Rust crate for fuzzable functions"
@@ -64,7 +67,10 @@ uv run fuzzforge mcp install copilot     # For VS Code + GitHub Copilot
 # OR
 uv run fuzzforge mcp install claude-code # For Claude Code CLI
 
-# Build hub tool images
+# Clone and link the default security hub
+git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.fuzzforge/hubs/mcp-security-hub
+
+# Build hub tool images (required — tools only run once their image is built)
 ./scripts/build-hub-images.sh
 
 # Restart your AI agent — done!
@@ -399,13 +405,20 @@ uv run fuzzforge project results <id>     # Get execution results
 Configure FuzzForge using environment variables:
 
 ```bash
-# Storage path for projects and execution results
-export FUZZFORGE_STORAGE_PATH=/path/to/storage
+# Override the FuzzForge installation root (auto-detected from cwd by default)
+export FUZZFORGE_ROOT=/path/to/fuzzforge_ai
+
+# Override the user-global data directory (default: ~/.fuzzforge)
+# Useful for isolated testing without touching your real installation
+export FUZZFORGE_USER_DIR=/tmp/my-fuzzforge-test
+
+# Storage path for projects and execution results (default: <workspace>/.fuzzforge/storage)
+export FUZZFORGE_STORAGE__PATH=/path/to/storage
 
 # Container engine (Docker is default)
 export FUZZFORGE_ENGINE__TYPE=docker  # or podman
 
-# Podman-specific settings
+# Podman-specific container storage paths
 export FUZZFORGE_ENGINE__GRAPHROOT=~/.fuzzforge/containers/storage
 export FUZZFORGE_ENGINE__RUNROOT=~/.fuzzforge/containers/run
 ```

@@ -120,15 +120,20 @@ def check_agent_status(config_path: Path, servers_key: str) -> tuple[bool, str]:
 
 
 def check_hub_image(image: str) -> tuple[bool, str]:
-    """Check whether a Docker image exists locally.
+    """Check whether a container image exists locally.
 
-    :param image: Docker image name (e.g. "semgrep-mcp:latest").
+    Respects the ``FUZZFORGE_ENGINE__TYPE`` environment variable so that
+    Podman users see the correct build status instead of always "Not built".
+
+    :param image: Image name (e.g. "semgrep-mcp:latest").
     :return: Tuple of (is_ready, status_description).
 
     """
+    engine = os.environ.get("FUZZFORGE_ENGINE__TYPE", "docker").lower()
+    cmd = "podman" if engine == "podman" else "docker"
     try:
         result = subprocess.run(
-            ["docker", "image", "inspect", image],
+            [cmd, "image", "inspect", image],
             check=False, capture_output=True,
             text=True,
             timeout=5,
@@ -139,7 +144,7 @@ def check_hub_image(image: str) -> tuple[bool, str]:
     except subprocess.TimeoutExpired:
         return False, "Timeout"
     except FileNotFoundError:
-        return False, "Docker not found"
+        return False, f"{cmd} not found"
 
 
 def load_hub_config(fuzzforge_root: Path) -> dict[str, Any]:
