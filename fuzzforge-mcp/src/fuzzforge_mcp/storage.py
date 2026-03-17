@@ -13,9 +13,11 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from tarfile import open as Archive  # noqa: N812
 from typing import Any
+from uuid import uuid4
 
 logger = logging.getLogger("fuzzforge-mcp")
 
@@ -79,6 +81,7 @@ class LocalStorage:
         storage_path = self._get_project_path(project_path)
         storage_path.mkdir(parents=True, exist_ok=True)
         (storage_path / "runs").mkdir(parents=True, exist_ok=True)
+        (storage_path / "output").mkdir(parents=True, exist_ok=True)
 
         # Create .gitignore to avoid committing large files
         gitignore_path = storage_path / ".gitignore"
@@ -86,6 +89,7 @@ class LocalStorage:
             gitignore_path.write_text(
                 "# FuzzForge storage - ignore large/temporary files\n"
                 "runs/\n"
+                "output/\n"
                 "!config.json\n"
             )
 
@@ -141,17 +145,85 @@ class LocalStorage:
         logger.info("Set project assets: %s -> %s", project_path.name, assets_path)
         return assets_path
 
-    def list_executions(self, project_path: Path) -> list[str]:
-        """List all execution IDs for a project.
+    def get_project_output_path(self, project_path: Path) -> Path | None:
+        """Get the output directory path for a project.
+
+        Returns the path to the writable output directory that is mounted
+        into hub tool containers at /app/output.
 
         :param project_path: Path to the project directory.
-        :returns: List of execution IDs.
+        :returns: Path to output directory, or None if project not initialized.
+
+        """
+        output_path = self._get_project_path(project_path) / "output"
+        if output_path.exists():
+            return output_path
+        return None
+
+    def record_execution(
+        self,
+        project_path: Path,
+        server_name: str,
+        tool_name: str,
+        arguments: dict[str, Any],
+        result: dict[str, Any],
+    ) -> str:
+        """Record an execution result to the project's runs directory.
+
+        :param project_path: Path to the project directory.
+        :param server_name: Hub server name.
+        :param tool_name: Tool name that was executed.
+        :param arguments: Arguments passed to the tool.
+        :param result: Execution result dictionary.
+        :returns: Execution ID.
+
+        """
+        execution_id = f"{datetime.now(tz=UTC).strftime('%Y%m%dT%H%M%SZ')}_{uuid4().hex[:8]}"
+        run_dir = self._get_project_path(project_path) / "runs" / execution_id
+        run_dir.mkdir(parents=True, exist_ok=True)
+
+        metadata = {
+            "execution_id": execution_id,
+            "timestamp": datetime.now(tz=UTC).isoformat(),
+            "server": server_name,
+            "tool": tool_name,
+            "arguments": arguments,
+            "success": result.get("success", False),
+            "result": result,
+        }
+        (run_dir / "metadata.json").write_text(json.dumps(metadata, indent=2, default=str))
+
+        logger.info("Recorded execution %s: %s:%s", execution_id, server_name, tool_name)
+        return execution_id
+
+    def list_executions(self, project_path: Path) -> list[dict[str, Any]]:
+        """List all executions for a project with summary metadata.
+
+        :param project_path: Path to the project directory.
+        :returns: List of execution summaries (id, timestamp, server, tool, success).
 
         """
         runs_dir = self._get_project_path(project_path) / "runs"
         if not runs_dir.exists():
             return []
-        return [d.name for d in runs_dir.iterdir() if d.is_dir()]
+
+        executions: list[dict[str, Any]] = []
+        for run_dir in sorted(runs_dir.iterdir(), reverse=True):
+            if not run_dir.is_dir():
+                continue
+            meta_path = run_dir / "metadata.json"
+            if meta_path.exists():
+                meta = json.loads(meta_path.read_text())
+                executions.append({
+                    "execution_id": meta.get("execution_id", run_dir.name),
+                    "timestamp": meta.get("timestamp"),
+                    "server": meta.get("server"),
+                    "tool": meta.get("tool"),
+                    "success": meta.get("success"),
+                })
+            else:
+                executions.append({"execution_id": run_dir.name})
+        return executions
 
     def get_execution_results(
         self,

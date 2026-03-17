@@ -30,10 +30,10 @@ async def list_executions() -> list[dict[str, Any]]:
 
         return [
             {
-                "execution_id": exec_id,
-                "has_results": storage.get_execution_results(project_path, exec_id) is not None,
+                "execution_id": entry["execution_id"],
+                "has_results": storage.get_execution_results(project_path, entry["execution_id"]) is not None,
             }
-            for exec_id in execution_ids
+            for entry in execution_ids
         ]
 
     except Exception as exception:

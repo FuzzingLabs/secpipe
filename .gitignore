@@ -10,3 +10,6 @@ __pycache__
 
 # Podman/Docker container storage artifacts
 ~/.fuzzforge/
+
+# User-specific hub config (generated at runtime)
+hub-config.json

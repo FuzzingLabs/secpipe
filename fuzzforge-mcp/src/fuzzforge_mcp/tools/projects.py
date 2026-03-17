@@ -15,15 +15,14 @@ mcp: FastMCP = FastMCP()
 
 @mcp.tool
 async def init_project(project_path: str | None = None) -> dict[str, Any]:
-    """Initialize a new FuzzForge project.
+    """Initialize a new FuzzForge project workspace.
 
-    Creates a `.fuzzforge/` directory inside the project for storing:
-    - config.json: Project configuration
-    - runs/: Execution results
+    Creates a `.fuzzforge/` directory for storing configuration and execution results.
+    Call this once before using hub tools. The project path is a working directory
+    for FuzzForge state — it does not need to contain the files you want to analyze.
+    Use `set_project_assets` separately to specify the target files.
 
-    This should be called before executing hub tools.
-
-    :param project_path: Path to the project directory. If not provided, uses current directory.
+    :param project_path: Working directory for FuzzForge state. Defaults to current directory.
     :return: Project initialization result.
 
     """
@@ -51,12 +50,13 @@ async def init_project(project_path: str | None = None) -> dict[str, Any]:
 
 @mcp.tool
 async def set_project_assets(assets_path: str) -> dict[str, Any]:
-    """Set the initial assets (source code) for a project.
+    """Set the directory containing target files to analyze.
 
-    This sets the DEFAULT source directory that will be mounted into
-    hub tool containers via volume mounts.
+    Points FuzzForge to the directory with your analysis targets
+    (firmware images, binaries, source code, etc.). This directory
+    is mounted read-only into hub tool containers.
 
-    :param assets_path: Path to the project source directory.
+    :param assets_path: Path to the directory containing files to analyze.
     :return: Result including stored assets path.
 
     """
@@ -85,9 +85,9 @@ async def set_project_assets(assets_path: str) -> dict[str, Any]:
 async def list_executions() -> dict[str, Any]:
     """List all executions for the current project.
 
-    Returns a list of execution IDs that can be used to retrieve results.
+    Returns execution summaries including server, tool, timestamp, and success status.
 
-    :return: List of execution IDs.
+    :return: List of execution summaries.
 
     """
     storage = get_storage()
