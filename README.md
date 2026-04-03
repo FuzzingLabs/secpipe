@@ -1,4 +1,4 @@
-<h1 align="center"> FuzzForge AI</h1>
+<h1 align="center">SecPipe</h1>
 <h3 align="center">AI-Powered Security Research Orchestration via MCP</h3>
 
 <p align="center">
