@@ -20,6 +20,8 @@ from tarfile import open as Archive  # noqa: N812
 from typing import Any
 from uuid import uuid4
 
+import yaml
+
 logger = logging.getLogger("fuzzforge-mcp")
 
 #: Name of the FuzzForge storage directory within projects.
@@ -475,3 +477,101 @@ class LocalStorage:
             if artifact["path"] == path:
                 return artifact
         return None
+
+    # ------------------------------------------------------------------
+    # Skill packs
+    # ------------------------------------------------------------------
+
+    #: Directory containing built-in skill packs shipped with FuzzForge.
+    _BUILTIN_SKILLS_DIR: Path = Path(__file__).parent / "skills"
+
+    def _skill_dirs(self, project_path: Path) -> list[Path]:
+        """Return skill directories in priority order (project-local first).
+
+        :param project_path: Path to the project directory.
+        :returns: List of directories that may contain skill YAML files.
+
+        """
+        dirs: list[Path] = []
+        project_skills = self._get_project_path(project_path) / "skills"
+        if project_skills.is_dir():
+            dirs.append(project_skills)
+        if self._BUILTIN_SKILLS_DIR.is_dir():
+            dirs.append(self._BUILTIN_SKILLS_DIR)
+        return dirs
+
+    def list_skills(self, project_path: Path) -> list[dict[str, Any]]:
+        """List available skill packs from project and built-in directories.
+
+        :param project_path: Path to the project directory.
+        :returns: List of skill summaries (name, description first line, source).
+
+        """
+        seen: set[str] = set()
+        skills: list[dict[str, Any]] = []
+
+        for skill_dir in self._skill_dirs(project_path):
+            for yaml_path in sorted(skill_dir.glob("*.yaml")):
+                skill = self._parse_skill_file(yaml_path)
+                if skill is None:
+                    continue
+                name = skill["name"]
+                if name in seen:
+                    continue  # project-local overrides built-in
+                seen.add(name)
+                desc = skill.get("description", "")
+                first_line = desc.strip().split("\n", 1)[0] if desc else ""
+                is_project = ".fuzzforge" in str(yaml_path.parent)
+                source = "project" if is_project else "builtin"
+                skills.append({
+                    "name": name,
+                    "summary": first_line,
+                    "source": source,
+                    "servers": skill.get("servers", []),
+                })
+
+        return skills
+
+    def load_skill(self, project_path: Path, name: str) -> dict[str, Any] | None:
+        """Load a skill pack by name.
+
+        Searches project-local skills first, then built-in skills.
+
+        :param project_path: Path to the project directory.
+        :param name: Skill name (filename without .yaml extension).
+        :returns: Parsed skill dict with name, description, servers — or None.
+
+        """
+        for skill_dir in self._skill_dirs(project_path):
+            yaml_path = skill_dir / f"{name}.yaml"
+            if yaml_path.is_file():
+                return self._parse_skill_file(yaml_path)
+        return None
+
+    @staticmethod
+    def _parse_skill_file(yaml_path: Path) -> dict[str, Any] | None:
+        """Parse and validate a skill YAML file.
+
+        :param yaml_path: Path to the YAML file.
+        :returns: Parsed skill dict, or None if invalid.
+
+        """
+        try:
+            data = yaml.safe_load(yaml_path.read_text())
+        except (yaml.YAMLError, OSError):
+            logger.warning("Failed to parse skill file: %s", yaml_path)
+            return None
+
+        if not isinstance(data, dict):
+            return None
+
+        name = data.get("name")
+        if not name or not isinstance(name, str):
+            logger.warning("Skill file missing 'name': %s", yaml_path)
+            return None
+
+        return {
+            "name": name,
+            "description": data.get("description", ""),
+            "servers": data.get("servers", []),
+        }

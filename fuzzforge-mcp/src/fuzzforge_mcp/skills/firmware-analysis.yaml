@@ -1,0 +1,44 @@
+name: firmware-analysis
+description: |
+  ## Firmware Binary Vulnerability Analysis
+
+  Goal: Find exploitable vulnerabilities in firmware images.
+
+  ### Pipeline
+
+  1. **Extract the filesystem** from the firmware image.
+     Look for SquashFS, JFFS2, CPIO, or other embedded filesystems.
+
+  2. **Scan extracted files for vulnerability patterns.**
+     Use vulnerability-focused rules to identify binaries with dangerous
+     function calls (system, strcpy, popen, sprintf, gets).
+     Prioritize targets by match count — the binary with the most hits
+     is the highest-priority target.
+
+  3. **Deep-analyze the highest-priority binary.**
+     Open a persistent analysis session. Look for:
+     - Dangerous function calls with unsanitized input
+     - Hardcoded credentials or backdoor strings
+     - Network service listeners with weak input validation
+     Focus on confirming whether flagged patterns are actually reachable.
+
+  4. **Search for known CVEs** matching library version strings found
+     during analysis. Cross-reference with public exploit databases.
+
+  5. **Compile findings** with severity ratings:
+     - CRITICAL: confirmed remote code execution paths
+     - HIGH: command injection or buffer overflow with reachable input
+     - MEDIUM: hardcoded credentials, weak crypto, format string issues
+     - LOW: informational findings (library versions, service fingerprints)
+
+  ### Key files to prioritize in extracted firmware
+  - `usr/sbin/httpd`, `usr/bin/httpd` — web servers (high-priority)
+  - `etc/shadow`, `etc/passwd` — credential files
+  - `www/cgi-bin/*` — CGI scripts (command injection vectors)
+  - Custom binaries in `usr/sbin/`, `usr/bin/` — vendor attack surface
+
+servers:
+  - binwalk-mcp
+  - yara-mcp
+  - radare2-mcp
+  - searchsploit-mcp

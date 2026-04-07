@@ -53,10 +53,21 @@ Typical workflow:
 4. Discover tools from servers with `discover_hub_tools`
 5. Execute hub tools with `execute_hub_tool`
 
+Skill packs:
+Use `list_skills` to see available analysis pipelines (e.g. firmware-analysis).
+Load one with `load_skill("firmware-analysis")` to get domain-specific guidance
+and a scoped list of relevant hub servers. Skill packs describe the methodology —
+follow the pipeline steps while adapting to what you find at each stage.
+
 Agent context convention:
 When you call `discover_hub_tools`, some servers return an `agent_context` field
 with usage tips, known issues, rule templates, and workflow guidance. Always read
 this context before using the server's tools.
+
+Artifact tracking:
+After each `execute_hub_tool` call, new output files are automatically tracked.
+Use `list_artifacts` to find files produced by previous tools instead of parsing
+paths from tool output text. Filter by source server or file type.
 
 File access in containers:
 - Assets set via `set_project_assets` are mounted read-only at `/app/uploads/` and `/app/samples/`
@@ -64,29 +75,8 @@ File access in containers:
 - Always use container paths (e.g. `/app/uploads/file`) when passing file arguments to hub tools
 
 Stateful tools:
-- Some tools (e.g. radare2-mcp) require multi-step sessions. Use `start_hub_server` to launch
+- Some tools require multi-step sessions. Use `start_hub_server` to launch
   a persistent container, then `execute_hub_tool` calls reuse that container. Stop with `stop_hub_server`.
-
-Firmware analysis pipeline (when analyzing firmware images):
-1. **binwalk-mcp** (`binwalk_scan` + `binwalk_extract`) — identify and extract filesystem from firmware
-2. **yara-mcp** (`yara_scan_with_rules`) — scan extracted files with vulnerability rules to prioritize targets
-3. **radare2-mcp** (persistent session) — confirm dangerous code paths
-4. **searchsploit-mcp** (`search_exploitdb`) — query version strings from radare2 against ExploitDB
-   Run steps 3 and 4 outputs feed into a final triage summary.
-
-radare2-mcp agent context (upstream tool — no embedded context):
-- Start a persistent session with `start_hub_server("radare2-mcp")` before any calls.
-- IMPORTANT: the `open_file` tool requires the parameter name `file_path` (with underscore),
-  not `filepath`. Example: `execute_hub_tool("hub:radare2-mcp:open_file", {"file_path": "/app/output/..."})`
-- Workflow: `open_file` → `analyze` → `list_imports` → `xrefs_to` → `run_command` with `pdf @ <addr>`.
-- Static binary fallback: firmware binaries are often statically linked. When `list_imports`
-  returns an empty result, fall back to `list_symbols` and search for dangerous function names
-  (system, strcpy, gets, popen, sprintf) in the output. Then use `xrefs_to` on their addresses.
-- For string extraction, use `run_command` with `iz` (data section strings).
-  The `list_all_strings` tool may return garbled output for large binaries.
-- For decompilation, use `run_command` with `pdc @ <addr>` (pseudo-C) or `pdf @ <addr>`
-  (annotated disassembly). The `decompile` tool may fail with "not available in current mode".
-- Stop the session with `stop_hub_server("radare2-mcp")` when done.
 """,
     lifespan=lifespan,
 )

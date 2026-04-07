@@ -1,0 +1,90 @@
+name: go-fuzzing
+description: |
+  ## Go Fuzzing Vulnerability Discovery
+
+  Goal: Find memory safety bugs, panics, and logic errors in a Go project
+  using native Go fuzzing (go test -fuzz).
+
+  ### Pipeline
+
+  1. **Analyze the Go project** to understand its attack surface.
+     Use `go_analyze` to scan the codebase and identify:
+     - Fuzzable entry points: functions accepting `[]byte`, `string`,
+       `io.Reader`, or other parser-like signatures (`Parse*`, `Decode*`,
+       `Unmarshal*`, `Read*`, `Open*`)
+     - Existing `Fuzz*` test functions already in `*_test.go` files
+     - Unsafe/cgo usage that increases the severity of any bugs found
+     - Known CVEs via govulncheck (enable with `run_vulncheck: true`)
+
+     If there are **no existing Fuzz targets**, stop here and report
+     that the project needs fuzz harnesses written first, listing the
+     recommended entry points from the analysis.
+
+  2. **Test harness quality** before committing to a long fuzzing campaign.
+     Use `go_harness_test` to evaluate each Fuzz* function:
+     - Compilation check — does `go test -c` succeed?
+     - Seed execution — do the seed corpus entries pass without panics?
+     - Short fuzzing trial — does the harness sustain fuzzing for 15-30s?
+     - Quality score (0-100): ≥80 = production-ready, ≥50 = needs work, <50 = broken
+
+     **Decision point:**
+     - If all harnesses are **broken** (score < 50): stop and report issues.
+       The user needs to fix them before fuzzing is useful.
+     - If some are **production-ready** or **needs-improvement** (score ≥ 50):
+       proceed with those targets to step 3.
+     - Skip broken harnesses — do not waste fuzzing time on them.
+
+  3. **Run fuzzing** on the viable targets.
+     Use `go_fuzz_run` for a bounded campaign:
+     - Set `duration` based on project size: 60-120s for quick scan,
+       300-600s for thorough analysis.
+     - Pass only the targets that scored ≥ 50 in step 2 via the `targets`
+       parameter — do not fuzz broken harnesses.
+     - The fuzzer collects crash inputs to `/app/output/crashes/{FuzzName}/`.
+
+     **Alternative — continuous mode** for deeper exploration:
+     - Use `go_fuzz_start` to begin background fuzzing.
+     - Periodically check `go_fuzz_status` to monitor progress.
+     - Use `go_fuzz_stop` when satisfied or when crashes are found.
+
+     If **no crashes** are found after a reasonable duration, report that
+     the fuzzing campaign completed cleanly with the execution metrics.
+
+  4. **Analyze crashes** found during fuzzing.
+     Use `go_crash_analyze` to process the crash inputs:
+     - Reproduction: re-run each crash input to confirm it's real
+     - Classification: categorize by type (nil-dereference, index-out-of-range,
+       slice-bounds, divide-by-zero, stack-overflow, data-race, panic, etc.)
+     - Severity assignment: critical / high / medium / low
+     - Deduplication: group crashes by signature (target + type + top 3 frames)
+
+     Skip this step if no crashes were found in step 3.
+
+  5. **Compile the vulnerability report** with findings organized by severity:
+     - **CRITICAL**: nil-dereference, segfault, data-race, stack-overflow
+     - **HIGH**: index/slice out of bounds, allocation overflow
+     - **MEDIUM**: integer overflow, divide by zero, explicit panics
+     - **LOW**: timeout, unclassified crashes
+
+     For each unique crash, include:
+     - The fuzz target that triggered it
+     - The crash type and root cause function + file + line
+     - Whether it was reproducible
+     - The crash input file path for manual investigation
+
+  ### What the user's project needs
+  - A `go.mod` file (any Go module)
+  - At least one `*_test.go` file with `func FuzzXxx(f *testing.F)` functions
+  - Seed corpus entries added via `f.Add(...)` in the Fuzz functions
+
+  ### Interpretation guide
+  - **govulncheck CVEs** (step 1) are known dependency vulnerabilities — report separately
+  - **Fuzzer crashes** (steps 3-4) are new bugs found by fuzzing the project's own code
+  - High execution counts with zero crashes = good sign (code is robust to that input space)
+  - Low quality scores in step 2 usually mean the harness needs better seed corpus or input handling
+
+servers:
+  - go-analyzer-mcp
+  - go-harness-tester-mcp
+  - go-fuzzer-mcp
+  - go-crash-analyzer-mcp

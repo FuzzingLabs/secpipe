@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 
 from fastmcp.server.dependencies import get_context
 
@@ -20,6 +20,9 @@ _current_project_path: Path | None = None
 
 # Singleton storage instance
 _storage: LocalStorage | None = None
+
+# Currently loaded skill pack (set by load_skill)
+_active_skill: dict[str, Any] | None = None
 
 
 def set_current_project_path(project_path: Path) -> None:
@@ -75,3 +78,22 @@ def get_storage() -> LocalStorage:
         settings = get_settings()
         _storage = LocalStorage(settings.storage.path)
     return _storage
+
+
+def set_active_skill(skill: dict[str, Any] | None) -> None:
+    """Set (or clear) the currently loaded skill pack.
+
+    :param skill: Parsed skill dict, or None to unload.
+
+    """
+    global _active_skill
+    _active_skill = skill
+
+
+def get_active_skill() -> dict[str, Any] | None:
+    """Get the currently loaded skill pack.
+
+    :return: Active skill dict, or None if no skill is loaded.
+
+    """
+    return _active_skill
