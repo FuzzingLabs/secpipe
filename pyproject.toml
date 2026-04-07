@@ -1,6 +1,6 @@
 [project]
 name = "fuzzforge-oss"
-version = "1.0.0"
+version = "0.8.0"
 description = "FuzzForge AI - AI-driven security research platform for local execution"
 readme = "README.md"
 requires-python = ">=3.14"

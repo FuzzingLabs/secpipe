@@ -146,3 +146,70 @@ async def get_execution_results(execution_id: str, extract_to: str | None = None
     except Exception as exception:
         message: str = f"Failed to get execution results: {exception}"
         raise ToolError(message) from exception
+
+
+@mcp.tool
+async def list_artifacts(
+    source: str | None = None,
+    artifact_type: str | None = None,
+) -> dict[str, Any]:
+    """List all artifacts produced by hub tools in the current project.
+
+    Artifacts are files created by tool executions in /app/output/.
+    They are automatically tracked after each execute_hub_tool call.
+
+    :param source: Filter by source server name (e.g. "binwalk-mcp").
+    :param artifact_type: Filter by type (e.g. "elf-binary", "json", "text", "archive").
+    :return: List of artifacts with path, type, size, and source info.
+
+    """
+    storage = get_storage()
+    project_path: Path = get_project_path()
+
+    try:
+        artifacts = storage.list_artifacts(
+            project_path,
+            source=source,
+            artifact_type=artifact_type,
+        )
+
+        return {
+            "success": True,
+            "artifacts": artifacts,
+            "count": len(artifacts),
+        }
+
+    except Exception as exception:
+        message: str = f"Failed to list artifacts: {exception}"
+        raise ToolError(message) from exception
+
+
+@mcp.tool
+async def get_artifact(path: str) -> dict[str, Any]:
+    """Get metadata for a specific artifact by its container path.
+
+    :param path: Container path of the artifact (e.g. /app/output/extract_abc123/squashfs-root/usr/sbin/httpd).
+    :return: Artifact metadata including path, type, size, source tool, and timestamps.
+
+    """
+    storage = get_storage()
+    project_path: Path = get_project_path()
+
+    try:
+        artifact = storage.get_artifact(project_path, path)
+
+        if artifact is None:
+            return {
+                "success": False,
+                "path": path,
+                "error": "Artifact not found",
+            }
+
+        return {
+            "success": True,
+            "artifact": artifact,
+        }
+
+    except Exception as exception:
+        message: str = f"Failed to get artifact: {exception}"
+        raise ToolError(message) from exception
