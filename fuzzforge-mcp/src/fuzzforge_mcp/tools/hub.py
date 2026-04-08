@@ -291,7 +291,33 @@ async def execute_hub_tool(
         except Exception:  # noqa: BLE001, S110 - never fail the tool call due to recording issues
             pass
 
-        return result.to_dict()
+        # Scan for new artifacts produced by the tool in /app/output.
+        response = result.to_dict()
+        try:
+            storage = get_storage()
+            project_path = get_project_path()
+            new_artifacts = storage.scan_artifacts(
+                project_path=project_path,
+                server_name=result.server_name,
+                tool_name=result.tool_name,
+            )
+            if new_artifacts:
+                response["artifacts"] = [
+                    {"path": a["path"], "type": a["type"], "size": a["size"]}
+                    for a in new_artifacts
+                ]
+        except Exception:  # noqa: BLE001, S110 - never fail the tool call due to artifact scanning
+            pass
+
+        # Append workflow suggestions based on hints configured for this tool.
+        try:
+            hint = executor.registry.get_workflow_hint(result.tool_name)
+            if hint:
+                response["suggested_next_steps"] = hint
+        except Exception:  # noqa: BLE001, S110 - never fail the tool call due to hint lookup
+            pass
+
+        return response
 
     except Exception as e:
         if isinstance(e, ToolError):

@@ -294,3 +294,17 @@ class HubConfig(BaseModel):
         default=True,
         description="Cache discovered tools",
     )
+
+    #: Workflow hints indexed by "after:<tool_name>" keys.
+    #: Loaded inline or merged from workflow_hints_file.
+    workflow_hints: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Workflow hints indexed by 'after:<tool_name>'",
+    )
+
+    #: Optional path to an external workflow-hints.json file.
+    #: Relative paths are resolved relative to the hub-config.json location.
+    workflow_hints_file: str | None = Field(
+        default=None,
+        description="Path to an external workflow-hints.json to load and merge",
+    )

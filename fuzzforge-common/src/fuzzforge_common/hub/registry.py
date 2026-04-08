@@ -87,6 +87,28 @@ class HubRegistry:
                         config=server_config,
                     )
 
+            # Load and merge external workflow hints file if specified.
+            if self._config.workflow_hints_file:
+                hints_path = Path(self._config.workflow_hints_file)
+                if not hints_path.is_absolute():
+                    hints_path = config_path.parent / hints_path
+                if hints_path.exists():
+                    try:
+                        with hints_path.open() as hf:
+                            hints_data = json.load(hf)
+                        self._config.workflow_hints.update(hints_data.get("hints", {}))
+                        logger.info(
+                            "Loaded workflow hints",
+                            path=str(hints_path),
+                            hints=len(self._config.workflow_hints),
+                        )
+                    except Exception as hints_err:
+                        logger.warning(
+                            "Failed to load workflow hints file",
+                            path=str(hints_path),
+                            error=str(hints_err),
+                        )
+
             logger.info(
                 "Loaded hub configuration",
                 path=str(config_path),
@@ -217,6 +239,15 @@ class HubRegistry:
             server.discovered = True
             server.discovery_error = None
             server.tools = tools
+
+    def get_workflow_hint(self, tool_name: str) -> dict | None:
+        """Get the workflow hint for a tool by name.
+
+        :param tool_name: Tool name (e.g. ``binwalk_extract``).
+        :returns: Hint dict for the ``after:<tool_name>`` key, or None.
+
+        """
+        return self._config.workflow_hints.get(f"after:{tool_name}") or None
 
     def get_all_tools(self) -> list:
         """Get all discovered tools from all servers.
