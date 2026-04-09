@@ -13,3 +13,4 @@ __pycache__
 
 # User-specific hub config (generated at runtime)
 hub-config.json
+*.egg-info/

@@ -25,37 +25,37 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Ruff check (fuzzforge-cli)
+      - name: Ruff check (secpipe-cli)
         run: |
-          cd fuzzforge-cli
+          cd secpipe-cli
           uv run --extra lints ruff check src/
 
-      - name: Ruff check (fuzzforge-mcp)
+      - name: Ruff check (secpipe-mcp)
         run: |
-          cd fuzzforge-mcp
+          cd secpipe-mcp
           uv run --extra lints ruff check src/
 
-      - name: Ruff check (fuzzforge-common)
+      - name: Ruff check (secpipe-common)
         run: |
-          cd fuzzforge-common
+          cd secpipe-common
           uv run --extra lints ruff check src/
 
-      - name: Mypy type check (fuzzforge-cli)
+      - name: Mypy type check (secpipe-cli)
         run: |
-          cd fuzzforge-cli
+          cd secpipe-cli
           uv run --extra lints mypy src/
 
-      - name: Mypy type check (fuzzforge-mcp)
+      - name: Mypy type check (secpipe-mcp)
         run: |
-          cd fuzzforge-mcp
+          cd secpipe-mcp
           uv run --extra lints mypy src/
 
-      # NOTE: Mypy check for fuzzforge-common temporarily disabled
+      # NOTE: Mypy check for secpipe-common temporarily disabled
       # due to 37 pre-existing type errors in legacy code.
       # TODO: Fix type errors and re-enable strict checking
-      #- name: Mypy type check (fuzzforge-common)
+      #- name: Mypy type check (secpipe-common)
       #  run: |
-      #    cd fuzzforge-common
+      #    cd secpipe-common
       #    uv run --extra lints mypy src/
 
   test:
@@ -77,10 +77,10 @@ jobs:
 
       - name: Run MCP tests
         run: |
-          cd fuzzforge-mcp
+          cd secpipe-mcp
           uv run --extra tests pytest -v
 
       - name: Run common tests
         run: |
-          cd fuzzforge-common
+          cd secpipe-common
           uv run --extra tests pytest -v

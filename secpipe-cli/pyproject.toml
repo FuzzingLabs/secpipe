@@ -1,0 +1,29 @@
+[project]
+name = "secpipe-cli"
+version = "0.0.1"
+description = "SecPipe CLI - Command-line interface for SecPipe AI."
+authors = []
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "secpipe-mcp==0.0.1",
+    "rich>=14.0.0",
+    "textual>=1.0.0",
+    "typer==0.20.1",
+]
+
+[project.optional-dependencies]
+lints = [
+    "bandit==1.8.6",
+    "mypy==1.18.2",
+    "ruff==0.14.4",
+]
+tests = [
+    "pytest==9.0.2",
+]
+
+[project.scripts]
+secpipe = "secpipe_cli.__main__:main"
+
+[tool.uv.sources]
+secpipe-mcp = { workspace = true }

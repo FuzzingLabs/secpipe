@@ -71,13 +71,13 @@ test(runner): add container execution tests
 3. **Test Your Changes**
    ```bash
    # Test modules
-   FUZZFORGE_MODULES_PATH=./fuzzforge-modules uv run fuzzforge modules list
+   SECPIPE_MODULES_PATH=./secpipe-modules uv run secpipe modules list
    
    # Run a module
-   uv run fuzzforge modules run your-module --assets ./test-assets
+   uv run secpipe modules run your-module --assets ./test-assets
    
    # Test MCP integration (if applicable)
-   uv run fuzzforge mcp status
+   uv run secpipe mcp status
    ```
 
 4. **Submit Pull Request**
@@ -88,11 +88,11 @@ test(runner): add container execution tests
 
 ## Module Development
 
-SecPipe uses a modular architecture where security tools run as isolated containers. The `fuzzforge-modules-sdk` provides everything you need to create new modules.
+SecPipe uses a modular architecture where security tools run as isolated containers. The `secpipe-modules-sdk` provides everything you need to create new modules.
 
 **Documentation:**
-- [Module SDK Documentation](fuzzforge-modules/fuzzforge-modules-sdk/README.md) - Complete SDK reference
-- [Module Template](fuzzforge-modules/fuzzforge-module-template/) - Starting point for new modules
+- [Module SDK Documentation](secpipe-modules/secpipe-modules-sdk/README.md) - Complete SDK reference
+- [Module Template](secpipe-modules/secpipe-module-template/) - Starting point for new modules
 - [USAGE Guide](USAGE.md) - Setup and installation instructions
 
 ### Creating a New Module
@@ -100,8 +100,8 @@ SecPipe uses a modular architecture where security tools run as isolated contain
 1. **Use the Module Template**
    ```bash
    # Generate a new module from template
-   cd fuzzforge-modules/
-   cp -r fuzzforge-module-template my-new-module
+   cd secpipe-modules/
+   cp -r secpipe-module-template my-new-module
    cd my-new-module
    ```
 
@@ -127,8 +127,8 @@ SecPipe uses a modular architecture where security tools run as isolated contain
    
    Edit `src/module/mod.py`:
    ```python
-   from fuzzforge_modules_sdk.api.modules import BaseModule
-   from fuzzforge_modules_sdk.api.models import ModuleResult
+   from secpipe_modules_sdk.api.modules import BaseModule
+   from secpipe_modules_sdk.api.models import ModuleResult
    from .models import MyModuleConfig, MyModuleOutput
    
    class MyModule(BaseModule[MyModuleConfig, MyModuleOutput]):
@@ -157,7 +157,7 @@ SecPipe uses a modular architecture where security tools run as isolated contain
    Edit `src/module/models.py`:
    ```python
    from pydantic import BaseModel, Field
-   from fuzzforge_modules_sdk.api.models import BaseModuleConfig, BaseModuleOutput
+   from secpipe_modules_sdk.api.models import BaseModuleConfig, BaseModuleOutput
    
    class MyModuleConfig(BaseModuleConfig):
        """Configuration for your module."""
@@ -173,31 +173,31 @@ SecPipe uses a modular architecture where security tools run as isolated contain
 5. **Build Your Module**
    ```bash
    # Build the SDK first (if not already done)
-   cd ../fuzzforge-modules-sdk
+   cd ../secpipe-modules-sdk
    uv build
    mkdir -p .wheels
-   cp ../../dist/fuzzforge_modules_sdk-*.whl .wheels/
+   cp ../../dist/secpipe_modules_sdk-*.whl .wheels/
    cd ../..
-   docker build -t localhost/fuzzforge-modules-sdk:0.1.0 fuzzforge-modules/fuzzforge-modules-sdk/
+   docker build -t localhost/secpipe-modules-sdk:0.1.0 secpipe-modules/secpipe-modules-sdk/
    
    # Build your module
-   cd fuzzforge-modules/my-new-module
-   docker build -t fuzzforge-my-new-module:0.1.0 .
+   cd secpipe-modules/my-new-module
+   docker build -t secpipe-my-new-module:0.1.0 .
    ```
 
 6. **Test Your Module**
    ```bash
    # Run with test assets
-   uv run fuzzforge modules run my-new-module --assets ./test-assets
+   uv run secpipe modules run my-new-module --assets ./test-assets
    
    # Check module info
-   uv run fuzzforge modules info my-new-module
+   uv run secpipe modules info my-new-module
    ```
 
 ### Module Development Guidelines
 
 **Important Conventions:**
-- **Input/Output**: Use `/fuzzforge/input` for assets and `/fuzzforge/output` for results
+- **Input/Output**: Use `/secpipe/input` for assets and `/secpipe/output` for results
 - **Configuration**: Support JSON configuration via stdin or file
 - **Logging**: Use structured logging (structlog is pre-configured)
 - **Error Handling**: Return proper exit codes and error messages
@@ -206,7 +206,7 @@ SecPipe uses a modular architecture where security tools run as isolated contain
 - **Dependencies**: Minimize container size, use multi-stage builds
 
 **See also:**
-- [Module SDK API Reference](fuzzforge-modules/fuzzforge-modules-sdk/src/fuzzforge_modules_sdk/api/)
+- [Module SDK API Reference](secpipe-modules/secpipe-modules-sdk/src/secpipe_modules_sdk/api/)
 - [Dockerfile Best Practices](https://docs.docker.com/develop/develop-images/dockerfile_best-practices/)
 
 ### Module Types
@@ -273,8 +273,8 @@ SecPipe is designed to support modules across **all cybersecurity domains**. The
 ```python
 # src/module/mod.py
 from pathlib import Path
-from fuzzforge_modules_sdk.api.modules import BaseModule
-from fuzzforge_modules_sdk.api.models import ModuleResult
+from secpipe_modules_sdk.api.modules import BaseModule
+from secpipe_modules_sdk.api.models import ModuleResult
 from .models import ScannerConfig, ScannerOutput
 
 class SecurityScanner(BaseModule[ScannerConfig, ScannerOutput]):
@@ -350,18 +350,18 @@ Beyond modules, you can contribute to SecPipe's core components.
 
 ### Core Components
 
-- **fuzzforge-mcp** - MCP server for AI agent integration
-- **fuzzforge-runner** - Module execution engine
-- **fuzzforge-cli** - Command-line interface
-- **fuzzforge-common** - Shared utilities and sandbox engines
-- **fuzzforge-types** - Type definitions and schemas
+- **secpipe-mcp** - MCP server for AI agent integration
+- **secpipe-runner** - Module execution engine
+- **secpipe-cli** - Command-line interface
+- **secpipe-common** - Shared utilities and sandbox engines
+- **secpipe-types** - Type definitions and schemas
 
 ### Development Setup
 
 1. **Clone and Install**
    ```bash
-   git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
-   cd fuzzforge_ai
+   git clone https://github.com/FuzzingLabs/secpipe_ai.git
+   cd secpipe_ai
    uv sync --all-extras
    ```
 
@@ -371,7 +371,7 @@ Beyond modules, you can contribute to SecPipe's core components.
    make test
    
    # Run specific package tests
-   cd fuzzforge-mcp
+   cd secpipe-mcp
    uv run pytest
    ```
 
@@ -381,7 +381,7 @@ Beyond modules, you can contribute to SecPipe's core components.
    make typecheck
    
    # Type check specific package
-   cd fuzzforge-runner
+   cd secpipe-runner
    uv run mypy .
    ```
 
@@ -399,7 +399,7 @@ Beyond modules, you can contribute to SecPipe's core components.
 When reporting bugs, please include:
 
 - **Environment**: OS, Python version, Docker version, uv version
-- **SecPipe Version**: Output of `uv run fuzzforge --version`
+- **SecPipe Version**: Output of `uv run secpipe --version`
 - **Module**: Which module or component is affected
 - **Steps to Reproduce**: Clear steps to recreate the issue
 - **Expected Behavior**: What should happen
@@ -419,7 +419,7 @@ When reporting bugs, please include:
 **Module:** my-custom-scanner
 
 **Steps to Reproduce:**
-1. Run `uv run fuzzforge modules run my-scanner --assets ./test-target`
+1. Run `uv run secpipe modules run my-scanner --assets ./test-target`
 2. Module fails with timeout error
 
 **Expected:** Module completes analysis
@@ -491,7 +491,7 @@ Brief description of what this module does.
 ## Usage
 
 \`\`\`bash
-uv run fuzzforge modules run module-name --assets ./path/to/assets
+uv run secpipe modules run module-name --assets ./path/to/assets
 \`\`\`
 
 ## Output
@@ -552,7 +552,7 @@ For module contributions:
 Need help contributing?
 
 - Join our [Discord](https://discord.gg/8XEX33UUwZ)
-- Read the [Module SDK Documentation](fuzzforge-modules/fuzzforge-modules-sdk/README.md)
+- Read the [Module SDK Documentation](secpipe-modules/secpipe-modules-sdk/README.md)
 - Check the module template for examples
 - Contact: contact@fuzzinglabs.com
 

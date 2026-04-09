@@ -76,8 +76,8 @@ Agent → Crash Analysis:  Deduplicate and triage discovered crashes
 
 If you find SecPipe useful, please **star the repo** to support development! 🚀
 
-<a href="https://github.com/FuzzingLabs/fuzzforge_ai/stargazers">
-  <img src="https://img.shields.io/github/stars/FuzzingLabs/fuzzforge_ai?style=social" alt="GitHub Stars">
+<a href="https://github.com/FuzzingLabs/secpipe_ai/stargazers">
+  <img src="https://img.shields.io/github/stars/FuzzingLabs/secpipe_ai?style=social" alt="GitHub Stars">
 </a>
 
 ---
@@ -169,8 +169,8 @@ The hub is open source and can be extended with your own MCP servers. See the [m
 
 ```bash
 # Clone the repository
-git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
-cd fuzzforge_ai
+git clone https://github.com/FuzzingLabs/secpipe_ai.git
+cd secpipe_ai
 
 # Install dependencies
 uv sync
@@ -180,28 +180,28 @@ uv sync
 
 ```bash
 # Clone the MCP Security Hub
-git clone https://github.com/FuzzingLabs/mcp-security-hub.git ~/.fuzzforge/hubs/mcp-security-hub
+git clone https://github.com/FuzzingLabs/mcp-security-hub.git ~/.secpipe/hubs/mcp-security-hub
 
 # Build the Docker images for the hub tools
 ./scripts/build-hub-images.sh
 ```
 
-Or use the terminal UI (`uv run fuzzforge ui`) to link hubs interactively.
+Or use the terminal UI (`uv run secpipe ui`) to link hubs interactively.
 
 ### Configure MCP for Your AI Agent
 
 ```bash
 # For GitHub Copilot
-uv run fuzzforge mcp install copilot
+uv run secpipe mcp install copilot
 
 # For Claude Code (CLI)
-uv run fuzzforge mcp install claude-code
+uv run secpipe mcp install claude-code
 
 # For Claude Desktop (standalone app)
-uv run fuzzforge mcp install claude-desktop
+uv run secpipe mcp install claude-desktop
 
 # Verify installation
-uv run fuzzforge mcp status
+uv run secpipe mcp status
 ```
 
 **Restart your editor** and your AI agent will have access to SecPipe tools!
@@ -228,12 +228,12 @@ See the [Usage Guide](USAGE.md) for detailed setup and advanced workflows.
 ## 📁 Project Structure
 
 ```
-fuzzforge_ai/
-├── fuzzforge-mcp/           # MCP server — the core of SecPipe
-├── fuzzforge-cli/           # Command-line interface & terminal UI
-├── fuzzforge-common/        # Shared abstractions (containers, storage)
-├── fuzzforge-runner/        # Container execution engine (Docker/Podman)
-├── fuzzforge-tests/         # Integration tests
+secpipe_ai/
+├── secpipe-mcp/           # MCP server — the core of SecPipe
+├── secpipe-cli/           # Command-line interface & terminal UI
+├── secpipe-common/        # Shared abstractions (containers, storage)
+├── secpipe-runner/        # Container execution engine (Docker/Podman)
+├── secpipe-tests/         # Integration tests
 ├── mcp-security-hub/        # Default hub: 36 offensive security MCP servers
 └── scripts/                 # Hub image build scripts
 ```

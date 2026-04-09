@@ -27,23 +27,23 @@ jobs:
 
       - name: Start MCP server in background
         run: |
-          cd fuzzforge-mcp
-          nohup uv run python -m fuzzforge_mcp.server > server.log 2>&1 &
+          cd secpipe-mcp
+          nohup uv run uvicorn secpipe_mcp.application:app --host 127.0.0.1 --port 8000 > server.log 2>&1 &
           echo $! > server.pid
           sleep 3
 
       - name: Run MCP tool tests
         run: |
-          cd fuzzforge-mcp
+          cd secpipe-mcp
           uv run --extra tests pytest tests/test_resources.py -v
 
       - name: Stop MCP server
         if: always()
         run: |
-          if [ -f fuzzforge-mcp/server.pid ]; then
-            kill $(cat fuzzforge-mcp/server.pid) || true
+          if [ -f secpipe-mcp/server.pid ]; then
+            kill $(cat secpipe-mcp/server.pid) || true
           fi
 
       - name: Show server logs
         if: failure()
-        run: cat fuzzforge-mcp/server.log || true
+        run: cat secpipe-mcp/server.log || true
