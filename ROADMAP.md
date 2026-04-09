@@ -115,7 +115,7 @@ Features under consideration for future releases:
 
 Have suggestions for the roadmap? 
 
-- Open an issue on [GitHub](https://github.com/FuzzingLabs/fuzzforge_ai/issues)
+- Open an issue on [GitHub](https://github.com/FuzzingLabs/secpipe_ai/issues)
 - Join our [Discord](https://discord.gg/8XEX33UUwZ)
 
 ---

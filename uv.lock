@@ -4,11 +4,11 @@ requires-python = ">=3.14"
 
 [manifest]
 members = [
-    "fuzzforge-cli",
-    "fuzzforge-common",
-    "fuzzforge-mcp",
-    "fuzzforge-oss",
-    "fuzzforge-tests",
+    "secpipe-cli",
+    "secpipe-common",
+    "secpipe-mcp",
+    "secpipe-oss",
+    "secpipe-tests",
 ]
 
 [[package]]
@@ -358,11 +358,11 @@ wheels = [
 ]
 
 [[package]]
-name = "fuzzforge-cli"
+name = "secpipe-cli"
 version = "0.0.1"
-source = { editable = "fuzzforge-cli" }
+source = { editable = "secpipe-cli" }
 dependencies = [
-    { name = "fuzzforge-mcp" },
+    { name = "secpipe-mcp" },
     { name = "rich" },
     { name = "textual" },
     { name = "typer" },
@@ -381,7 +381,7 @@ tests = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'lints'", specifier = "==1.8.6" },
-    { name = "fuzzforge-mcp", editable = "fuzzforge-mcp" },
+    { name = "secpipe-mcp", editable = "secpipe-mcp" },
     { name = "mypy", marker = "extra == 'lints'", specifier = "==1.18.2" },
     { name = "pytest", marker = "extra == 'tests'", specifier = "==9.0.2" },
     { name = "rich", specifier = ">=14.0.0" },
@@ -392,9 +392,9 @@ requires-dist = [
 provides-extras = ["lints", "tests"]
 
 [[package]]
-name = "fuzzforge-common"
+name = "secpipe-common"
 version = "0.0.1"
-source = { editable = "fuzzforge-common" }
+source = { editable = "secpipe-common" }
 dependencies = [
     { name = "podman" },
     { name = "pydantic" },
@@ -424,12 +424,12 @@ requires-dist = [
 provides-extras = ["lints", "tests"]
 
 [[package]]
-name = "fuzzforge-mcp"
+name = "secpipe-mcp"
 version = "0.0.1"
-source = { editable = "fuzzforge-mcp" }
+source = { editable = "secpipe-mcp" }
 dependencies = [
     { name = "fastmcp" },
-    { name = "fuzzforge-common" },
+    { name = "secpipe-common" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyyaml" },
@@ -443,7 +443,7 @@ lints = [
     { name = "ruff" },
 ]
 tests = [
-    { name = "fuzzforge-tests" },
+    { name = "secpipe-tests" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-httpx" },
@@ -453,8 +453,8 @@ tests = [
 requires-dist = [
     { name = "bandit", marker = "extra == 'lints'", specifier = "==1.8.6" },
     { name = "fastmcp", specifier = "==2.14.1" },
-    { name = "fuzzforge-common", editable = "fuzzforge-common" },
-    { name = "fuzzforge-tests", marker = "extra == 'tests'", editable = "fuzzforge-tests" },
+    { name = "secpipe-common", editable = "secpipe-common" },
+    { name = "secpipe-tests", marker = "extra == 'tests'", editable = "secpipe-tests" },
     { name = "mypy", marker = "extra == 'lints'", specifier = "==1.18.2" },
     { name = "pydantic", specifier = "==2.12.4" },
     { name = "pydantic-settings", specifier = "==2.12.0" },
@@ -468,20 +468,20 @@ requires-dist = [
 provides-extras = ["lints", "tests"]
 
 [[package]]
-name = "fuzzforge-oss"
+name = "secpipe-oss"
 version = "0.8.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "fuzzforge-cli" },
-    { name = "fuzzforge-common" },
-    { name = "fuzzforge-mcp" },
+    { name = "secpipe-cli" },
+    { name = "secpipe-common" },
+    { name = "secpipe-mcp" },
 ]
 
 [package.optional-dependencies]
 dev = [
-    { name = "fuzzforge-common" },
-    { name = "fuzzforge-mcp" },
-    { name = "fuzzforge-tests" },
+    { name = "secpipe-common" },
+    { name = "secpipe-mcp" },
+    { name = "secpipe-tests" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-httpx" },
@@ -489,12 +489,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "fuzzforge-cli", editable = "fuzzforge-cli" },
-    { name = "fuzzforge-common", editable = "fuzzforge-common" },
-    { name = "fuzzforge-common", marker = "extra == 'dev'", editable = "fuzzforge-common" },
-    { name = "fuzzforge-mcp", editable = "fuzzforge-mcp" },
-    { name = "fuzzforge-mcp", marker = "extra == 'dev'", editable = "fuzzforge-mcp" },
-    { name = "fuzzforge-tests", marker = "extra == 'dev'", editable = "fuzzforge-tests" },
+    { name = "secpipe-cli", editable = "secpipe-cli" },
+    { name = "secpipe-common", editable = "secpipe-common" },
+    { name = "secpipe-common", marker = "extra == 'dev'", editable = "secpipe-common" },
+    { name = "secpipe-mcp", editable = "secpipe-mcp" },
+    { name = "secpipe-mcp", marker = "extra == 'dev'", editable = "secpipe-mcp" },
+    { name = "secpipe-tests", marker = "extra == 'dev'", editable = "secpipe-tests" },
     { name = "pytest", marker = "extra == 'dev'", specifier = "==9.0.2" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = "==1.3.0" },
     { name = "pytest-httpx", marker = "extra == 'dev'", specifier = "==0.36.0" },
@@ -502,11 +502,11 @@ requires-dist = [
 provides-extras = ["dev"]
 
 [[package]]
-name = "fuzzforge-tests"
+name = "secpipe-tests"
 version = "0.0.1"
-source = { editable = "fuzzforge-tests" }
+source = { editable = "secpipe-tests" }
 dependencies = [
-    { name = "fuzzforge-common" },
+    { name = "secpipe-common" },
     { name = "podman" },
     { name = "pydantic" },
     { name = "pytest" },
@@ -522,7 +522,7 @@ lints = [
 [package.metadata]
 requires-dist = [
     { name = "bandit", marker = "extra == 'lints'", specifier = "==1.8.6" },
-    { name = "fuzzforge-common", editable = "fuzzforge-common" },
+    { name = "secpipe-common", editable = "secpipe-common" },
     { name = "mypy", marker = "extra == 'lints'", specifier = "==1.18.2" },
     { name = "podman", specifier = "==5.6.0" },
     { name = "pydantic", specifier = ">=2.12.4" },

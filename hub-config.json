@@ -8,7 +8,7 @@
       "category": "active-directory",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -21,7 +21,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -34,7 +34,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -47,7 +47,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -60,7 +60,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -73,7 +73,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -86,7 +86,7 @@
       "category": "binary-analysis",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -99,7 +99,7 @@
       "category": "blockchain",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -112,7 +112,7 @@
       "category": "blockchain",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -125,7 +125,7 @@
       "category": "blockchain",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -138,7 +138,7 @@
       "category": "cloud-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -151,7 +151,7 @@
       "category": "cloud-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -164,7 +164,7 @@
       "category": "cloud-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -177,7 +177,7 @@
       "category": "code-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -190,7 +190,7 @@
       "category": "exploitation",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -203,7 +203,7 @@
       "category": "fuzzing",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -216,7 +216,7 @@
       "category": "fuzzing",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -229,7 +229,7 @@
       "category": "osint",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -242,7 +242,7 @@
       "category": "osint",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -255,7 +255,7 @@
       "category": "password-cracking",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -270,7 +270,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -285,7 +285,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -300,7 +300,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -315,7 +315,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -330,7 +330,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -345,7 +345,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -360,7 +360,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -375,7 +375,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -388,7 +388,7 @@
       "category": "secrets",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -401,7 +401,7 @@
       "category": "threat-intel",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -414,7 +414,7 @@
       "category": "threat-intel",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -429,7 +429,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -444,7 +444,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -459,7 +459,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -474,7 +474,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -489,7 +489,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -504,7 +504,7 @@
         "NET_RAW"
       ],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -517,7 +517,7 @@
       "category": "code-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -530,7 +530,7 @@
       "category": "code-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -543,7 +543,7 @@
       "category": "code-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"
@@ -556,7 +556,7 @@
       "category": "code-security",
       "capabilities": [],
       "volumes": [
-        "/home/afredefon/.fuzzforge/hub/workspace:/data"
+        "/home/afredefon/.secpipe/hub/workspace:/data"
       ],
       "enabled": true,
       "source_hub": "mcp-security-hub"

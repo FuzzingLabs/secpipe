@@ -4,7 +4,7 @@ SHELL := /bin/bash
 
 # Default target
 help:
-	@echo "FuzzForge AI Development Commands"
+	@echo "SecPipe AI Development Commands"
 	@echo ""
 	@echo "  make install       - Install all dependencies"
 	@echo "  make sync          - Sync shared packages from upstream"
@@ -20,17 +20,17 @@ help:
 install:
 	uv sync
 
-# Sync shared packages from upstream fuzzforge-core
+# Sync shared packages from upstream secpipe-core
 sync:
 	@if [ -z "$(UPSTREAM)" ]; then \
-		echo "Usage: make sync UPSTREAM=/path/to/fuzzforge-core"; \
+		echo "Usage: make sync UPSTREAM=/path/to/secpipe-core"; \
 		exit 1; \
 	fi
 	./scripts/sync-upstream.sh $(UPSTREAM)
 
 # Format all packages
 format:
-	@for pkg in packages/fuzzforge-*/; do \
+	@for pkg in packages/secpipe-*/; do \
 		if [ -f "$$pkg/pyproject.toml" ]; then \
 			echo "Formatting $$pkg..."; \
 			cd "$$pkg" && uv run ruff format . && cd -; \
@@ -39,7 +39,7 @@ format:
 
 # Lint all packages
 lint:
-	@for pkg in packages/fuzzforge-*/; do \
+	@for pkg in packages/secpipe-*/; do \
 		if [ -f "$$pkg/pyproject.toml" ]; then \
 			echo "Linting $$pkg..."; \
 			cd "$$pkg" && uv run ruff check . && cd -; \
@@ -48,7 +48,7 @@ lint:
 
 # Type check all packages
 typecheck:
-	@for pkg in packages/fuzzforge-*/; do \
+	@for pkg in packages/secpipe-*/; do \
 		if [ -f "$$pkg/pyproject.toml" ] && [ -f "$$pkg/mypy.ini" ]; then \
 			echo "Type checking $$pkg..."; \
 			cd "$$pkg" && uv run mypy . && cd -; \
@@ -57,7 +57,7 @@ typecheck:
 
 # Run all tests
 test:
-	@for pkg in packages/fuzzforge-*/; do \
+	@for pkg in packages/secpipe-*/; do \
 		if [ -f "$$pkg/pytest.ini" ]; then \
 			echo "Testing $$pkg..."; \
 			cd "$$pkg" && uv run pytest && cd -; \

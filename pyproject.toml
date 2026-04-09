@@ -1,16 +1,16 @@
 [project]
-name = "fuzzforge-oss"
+name = "secpipe-oss"
 version = "0.8.0"
-description = "FuzzForge AI - AI-driven security research platform for local execution"
+description = "SecPipe AI - AI-driven security research platform for local execution"
 readme = "README.md"
 requires-python = ">=3.14"
 authors = [
     { name = "FuzzingLabs", email = "contact@fuzzinglabs.com" }
 ]
 dependencies = [
-    "fuzzforge-cli",
-    "fuzzforge-mcp",
-    "fuzzforge-common",
+    "secpipe-cli",
+    "secpipe-mcp",
+    "secpipe-common",
 ]
 
 [project.optional-dependencies]
@@ -18,21 +18,21 @@ dev = [
     "pytest==9.0.2",
     "pytest-asyncio==1.3.0",
     "pytest-httpx==0.36.0",
-    "fuzzforge-tests",
-    "fuzzforge-common",
-    "fuzzforge-mcp",
+    "secpipe-tests",
+    "secpipe-common",
+    "secpipe-mcp",
 ]
 
 [tool.uv.workspace]
 members = [
-    "fuzzforge-common",
-    "fuzzforge-mcp",
-    "fuzzforge-cli",
-    "fuzzforge-tests",
+    "secpipe-common",
+    "secpipe-mcp",
+    "secpipe-cli",
+    "secpipe-tests",
 ]
 
 [tool.uv.sources]
-fuzzforge-common = { workspace = true }
-fuzzforge-mcp = { workspace = true }
-fuzzforge-cli = { workspace = true }
-fuzzforge-tests = { workspace = true }
+secpipe-common = { workspace = true }
+secpipe-mcp = { workspace = true }
+secpipe-cli = { workspace = true }
+secpipe-tests = { workspace = true }

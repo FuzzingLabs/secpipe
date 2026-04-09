@@ -3,7 +3,7 @@
 This guide covers everything you need to know to get started with SecPipe AI — from installation to linking your first MCP hub and running security research workflows with AI.
 
 > **SecPipe is designed to be used with AI agents** (GitHub Copilot, Claude, etc.) via MCP.
-> A terminal UI (`fuzzforge ui`) is provided for managing agents and hubs.
+> A terminal UI (`secpipe ui`) is provided for managing agents and hubs.
 > The CLI is available for advanced users but the primary experience is through natural language interaction with your AI assistant.
 
 ---
@@ -41,12 +41,12 @@ This guide covers everything you need to know to get started with SecPipe AI —
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
-cd fuzzforge_ai
+git clone https://github.com/FuzzingLabs/secpipe_ai.git
+cd secpipe_ai
 uv sync
 
 # 2. Launch the terminal UI
-uv run fuzzforge ui
+uv run secpipe ui
 
 # 3. Press 'h' → "FuzzingLabs Hub" to clone & link the default security hub
 # 4. Select an agent row and press Enter to install the MCP server for your agent
@@ -63,12 +63,12 @@ Or do it entirely from the command line:
 
 ```bash
 # Install MCP for your AI agent
-uv run fuzzforge mcp install copilot     # For VS Code + GitHub Copilot
+uv run secpipe mcp install copilot     # For VS Code + GitHub Copilot
 # OR
-uv run fuzzforge mcp install claude-code # For Claude Code CLI
+uv run secpipe mcp install claude-code # For Claude Code CLI
 
 # Clone and link the default security hub
-git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.fuzzforge/hubs/mcp-security-hub
+git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.secpipe/hubs/mcp-security-hub
 
 # Build hub tool images (required — tools only run once their image is built)
 ./scripts/build-hub-images.sh
@@ -112,7 +112,7 @@ sudo usermod -aG docker $USER
 ```
 
 > **Note:** Podman is also supported. Use `--engine podman` with CLI commands
-> or set `FUZZFORGE_ENGINE=podman` environment variable.
+> or set `SECPIPE_ENGINE=podman` environment variable.
 
 ---
 
@@ -121,8 +121,8 @@ sudo usermod -aG docker $USER
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/FuzzingLabs/fuzzforge_ai.git
-cd fuzzforge_ai
+git clone https://github.com/FuzzingLabs/secpipe_ai.git
+cd secpipe_ai
 ```
 
 ### 2. Install Dependencies
@@ -136,7 +136,7 @@ This installs all SecPipe components in a virtual environment.
 ### 3. Verify Installation
 
 ```bash
-uv run fuzzforge --help
+uv run secpipe --help
 ```
 
 ---
@@ -148,7 +148,7 @@ SecPipe ships with a terminal user interface (TUI) built on [Textual](https://te
 ### Launching the UI
 
 ```bash
-uv run fuzzforge ui
+uv run secpipe ui
 ```
 
 ### Dashboard
@@ -174,7 +174,7 @@ The main screen is split into two panels:
 Select an agent row in the AI Agents table and press `Enter`:
 
 - **If the agent is not linked** → a setup dialog opens asking for your container engine (Docker or Podman), then installs the SecPipe MCP configuration
-- **If the agent is already linked** → a confirmation dialog offers to unlink it (removes the `fuzzforge` entry without touching other MCP servers)
+- **If the agent is already linked** → a confirmation dialog offers to unlink it (removes the `secpipe` entry without touching other MCP servers)
 
 The setup auto-detects:
 - SecPipe installation root
@@ -187,7 +187,7 @@ Press `h` to open the hub manager. This is where you manage your MCP hub reposit
 
 | Button | Action |
 |--------|--------|
-| **FuzzingLabs Hub** | One-click clone of the official [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub) repository — clones to `~/.fuzzforge/hubs/mcp-security-hub`, scans for tools, and registers them in `hub-config.json` |
+| **FuzzingLabs Hub** | One-click clone of the official [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub) repository — clones to `~/.secpipe/hubs/mcp-security-hub`, scans for tools, and registers them in `hub-config.json` |
 | **Link Path** | Link any local directory as a hub — enter a name and path, SecPipe scans it for `category/tool-name/Dockerfile` patterns |
 | **Clone URL** | Clone any git repository and link it as a hub |
 | **Remove** | Unlink the selected hub and remove its servers from the configuration |
@@ -242,14 +242,14 @@ The default MCP hub is [mcp-security-hub](https://github.com/FuzzingLabs/mcp-sec
 
 **Clone it via the UI:**
 
-1. `uv run fuzzforge ui`
+1. `uv run secpipe ui`
 2. Press `h` → click **FuzzingLabs Hub**
 3. Wait for the clone to finish — servers are auto-registered
 
 **Or clone manually:**
 
 ```bash
-git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.fuzzforge/hubs/mcp-security-hub
+git clone git@github.com:FuzzingLabs/mcp-security-hub.git ~/.secpipe/hubs/mcp-security-hub
 ```
 
 ### Linking a Custom Hub
@@ -286,7 +286,7 @@ If you prefer the command line over the TUI, you can configure agents directly:
 ### GitHub Copilot
 
 ```bash
-uv run fuzzforge mcp install copilot
+uv run secpipe mcp install copilot
 ```
 
 The command auto-detects:
@@ -295,7 +295,7 @@ The command auto-detects:
 
 **Optional overrides:**
 ```bash
-uv run fuzzforge mcp install copilot --engine podman
+uv run secpipe mcp install copilot --engine podman
 ```
 
 **After installation:** Restart VS Code. SecPipe tools appear in GitHub Copilot Chat.
@@ -303,7 +303,7 @@ uv run fuzzforge mcp install copilot --engine podman
 ### Claude Code (CLI)
 
 ```bash
-uv run fuzzforge mcp install claude-code
+uv run secpipe mcp install claude-code
 ```
 
 Installs to `~/.claude.json`. SecPipe tools are available from any directory after restarting Claude.
@@ -311,7 +311,7 @@ Installs to `~/.claude.json`. SecPipe tools are available from any directory aft
 ### Claude Desktop
 
 ```bash
-uv run fuzzforge mcp install claude-desktop
+uv run secpipe mcp install claude-desktop
 ```
 
 **After installation:** Restart Claude Desktop.
@@ -319,15 +319,15 @@ uv run fuzzforge mcp install claude-desktop
 ### Check Status
 
 ```bash
-uv run fuzzforge mcp status
+uv run secpipe mcp status
 ```
 
 ### Remove Configuration
 
 ```bash
-uv run fuzzforge mcp uninstall copilot
-uv run fuzzforge mcp uninstall claude-code
-uv run fuzzforge mcp uninstall claude-desktop
+uv run secpipe mcp uninstall copilot
+uv run secpipe mcp uninstall claude-code
+uv run secpipe mcp uninstall claude-desktop
 ```
 
 ---
@@ -377,25 +377,25 @@ AI: Uses semgrep-mcp → "Found 5 findings: 2 high severity SQL injection
 ### UI Command
 
 ```bash
-uv run fuzzforge ui                      # Launch the terminal dashboard
+uv run secpipe ui                      # Launch the terminal dashboard
 ```
 
 ### MCP Commands
 
 ```bash
-uv run fuzzforge mcp status              # Check agent configuration status
-uv run fuzzforge mcp install <agent>     # Install MCP config (copilot|claude-code|claude-desktop)
-uv run fuzzforge mcp uninstall <agent>   # Remove MCP config
-uv run fuzzforge mcp generate <agent>    # Preview config without installing
+uv run secpipe mcp status              # Check agent configuration status
+uv run secpipe mcp install <agent>     # Install MCP config (copilot|claude-code|claude-desktop)
+uv run secpipe mcp uninstall <agent>   # Remove MCP config
+uv run secpipe mcp generate <agent>    # Preview config without installing
 ```
 
 ### Project Commands
 
 ```bash
-uv run fuzzforge project init             # Initialize a project
-uv run fuzzforge project info             # Show project info
-uv run fuzzforge project executions       # List executions
-uv run fuzzforge project results <id>     # Get execution results
+uv run secpipe project init             # Initialize a project
+uv run secpipe project info             # Show project info
+uv run secpipe project executions       # List executions
+uv run secpipe project results <id>     # Get execution results
 ```
 
 ---
@@ -406,21 +406,21 @@ Configure SecPipe using environment variables:
 
 ```bash
 # Override the SecPipe installation root (auto-detected from cwd by default)
-export FUZZFORGE_ROOT=/path/to/fuzzforge_ai
+export SECPIPE_ROOT=/path/to/secpipe_ai
 
-# Override the user-global data directory (default: ~/.fuzzforge)
+# Override the user-global data directory (default: ~/.secpipe)
 # Useful for isolated testing without touching your real installation
-export FUZZFORGE_USER_DIR=/tmp/my-fuzzforge-test
+export SECPIPE_USER_DIR=/tmp/my-secpipe-test
 
-# Storage path for projects and execution results (default: <workspace>/.fuzzforge/storage)
-export FUZZFORGE_STORAGE__PATH=/path/to/storage
+# Storage path for projects and execution results (default: <workspace>/.secpipe/storage)
+export SECPIPE_STORAGE__PATH=/path/to/storage
 
 # Container engine (Docker is default)
-export FUZZFORGE_ENGINE__TYPE=docker  # or podman
+export SECPIPE_ENGINE__TYPE=docker  # or podman
 
 # Podman-specific container storage paths
-export FUZZFORGE_ENGINE__GRAPHROOT=~/.fuzzforge/containers/storage
-export FUZZFORGE_ENGINE__RUNROOT=~/.fuzzforge/containers/run
+export SECPIPE_ENGINE__GRAPHROOT=~/.secpipe/containers/storage
+export SECPIPE_ENGINE__RUNROOT=~/.secpipe/containers/run
 ```
 
 ---
@@ -473,7 +473,7 @@ docker build -t <tool-name>:latest mcp-security-hub/<category>/<tool-name>/
 
 ```bash
 # Check agent configuration
-uv run fuzzforge mcp status
+uv run secpipe mcp status
 
 # Verify the config file path exists and contains valid JSON
 cat ~/.config/Code/User/mcp.json    # Copilot
@@ -484,29 +484,29 @@ cat ~/.claude.json                   # Claude Code
 
 ```bash
 # Install with Podman engine
-uv run fuzzforge mcp install copilot --engine podman
+uv run secpipe mcp install copilot --engine podman
 
 # Or set environment variable
-export FUZZFORGE_ENGINE=podman
+export SECPIPE_ENGINE=podman
 ```
 
 ### Hub Registry
 
-SecPipe stores linked hub information in `~/.fuzzforge/hubs.json`. If something goes wrong:
+SecPipe stores linked hub information in `~/.secpipe/hubs.json`. If something goes wrong:
 
 ```bash
 # View registry
-cat ~/.fuzzforge/hubs.json
+cat ~/.secpipe/hubs.json
 
 # Reset registry
-rm ~/.fuzzforge/hubs.json
+rm ~/.secpipe/hubs.json
 ```
 
 ---
 
 ## Next Steps
 
-- 🖥️ Launch `uv run fuzzforge ui` and explore the dashboard
+- 🖥️ Launch `uv run secpipe ui` and explore the dashboard
 - 🔒 Clone the [mcp-security-hub](https://github.com/FuzzingLabs/mcp-security-hub) for 40+ security tools
 - 💬 Join our [Discord](https://discord.gg/8XEX33UUwZ) for support
 
